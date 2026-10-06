@@ -1,0 +1,24 @@
+schema_version: 1
+feature_groups:
+  housing_history:
+    status: required
+    examples:
+      - hpi_log_level
+      - hpi_growth_1y
+      - hpi_growth_3y
+      - hpi_history_length
+  affordability:
+    status: candidate
+    examples:
+      - median_household_income
+      - gross_rent_burden
+      - price_to_income_proxy
+  spatial_context:
+    status: required_ablation
+    examples:
+      - lagged_neighbor_hpi_growth
+      - lagged_cbsa_hpi_growth
+
+timing_policy:
+  use_only_values_available_by_forecast_origin: true
+  fit_transformations_on_training_data_only: true

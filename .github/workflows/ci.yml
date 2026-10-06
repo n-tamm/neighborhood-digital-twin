@@ -1,0 +1,44 @@
+# AI Assistance:
+# OpenAI ChatGPT was used for code debugging, code generation, code organization,
+# and code methodological brainstorming. All final modeling, implementation,
+# validation, commentary, and interpretation were performed and verified by the authors.
+# Model used: GPT-5
+
+name: Continuous integration
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package and development tools
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Type-check package
+        run: python -m mypy src
+
+      - name: Test
+        run: python -m pytest
+
