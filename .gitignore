@@ -1,0 +1,71 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+.streamlit/secrets.toml
+
+# Python caches and build output
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Notebook and editor state
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and local databases
+*.log
+*.db
+*.duckdb
+*.sqlite
+
+# Data zones: retain documentation, not local data
+data/raw/**
+data/interim/**
+data/processed/**
+data/external/**
+data/demo/generated/**
+!data/**/README.md
+!data/demo/.gitkeep
+
+# Models, experiments, and generated artifacts
+artifacts/local/**
+artifacts/models/**
+artifacts/bundles/**
+!artifacts/README.md
+mlruns/
+mlartifacts/
+
+# Databricks and deployment state
+.databricks/
+.terraform/
+terraform.tfstate*
+
+# Generated reports and documentation builds
+reports/generated/**
+!reports/README.md
+site/
+
+# Test output
+.tox/
+.nox/
+junit.xml

@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neighborhood-digital-twin"
+version = "0.1.0"
+description = "Public-data neighborhood forecasting, historical analogues, and scenario exploration."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { file = "LICENSE" }
+authors = []
+dependencies = []
+
+[project.optional-dependencies]
+data = [
+  "duckdb",
+  "pandas",
+  "polars",
+  "pyarrow",
+  "pydantic",
+  "pyyaml",
+  "requests",
+]
+geo = [
+  "geopandas",
+  "libpysal",
+  "shapely",
+]
+model = [
+  "joblib",
+  "mlflow",
+  "scikit-learn",
+]
+app = [
+  "plotly",
+  "streamlit",
+]
+dev = [
+  "mypy",
+  "pre-commit",
+  "pytest",
+  "pytest-cov",
+  "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
