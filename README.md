@@ -179,6 +179,8 @@ validation, commentary, and interpretation were performed and verified by the au
 
 Model used: GPT-5
 
+The required explanation of the AI workflow, model settings, prompt composition, and output evaluation is maintained in the [AI usage appendix](reports/AI_USAGE_APPENDIX.md).
+
 ## License
 
 Project code is released under the [MIT License](LICENSE). Source datasets retain their own terms, licenses, and attribution requirements.

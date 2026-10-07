@@ -58,7 +58,7 @@ This table is the working index from course expectations to project evidence. Up
 | Statement of work | Named team ownership, contributions, and review responsibilities |
 | Mentor or reviewer feedback | `docs/reference/feedback_log.md` with action or rationale |
 | Demonstration artifact | Three-to-five-minute video or the currently permitted poster format |
-| Required assistance disclosure | Course-compliant appendix and code-level notices, without contributor attribution |
+| Required AI disclosure when AI is used | `reports/AI_USAGE_APPENDIX.md`: workflow explanation and diagram, exact model and available parameter values, prompt-composition explanation with an actual prompt, and output-evaluation explanation with an actual evaluation |
 | Gallery post | Public summary, visuals, repository, and application links |
 
 ## Reproducibility package
@@ -121,6 +121,7 @@ For a team, each major workstream should have a primary owner and reviewer, but 
 - [ ] Public links work in a signed-out browser.
 - [ ] Demo fallback and rollback path are ready.
 - [ ] Team contribution and required assistance disclosures are complete.
+- [ ] The AI appendix matches the final models, settings, workflow, prompt example, and evaluation evidence.
 - [ ] Release is tagged and the changelog or release notes explain it.
 
 ## Exit criteria

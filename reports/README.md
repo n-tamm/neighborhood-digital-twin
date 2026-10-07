@@ -2,6 +2,8 @@
 
 This folder contains the written report and the figures and tables generated for it. It may also contain the required video or poster materials once the team chooses the submission format.
 
+The [AI usage appendix](AI_USAGE_APPENDIX.md) records the required AI workflow diagram, models and available parameter values, prompt-composition approach, actual prompt example, and actual output-evaluation example. It is required because AI has contributed to this project; it is separate from the optional full prompt log.
+
 Planned areas:
 
 - `generated/`: figures and tables created by code;
