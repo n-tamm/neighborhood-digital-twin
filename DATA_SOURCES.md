@@ -1,6 +1,8 @@
 # Data Source Policy and Initial Catalog
 
-This file tracks sources being considered for the project. A source appearing here is not automatically approved for modeling; it must pass the admission checks below and be recorded in a versioned manifest when used.
+This is the project's data access statement and source-review record. The planned core data is published by U.S. federal agencies and is available to every team member through the public pages or APIs linked below. The project does not currently use private partner data, paid data, or data governed by a nondisclosure agreement.
+
+A source appearing here is not automatically approved for modeling or redistribution. Before use, the team must confirm its current terms, record the publisher and access method in a versioned manifest, and document whether derived or source records may be included in a public demonstration bundle. Raw national data is downloaded from its publisher rather than redistributed through this repository.
 
 ## Core candidates
 
@@ -51,7 +53,7 @@ Every acquired source version should record:
 - local storage location and bronze table name;
 - code version responsible for acquisition.
 
-Raw national data is not committed to Git. The repository may include small, redistributable fixtures and compact demonstration outputs when their source terms allow it.
+Raw national data is not committed to Git. The repository may include a small fixture or compact demonstration output only after its source terms permit redistribution and its attribution is recorded.
 
 ## Privacy and IRB position
 

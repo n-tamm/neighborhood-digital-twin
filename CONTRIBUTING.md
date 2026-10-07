@@ -40,6 +40,12 @@ Schema changes should be explicit. Do not silently rename columns, change units,
 
 The final temporal test must not influence feature selection, hyperparameters, calibration choices, or scenario ranges. If a result causes the team to revise the approach, return to the development and validation periods and document why the test is no longer considered locked.
 
+## Attribution for reused code
+
+Code copied or adapted from a repository, tutorial, blog post, textbook, or generated example must include an inline comment next to the relevant code with a direct source link. Record the applicable license and confirm that it permits the intended use. A bibliography entry or general acknowledgment does not replace inline attribution for reused code.
+
+Ordinary use of an installed library does not require a source comment. The library still belongs in `pyproject.toml`, and any required attribution or redistribution notice must be preserved.
+
 ## Commit and merge practice
 
 - Keep commits focused and written in plain language.

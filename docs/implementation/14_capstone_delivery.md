@@ -41,12 +41,12 @@ This table is the working index from course expectations to project evidence. Up
 
 | Requirement | Planned evidence |
 |---|---|
-| Git repository and explanatory README | Root README, charter, contribution guide, and tagged release |
-| Reproducible environment | `pyproject.toml`, release lock file, local setup runbook, and clean-run record |
+| Git repository and README with run instructions | Root README, charter, contribution guide, and tagged release |
+| Dependency file containing only required libraries | `pyproject.toml`, release lock file, and clean-environment installation check |
 | Code generates results and figures | Versioned pipeline, scripts, and report artifacts without manual spreadsheet steps |
 | Clean code, relative paths, and no keys | Package structure, tests, configuration, `.env.example`, and secret scan |
 | Accessible, legally usable data | Data-source policy, access and terms review, and source manifests |
-| Data and code attribution | Source citations, manifest metadata, methodology references, and required notices |
+| Inline attribution for copied or adapted code | Source-link comments beside reused code, license review, and required notices |
 | Clear project statement | `PROJECT_CHARTER.md` and final report introduction |
 | Methodology and evaluation | Numbered implementation guides, experiment records, and final scorecards |
 | Technical depth | Data engineering, spatial analysis, supervised ML, uncertainty, analogues, scenarios, visualization, and deployment |
@@ -74,7 +74,7 @@ A reviewer should be able to:
 
 If full public-data refreshes are too slow for review, provide a small legally redistributable fixture and exact instructions for the full process. Never substitute an undocumented prepared file for a reproducible path.
 
-Freeze a dependency lock file for the final environment. Broad optional dependency declarations are useful during early discovery, but they are not sufficient evidence that the released analysis can be recreated later.
+Freeze a dependency lock file for the final environment. Keep `pyproject.toml` limited to libraries actually used by project code or required development commands.
 
 ## Final report outline
 

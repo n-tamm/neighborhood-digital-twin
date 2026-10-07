@@ -116,6 +116,36 @@ For a development environment, follow the [local setup runbook](docs/runbooks/lo
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
+## Run the current code
+
+The repository is currently a project scaffold with a package import test. The data pipeline, models, report figures, and application have not been implemented yet. These instructions run everything that exists today.
+
+PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+python -m ruff check .
+python -m mypy src
+python -m pytest
+```
+
+macOS or Linux:
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+python -m ruff check .
+python -m mypy src
+python -m pytest
+```
+
+As executable pipeline stages are added, this section will list the exact commands needed to acquire permitted data, reproduce analysis, generate every reported figure and table, and launch the application. A required command is not considered complete until it works from a clean checkout using relative paths.
+
 ## Development workflow
 
 - `main` is treated as a protected release branch.
@@ -125,7 +155,7 @@ The implementation guide is numbered in dependency order. It is a living technic
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository currently provides a minimal installable package and CI smoke test. Data-pipeline and application commands will be added with their first working vertical slice; until then, this remains a documented project scaffold rather than a functioning analytical product.
+The repository currently provides a minimal installable package and CI smoke test. Until the first data pipeline is implemented, it remains a documented project scaffold rather than a functioning analytical product.
 
 ## Planned deployment
 
@@ -148,8 +178,6 @@ and code methodological brainstorming. All final modeling, implementation,
 validation, commentary, and interpretation were performed and verified by the authors.
 
 Model used: GPT-5
-
-Only prompts that materially shaped the project, resolved a significant problem, or led to an important decision are retained in the [key prompt log](docs/reference/key_prompts.md). Routine editing and minor debugging exchanges are not recorded.
 
 ## License
 

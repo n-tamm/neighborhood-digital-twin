@@ -30,13 +30,7 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-Install the larger capability groups only when the work needs them:
-
-```bash
-python -m pip install -e ".[data,geo,model,app,dev]"
-```
-
-If a geospatial package cannot use a compatible wheel on the local platform, record the problem before changing a shared version or installing an unrelated distribution.
+Add a library to `pyproject.toml` only when implemented code or a required development command uses it. Do not preinstall planned data-science or deployment libraries. If a geospatial package cannot use a compatible wheel on the local platform, record the problem before changing a shared version or installing an unrelated distribution.
 
 ## Configure local settings
 
@@ -64,4 +58,3 @@ The initial repository contains only a package smoke test. These commands become
 ## Reset and recovery
 
 If the environment becomes inconsistent, deactivate it, remove only the repository's `.venv` directory after confirming its full path, recreate it, and reinstall from `pyproject.toml`. Do not delete source data or project artifacts as part of an environment reset.
-
