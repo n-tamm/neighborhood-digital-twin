@@ -86,21 +86,15 @@ All evaluation will use time-based splits. A separate geographic holdout will te
 |---|---|
 | [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Canonical scope, research questions, non-goals, and definition of success |
 | [ROADMAP.md](ROADMAP.md) | Twelve-week delivery plan, decision gates, and team ownership options |
-| [docs/](docs/) | Architecture, sequenced implementation guides, decision records, and reference documentation |
-| [.github/](.github/) | Pull-request guidance and fast continuous-integration checks |
-| [configs/](configs/) | Versioned source, feature, experiment, and scenario configuration |
-| [manifests/](manifests/) | Source provenance, checksums, schemas, and build metadata |
+| [docs/](docs/) | System architecture and the sequenced technical implementation guide |
 | [data/](data/) | Local-only raw, interim, processed, and demonstration data zones |
 | [notebooks/](notebooks/) | Numbered exploration and communication notebooks; reusable logic belongs in `src/` |
 | [src/](src/) | Reusable acquisition, validation, geography, feature, modeling, simulation, and export code |
 | [tests/](tests/) | Unit, contract, integration, regression, and application smoke tests |
 | [app/](app/) | Streamlit entry point, pages, components, and static assets |
-| [artifacts/](artifacts/) | Local model outputs, diagnostics, and versioned serving bundles |
-| [reports/](reports/) | Generated figures, tables, report drafts, and presentation material |
-| [scripts/](scripts/) | Thin operational entry points for repeatable local or CI tasks |
-| [infrastructure/](infrastructure/) | Databricks, Streamlit, GitHub Pages, and CI/CD configuration when implemented |
+| [reports/](reports/) | Written deliverables and code-generated figures and tables |
 
-Each top-level folder contains a short README describing what belongs there and what should stay out. The full reasoning is in [docs/architecture/repository_structure.md](docs/architecture/repository_structure.md).
+This layout stays intentionally small. A new folder should appear only when working code or a required deliverable has a clear need for it.
 
 ## Documentation path
 
@@ -110,9 +104,7 @@ Start with:
 2. [Twelve-week roadmap](ROADMAP.md)
 3. [Documentation index](docs/README.md)
 4. [Implementation sequence](docs/implementation/README.md)
-5. [System architecture](docs/architecture/system_architecture.md)
-
-For a development environment, follow the [local setup runbook](docs/runbooks/local_environment.md). Python 3.11 is the shared default.
+5. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 

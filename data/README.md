@@ -13,6 +13,6 @@ data/
 └── demo/         # compact, permitted data prepared for the public app
 ```
 
-The authoritative metadata for every raw snapshot belongs in `manifests/`. Do not edit a raw file in place. A corrected or updated source becomes a new version with a new checksum. Generated data should be reproducible from source manifests, configuration, and code.
+Every raw snapshot must retain its source URL, retrieval date, parameters, checksum, and applicable terms. Do not edit a raw file in place. A corrected or updated source becomes a new version with a new checksum. Create a dedicated manifest location only when the acquisition pipeline produces real manifests that need to be shared.
 
 Databricks Delta tables may live outside this local folder, but they should use the same bronze/silver/gold definitions and retain equivalent lineage fields.

@@ -1,7 +1,6 @@
 # Secrets and local environment
 .env
 .env.*
-!.env.example
 .venv/
 venv/
 .streamlit/secrets.toml
@@ -48,10 +47,8 @@ data/demo/generated/**
 !data/demo/.gitkeep
 
 # Models, experiments, and generated artifacts
-artifacts/local/**
-artifacts/models/**
-artifacts/bundles/**
-!artifacts/README.md
+artifacts/
+models/
 mlruns/
 mlartifacts/
 

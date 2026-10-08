@@ -62,7 +62,7 @@ GitHub Pages is appropriate for static documentation, project findings, and a fa
 
 ## Secrets and configuration
 
-- Commit `.env.example`, never `.env` or credentials.
+- Document required setting names only after code reads them; never commit `.env` or credentials.
 - Store host secrets in the deployment platform's secret manager.
 - Give credentials the narrowest practical permissions.
 - Prefer public download URLs and cached snapshots over long-lived personal tokens.
@@ -91,7 +91,7 @@ Add a visible status block containing the model version, data-through date, and 
 
 ## Rollback and recovery
 
-Keep at least one previously validated serving bundle and deployment revision. Rollback should mean selecting the prior known-good bundle and application release, not rerunning the entire pipeline under pressure. Document bundle publication, deployment, rollback, and source-refresh recovery in `docs/runbooks/`.
+Keep at least one previously validated serving bundle and deployment revision. Rollback should mean selecting the prior known-good bundle and application release, not rerunning the entire pipeline under pressure. Add operational instructions beside the deployment configuration when that configuration exists.
 
 ## Current platform references
 
@@ -114,4 +114,3 @@ Keep at least one previously validated serving bundle and deployment revision. R
 ## Exit criteria
 
 This stage is complete when a clean environment can test the repository, a validated bundle can be promoted without manual file editing, the public app identifies exactly what it serves, and the team can restore the prior release if a deployment fails.
-
