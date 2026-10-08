@@ -17,11 +17,10 @@ These documents describe the intended build sequence. The numbering reflects dep
 | 10 | [Evaluation, validation, and ethics](10_evaluation_validation_and_ethics.md) | Locked results, slices, ablations, and risk review |
 | 11 | [Application and visualization](11_application_and_visualization.md) | Integrated map-driven public experience |
 | 12 | [Deployment and operations](12_deployment_and_operations.md) | Public app, static fallback, and runbooks |
-| 13 | [Integrations and extensions](13_integrations_and_extensions.md) | Rules for adding optional capabilities safely |
-| 14 | [Capstone delivery](14_capstone_delivery.md) | Final report, visuals, demo, release, and reproducibility evidence |
+| 13 | [Capstone delivery](13_capstone_delivery.md) | Final report, visuals, demo, release, and reproducibility evidence |
 
 ## How to use a stage guide
 
 Before implementation, turn the stage's outputs and acceptance checks into issues. Assign one owner to the output contract even when several people contribute. When the stage changes a shared assumption, write a decision record. At the end, link the evidence—tests, report, table, figure, or deployed view—rather than marking the stage complete from memory.
 
-The guides separate required MVP work from optional extensions. An extension should not delay a required contract or weaken the final evaluation.
+The guides describe the intended core project. Add extensions only after the required end-to-end system works and the new work has a clear owner and evaluation plan.

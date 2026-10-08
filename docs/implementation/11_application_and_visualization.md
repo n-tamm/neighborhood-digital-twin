@@ -62,13 +62,13 @@ The app should read an immutable serving bundle instead of rebuilding features o
 - explanation fields and quality flags;
 - data-source and model-version metadata.
 
-The detailed contract belongs in `docs/contracts/serving_bundle.md`. The app must reject an incompatible bundle rather than silently guessing at changed columns.
+Document the detailed serving schema beside the export and loading code when it is implemented. The app must reject incompatible data rather than silently guessing at changed columns.
 
 ## Application boundaries
 
 - `app/` owns pages, components, session state, formatting, and calls to the serving layer.
 - `src/neighborhood_twin/` owns reusable data access, validation, inference, and analytical logic.
-- `artifacts/` contains generated outputs and is not a source-code dependency in Git.
+- Generated models and application data stay outside the source package and are not ordinary Git dependencies.
 - Configuration should choose the bundle and runtime environment; application code should not contain local paths or secrets.
 
 ## Performance strategy
@@ -121,4 +121,3 @@ Design explicit states for missing sources, unsupported tracts, stale bundles, u
 ## Exit criteria
 
 This stage is complete when a new user can select a supported community, understand what is observed versus modeled, follow the evidence behind a forecast, compare analogues, run a guarded scenario, and find the project limitations without reading the source code.
-

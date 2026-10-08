@@ -15,9 +15,9 @@ The project is designed so contributors can own meaningful work without creating
 - Use notebooks for investigation, diagnostic plots, and narrative demonstrations.
 - Move reusable logic into `src/neighborhood_twin/`.
 - Put user-interface code in `app/` and keep it dependent on stable serving contracts rather than research tables.
-- Put repeatable command wrappers in `scripts/`; keep the actual logic in the package.
-- Put source metadata and build provenance in `manifests/`.
-- Record scope or architecture decisions in `docs/decisions/`.
+- Put report text and generated figures or tables in `reports/`.
+- Keep technical plans in `docs/implementation/` and cross-cutting structure in `docs/ARCHITECTURE.md`.
+- Add a new folder only when working code or a required deliverable no longer fits an existing location.
 - Do not commit raw data, secrets, local experiment stores, or machine-specific paths.
 
 ## Pull request expectations

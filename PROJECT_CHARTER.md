@@ -121,4 +121,4 @@ Five gates keep the project from expanding faster than it can be validated:
 4. **Digital Twin core:** accept the scenario engine only after support and stability tests pass.
 5. **Content freeze:** after final evaluation, allow only defect fixes, clarity work, and required deliverables.
 
-Changes to the MVP, target, geography, or deployment architecture should be recorded in `docs/decisions/` so the reason does not disappear into chat or notebook history.
+Changes to the MVP, target, geography, or deployment architecture should be recorded in the roadmap or relevant implementation guide so the reason does not disappear into chat or notebook history.
