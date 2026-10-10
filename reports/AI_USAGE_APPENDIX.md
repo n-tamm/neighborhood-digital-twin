@@ -37,13 +37,13 @@ Prompts are written around a concrete artifact or outcome and normally include:
 4. the expected form of the output;
 5. a quality or verification standard when the task carries meaningful risk.
 
-Routine exchanges are not preserved as a full log. The example below is included because it led directly to a checklist-based repository review and also exposed a failure in how one constraint was interpreted.
+Routine exchanges are not preserved as a full log. The example below is included because it initiated the repository's structure and affected how later documentation, code, tests, and deliverables were organized. It records a consequential design request rather than ordinary conversational context.
 
 ### Actual prompt example
 
-> Can you read the Capstone Project Specifications Checklist pdf file and rework/organize anything as needed. Do not do anything that is optional. Also, just focus on code items, but you can make a report folder if you want. Be mindful of the readme instructions
+> Design an initial scaffold for the proposed project repo structure. Include readme files to add context and make suggestions on where organization can improve the project's design.
 
-This prompt identifies the authoritative source, permits repository changes, excludes the checklist's optional work, narrows attention to code-facing requirements, and points back to local README rules. Its phrase “focus on code items” was initially interpreted too narrowly: the first revision handled repository requirements but omitted the conditional AI appendix even though AI had been used.
+This prompt identifies a concrete artifact—the initial repository scaffold—while asking for enough README context that another contributor could understand the design. It also leaves room to evaluate the organization rather than assuming the first folder structure is final. That mattered because the repository was developed through several rounds of review and simplification rather than accepted as a one-time generated template.
 
 ## How AI output is evaluated
 
@@ -51,22 +51,22 @@ AI output is evaluated against the source requirement and the actual repository 
 
 ### Actual evaluation example
 
-The checklist-review output was evaluated against both pages of the Capstone Project Specifications Checklist. The review confirmed that the change:
+The repository scaffold was evaluated iteratively rather than treated as correct because the requested folders and README files had been created. After the initial version, the author reviewed the repository tree and found that it included too many speculative folders and documents for a project that had not begun implementation. Follow-up revisions simplified the structure, clarified which documents were authoritative, kept personal planning material outside version control, and retained folders only when they had an obvious current purpose such as data, source code, tests, notebooks, the application, reports, or active documentation.
 
-- added direct run instructions to the root README;
-- limited `pyproject.toml` to libraries used by current code or required checks;
-- documented data access and inline attribution requirements;
-- preserved relative paths and excluded populated credentials;
-- removed the optional full prompt log.
+Each revision was checked against practical questions:
 
-The evaluation also found a substantive omission: because AI had already been used, the checklist required an appendix with a workflow explanation and diagram, model and parameter details, an actual prompt example, and an actual output-evaluation example. Those items were absent. The author's follow-up identified the gap, the output was judged incomplete, and this appendix was created as the corrective action.
+- Can a new contributor understand the project and find the next implementation step from the root README?
+- Does each folder have a distinct responsibility that is likely to remain stable?
+- Are optional future capabilities described in planning documents instead of represented by empty infrastructure?
+- Are code, tests, data organization, application work, reports, and required deliverables separated without creating unnecessary layers?
+- Do Git status and ignore rules keep local notes, credentials, source data, generated artifacts, and licensed reading copies out of the public repository?
 
-The correction is accepted only when all four conditional requirements are present and linked from the root README. This example shows that successful formatting and static checks do not replace a direct requirement-by-requirement review.
+The structure was accepted only after those reviews led to concrete changes. This is the intended pattern for AI-assisted repository design: generate an initial proposal, inspect it in the context of the real project, remove or reorganize what does not help, and repeat until the organization supports the work that is actually planned.
 
 ## Maintenance requirements
 
 - Update the model table when a materially contributing model or configuration changes.
-- Add an actual prompt example only when the report needs a more representative example than the one above.
+- Keep only prompt examples that materially shaped the project, resolved a significant problem, or recorded an important design decision.
 - Add evaluation evidence for major AI-generated analytical code, not every small edit.
 - Never include credentials, private data, proprietary source content, or unnecessary personal information.
 - Reconcile this appendix with the final code, report, and contribution statement before submission.
