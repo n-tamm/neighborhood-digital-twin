@@ -22,7 +22,7 @@ The state table should have one row per canonical tract and state year. Required
 - feature-set or state-contract version;
 - pipeline build identifier.
 
-Candidate dimensions include housing history, affordability, population and households, income and employment context, tenure and vacancy, housing supply, regional macro conditions, spatial context, and selected slow-moving environmental attributes.
+Candidate dimensions include single-family HPI history, housing-stock composition, affordability, population and households, income and employment context, tenure and vacancy, housing supply, regional macro conditions, spatial context, and selected slow-moving environmental attributes.
 
 ## Field registry
 
@@ -47,13 +47,25 @@ This registry becomes the data dictionary and prevents fields from changing mean
 
 Use lagged HPI levels or log levels, one- and multi-year changes, recent momentum, volatility, history length, gap count, and coverage flags. Calculate every rolling feature using data no later than the forecast origin.
 
+The registry and target contract must call this series the `FHFA single-family HPI`. Do not shorten the label to a general tract housing-price index in reports or application fields where that would hide its coverage limits.
+
+### Housing-stock composition
+
+Use ACS units-in-structure estimates to calculate three mutually exclusive shares:
+
+- single-family: one-unit detached plus one-unit attached;
+- multifamily: structures with two or more units;
+- mobile/other: mobile homes, boats, recreational vehicles, vans, and other residual categories represented by the selected table.
+
+Retain the total housing-unit denominator, source fields, margins of error or derived quality flags, and release vintage. Validate that the categories reconcile to the total within the documented tolerance. These shares may be used as descriptive state, analogue dimensions, model features, and evaluation slices, but they do not extend FHFA price coverage to multifamily housing.
+
 ### Regional and spatial context
 
 Build lagged county or CBSA trends and neighbor aggregates from training-safe values. A neighbor feature should document its relationship method, weight transform, minimum neighbor count, and missing-neighbor behavior. In geographic holdouts, target-derived regional features cannot include future outcomes from the held-out metro.
 
 ### ACS and slow-moving context
 
-Prefer interpretable levels and slow changes over noisy annual differences. Carry estimates and margins of error together long enough to support quality filters, weights, or flags. Derived ratios must document their numerator, denominator, universe, and behavior when the denominator is small.
+The table may have one row per annual forecast origin, but an ACS tract value is an annually released five-year estimate, not a one-year measurement. Retain the release year and survey-window start and end. Prefer interpretable levels and slow changes over differences between heavily overlapping releases. Carry estimates and margins of error together long enough to support quality filters, weights, or flags. Derived ratios must document their numerator, denominator, universe, and behavior when the denominator is small.
 
 ### Availability and quality features
 
@@ -74,7 +86,7 @@ Do not replace all cases with the same sentinel. Fit imputers on training data o
 
 ## Target definitions
 
-Use direct horizon-specific targets. A proposed housing target is cumulative log HPI change from forecast origin `t` to `t+h`, with separate contracts for `h = 1`, `3`, and `5` years. Record:
+Use direct horizon-specific targets. The proposed target is cumulative log change in the FHFA single-family HPI from forecast origin `t` to `t+h`, with separate contracts for `h = 1`, `3`, and `5` years. Record:
 
 - forecast origin and target end year;
 - exact HPI observations used;
@@ -106,6 +118,8 @@ Scaling, imputation, encoding, feature selection, and dimensionality reduction a
 - rolling features do not cross the forecast origin;
 - units and transformations match the registry;
 - regional fields retain their true geography;
+- housing-composition categories reconcile to the documented ACS universe;
+- ACS release years and five-year survey windows remain distinguishable;
 - target censoring and row loss are reproducible;
 - the application can display a state row without loading model-training internals.
 

@@ -11,7 +11,8 @@ Build a map-driven application that presents historical context, forecasts, anal
 The first design should support a curious resident, prospective home buyer, analyst, or planner who wants to ask:
 
 - How has this community changed?
-- What does the model expect over the chosen horizon, and how uncertain is it?
+- What is the tract's mix of single-family, multifamily, and other housing, and how much of that market does the forecast target represent?
+- What does the model expect for the FHFA single-family HPI over the chosen horizon, and how uncertain is it?
 - Which historical communities looked similar at the same point in their development?
 - What variables most influenced the result?
 - How does the modeled distribution respond when selected inputs change?
@@ -27,11 +28,11 @@ A national or regional map, search, data-coverage status, short project explanat
 
 ### 2. Community profile
 
-Show the selected geography, current modeled state, historical trends, metro comparison, source dates, and missingness. Separate observed values from modeled or imputed values.
+Show the selected geography, current modeled state, housing-stock composition, historical trends, metro comparison, source dates, and missingness. Separate observed values from modeled or imputed values. Make clear that ACS tract values are rolling five-year estimates even though a new release appears each year.
 
 ### 3. Forecasts
 
-Show 1-, 3-, and 5-year outcomes where supported, with prediction intervals, baseline comparisons, backtest context, and short explanations of the strongest drivers. Do not imply that the center line is the one future that will occur.
+Show the one-year FHFA single-family HPI forecast, with longer horizons only where supported. Include prediction intervals, baseline comparisons, backtest context, and short explanations of the strongest drivers. Label the target consistently and do not imply that it covers multifamily prices, every home in the tract, or the one future that will occur.
 
 ### 4. Historical analogues
 
@@ -56,6 +57,7 @@ The app should read an immutable serving bundle instead of rebuilding features o
 - a release manifest and compatible schema version;
 - tract geometries simplified for display;
 - current state and historical series tables;
+- housing-composition fields and target-representativeness warnings;
 - forecasts and intervals;
 - analogue and cluster results;
 - approved scenario metadata or a lightweight inference artifact;
@@ -98,7 +100,7 @@ Each adjustable variable needs a definition, valid range, observed local range, 
 
 ## Failure and empty states
 
-Design explicit states for missing sources, unsupported tracts, stale bundles, unavailable horizons, failed inference, and low-confidence output. A blank chart or silent fallback is not acceptable. Where possible, retain the historical profile even if a forecast is withheld.
+Design explicit states for missing sources, unsupported tracts, stale bundles, unavailable horizons, failed inference, and low-confidence output. A blank chart or silent fallback is not acceptable. Where possible, retain the historical profile even if a forecast is withheld. A heavily multifamily tract may still show a clearly labeled single-family forecast, but it must also show that the target represents only part of its housing market.
 
 ## Testing
 
@@ -120,4 +122,4 @@ Design explicit states for missing sources, unsupported tracts, stale bundles, u
 
 ## Exit criteria
 
-This stage is complete when a new user can select a supported community, understand what is observed versus modeled, follow the evidence behind a forecast, compare analogues, run a guarded scenario, and find the project limitations without reading the source code.
+This stage is complete when a new user can select a supported community, understand its housing mix, distinguish the FHFA single-family target from the broader market, understand what is observed versus modeled, follow the evidence behind a forecast, compare analogues, run a guarded scenario, and find the project limitations without reading the source code.

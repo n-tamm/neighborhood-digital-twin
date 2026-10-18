@@ -8,6 +8,7 @@ The first technical milestone should answer whether the proposed tract-level stu
 
 - How many tracts and forecast-origin years have usable FHFA targets?
 - Where is coverage systematically missing, and what kinds of communities may be underrepresented?
+- How does FHFA availability vary with the tract's single-family and multifamily housing shares?
 - Which ACS fields have stable definitions, acceptable margins of error, and defensible release timing?
 - Can older observations be mapped to 2020 tracts with acceptable loss and uncertainty?
 - Are one-, three-, and five-year targets available for enough independent periods?
@@ -22,11 +23,11 @@ Use three to five metros or states that expose different problems rather than on
 
 ### FHFA audit
 
-Record the current file location, publication date, years, fields, row count, tract count, missing-value behavior, geography vintage, and hash. Profile first and last observation per tract, gaps within each series, and target availability by year and metro. Do not impute the prediction target during the feasibility decision.
+Record the current file location, publication date, years, fields, row count, tract count, missing-value behavior, geography vintage, and hash. Document that the series covers a filtered single-family market and excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments. Profile first and last observation per tract, gaps within each series, and target availability by year and metro. After the pilot ACS join, compare availability and history length across housing-stock composition. Do not impute the prediction target during the feasibility decision.
 
 ### ACS audit
 
-Choose 8–12 variables that cover population, income, housing units, vacancy, tenure, housing burden, and one or two other high-value dimensions. Pull estimates and margins of error together. Record the ACS table, concept, universe, variable label, release year, survey window, and API availability.
+Choose 8–12 variable groups that cover population, income, housing units, vacancy, tenure, housing burden, and one or two other high-value dimensions. Include units-in-structure fields needed to calculate single-family, multifamily, and mobile/other shares. Pull estimates and margins of error together. Record the ACS table, concept, universe, variable label, release year, full five-year survey window, and API availability.
 
 ### Geography audit
 
@@ -44,7 +45,8 @@ Estimate raw and processed storage, national row counts, memory needs, expected 
 
 - source feasibility table with access, license, time, geography, and coverage findings;
 - FHFA coverage and row-attrition report;
-- ACS variable shortlist with margins-of-error assessment;
+- ACS variable shortlist with margins-of-error assessment and housing-composition definitions;
+- FHFA coverage comparison across housing-stock composition;
 - geography match report and pilot map;
 - provisional target definition and baseline results;
 - national versus selected-metro resource estimate;
@@ -67,6 +69,8 @@ These are decision thresholds, not claims about data quality. If they are missed
 
 - counting overlapping ACS releases as independent annual samples;
 - treating an FHFA missing value as zero change;
+- describing the FHFA target as the entire tract housing market;
+- treating an annually released ACS five-year estimate as a one-year tract measurement;
 - building targets before deciding what was known at the forecast date;
 - selecting pilot metros only because they have complete data;
 - assuming a crosswalk is valid because row counts match;
