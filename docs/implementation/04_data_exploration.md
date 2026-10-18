@@ -8,7 +8,7 @@ Exploration should determine what the data can support, where it is biased or un
 
 ### Coverage and attrition
 
-Track the number of sources, files, rows, tracts, years, and metros after every meaningful step. Map where FHFA targets exist, where ACS quality filters remove observations, and where crosswalks are complex. Compare retained and excluded areas on observable regional characteristics.
+Track the number of sources, files, rows, tracts, years, and metros after every meaningful step. Map where FHFA targets exist, where ACS quality filters remove observations, and where crosswalks are complex. Compare retained and excluded areas on observable regional characteristics and housing-stock composition. Measure whether FHFA availability or history length falls as multifamily share rises.
 
 ### Temporal behavior
 
@@ -33,6 +33,7 @@ Examine lagged relationships between target and feature families using training 
 - Which ACS dimensions have enough temporal and geographic variation to matter?
 - Are feature relationships stable across housing regimes?
 - Where do coverage and uncertainty create a nonrepresentative sample?
+- Where is the FHFA single-family target a limited description of the tract's overall housing stock?
 - Does a national model appear plausible, or do region-specific patterns dominate?
 - Which features are descriptive for the app but unsuitable for prediction?
 
@@ -42,6 +43,7 @@ Examine lagged relationships between target and feature families using training 
 - source-year and geography coverage tables;
 - target distribution and horizon-availability analysis;
 - ACS margin-of-error and missingness analysis;
+- FHFA coverage and history-length analysis by housing-stock composition;
 - spatial autocorrelation and simple residual maps;
 - training-period relationship and stability plots;
 - initial feature-family recommendation;

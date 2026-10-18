@@ -1,6 +1,6 @@
 # Neighborhood Housing Intelligence & Digital Twin
 
-An interactive, map-based research platform for exploring how U.S. neighborhoods have changed, how their housing markets may evolve, which past communities followed similar paths, and how model results respond to a small set of plausible scenarios.
+An interactive, map-based research platform for exploring how U.S. neighborhoods have changed, how a public single-family housing indicator may evolve, which past communities followed similar paths, and how model results respond to a small set of plausible scenarios.
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
@@ -10,8 +10,8 @@ This is a data science capstone, not a neighborhood-ranking or home-investment t
 
 A user should be able to select a supported census tract and:
 
-- review its housing, affordability, demographic, economic, development, and environmental history;
-- see one-, three-, and—where the data supports it—five-year housing-market forecasts;
+- review its housing mix, affordability, demographic, economic, development, and environmental history;
+- see a one-year FHFA single-family HPI forecast, with longer horizons only where the data supports them;
 - view uncertainty ranges beside every forecast rather than only a point estimate;
 - compare the model with persistence and regional baselines;
 - find earlier tract-years that looked similar and see what happened afterward;
@@ -20,7 +20,7 @@ A user should be able to select a supported census tract and:
 - change a few bounded scenario assumptions and compare the resulting forecast distributions;
 - see warnings when a scenario is historically unusual or outside the model's reliable support.
 
-The scenario laboratory will describe model sensitivity, not causal policy effects. The project will not predict individual home values, label neighborhoods as good or bad, or provide buy/sell recommendations.
+The FHFA forecast does not cover multifamily prices or every home in a tract. The application will show the tract's broader housing-stock composition and make that limitation visible. The scenario laboratory will describe model sensitivity, not causal policy effects. The project will not predict individual home values, label neighborhoods as good or bad, or provide buy/sell recommendations.
 
 ## Core research question
 
@@ -59,8 +59,8 @@ The research pipeline and public application are deliberately separated. Databri
 
 The core candidate sources are:
 
-- Federal Housing Finance Agency census-tract House Price Index;
-- American Community Survey five-year estimates and margins of error;
+- Federal Housing Finance Agency annual single-family census-tract House Price Index;
+- American Community Survey five-year estimates, margins of error, and housing-stock composition;
 - Census tract boundaries and geographic relationship files;
 - FRED or ALFRED economic series for national and regional context.
 
@@ -78,7 +78,7 @@ The initial model ladder is intentionally conservative:
 6. standardized-feature and PCA representations for historical analogues;
 7. trajectory clustering or learned embeddings only if the simpler approach is complete and a harder method adds measurable value.
 
-All evaluation will use time-based splits. A separate geographic holdout will test whether the model transfers to metros it did not see during training. Random row splitting is not appropriate for repeated tract observations and overlapping ACS releases.
+Forecast evaluation will use time-based splits and a separate geographic holdout to test transfer to metros the model did not see during training. Errors and coverage will also be reported by housing-stock composition. Historical analogues will be tested retrospectively by retrieving matches using only information available at an earlier date and then comparing their later outcomes with simple geographic and random alternatives. Random row splitting is not appropriate for repeated tract observations and overlapping ACS releases.
 
 ## Repository map
 

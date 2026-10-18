@@ -6,7 +6,7 @@ The analogue system answers a different question from the forecast model: which 
 
 ## Representation baseline
 
-Start with a small, interpretable set of standardized state dimensions. Fit scaling on the training period and compare two representations:
+Start with a small, interpretable set of standardized state dimensions. The first representation should include housing-stock composition, affordability, tenure or vacancy, single-family HPI history, selected socioeconomic context, and regional conditions. This prevents a tract from being labeled similar only because its covered single-family market moved the same way. Fit scaling on the training period and compare two representations:
 
 1. distance in the standardized original feature space;
 2. principal component analysis followed by distance in the retained components.
@@ -34,14 +34,22 @@ Feature-family weighting can reflect project priorities, but weights must be con
 
 ## Evaluation
 
-Analogue quality is not established by visually appealing matches. Compare the average later outcome of the nearest analogues with:
+Analogue quality is not established by visually appealing matches. Evaluate it as a retrospective retrieval task:
+
+1. choose a historical query tract-year and hide what happened next;
+2. search only candidate tract-years that were already observable at that date;
+3. retrieve a small set of analogues from the approved state dimensions;
+4. summarize the analogues' later outcomes;
+5. compare that summary with the query tract's observed later outcome.
+
+Compare analogue-based estimates with:
 
 - random historical tract-years from the same period;
 - random matches within the same metro or region;
 - persistence and regional forecasts;
 - the supervised forecast model.
 
-Measure outcome MAE or rank usefulness, neighbor stability under bootstrap or feature changes, distance separation, geographic diversity, and coverage. Review case studies for obvious mismatches that a metric misses.
+Use outcome MAE when the analogue set is presented as evidence about what may follow. Also measure neighbor stability under small feature and scaling changes, balance across the displayed feature families, distance separation, geographic diversity, and coverage. The application should explain both the strongest similarities and important differences. Review case studies for obvious mismatches that a metric misses.
 
 ## Optional trajectory clustering
 
@@ -66,6 +74,7 @@ Evaluate cluster stability across seeds, time windows, feature subsets, and geog
 - distance calculations are deterministic and versioned;
 - the same tract and immediate neighbors follow the configured exclusion rule;
 - analogue usefulness is compared with honest baselines;
+- retrieved matches remain understandable across housing mix and the other displayed dimensions;
 - app text states that similarity does not guarantee the same future;
 - optional embeddings or clusters add evidence beyond a visualization.
 
