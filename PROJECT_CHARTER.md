@@ -6,7 +6,7 @@ This document is the canonical description of the project. The original brainsto
 
 Most public housing tools either describe current conditions or forecast a single outcome at a broad regional level. This project asks whether public housing, demographic, economic, geographic, development, environmental, and spatial data can support a richer longitudinal representation of U.S. census-tract communities.
 
-The work will produce a reproducible tract-year data system, forecast housing-market trajectories over several horizons, estimate uncertainty, measure the value of spatial context, and identify earlier community states that resemble a selected neighborhood today. Those results will be delivered through a map-driven Neighborhood Digital Twin where users can explore history, forecasts, comparisons, historical analogues, and carefully bounded scenarios.
+The work will produce a reproducible tract-year data system, forecast change in FHFA's single-family House Price Index, estimate uncertainty, measure the value of spatial context, and identify earlier community states that resemble a selected neighborhood today. The neighborhood state will remain broader than the forecast target by including housing-stock composition, renting, vacancy, affordability, and other community conditions. Those results will be delivered through a map-driven Neighborhood Digital Twin where users can explore history, forecasts, comparisons, historical analogues, and carefully bounded scenarios.
 
 ## Primary research question
 
@@ -14,7 +14,7 @@ Can heterogeneous public data support useful, transferable, interpretable, and u
 
 ## Supporting questions
 
-1. How accurately can housing-market trajectories be forecast over one, three, and—where defensible—five years using only information available at the forecast date?
+1. How accurately can the FHFA single-family HPI be forecast one year ahead using only information available at the forecast date, with longer horizons attempted only where defensible?
 2. Do neighboring-tract and metropolitan conditions improve forecasts after accounting for a tract's own history?
 3. How well does the model generalize to later years and to metropolitan areas omitted from training?
 4. Are uncertainty intervals calibrated across places, market regimes, and levels of source coverage?
@@ -27,16 +27,16 @@ Can heterogeneous public data support useful, transferable, interpretable, and u
 
 The intended analytical unit is a census tract represented on a canonical 2020 tract geography. The main table will contain one record per tract and forecast origin year, with source vintages and quality flags retained.
 
-The initial prediction target is future change in the FHFA tract-level House Price Index. One-year forecasting is the primary evaluation target. Three-year and five-year targets are added only if the feasibility audit leaves enough independent forecast origins and acceptable coverage.
+The initial prediction target is future change in the FHFA tract-level House Price Index. This is an annual appreciation measure for a filtered set of single-family homes financed with conforming conventional mortgages; it excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments. One-year forecasting is the primary evaluation target. Three-year and five-year targets are added only if the feasibility audit leaves enough independent forecast origins and acceptable coverage.
 
-The HPI is a market indicator, not a complete description of a community. The application will place it beside affordability, housing burden, vacancy, supply, population, income, and other contextual measures.
+The HPI is a market indicator, not a price index for every home or a complete description of a community. ACS units-in-structure estimates will be used to calculate single-family, multifamily, and mobile/other housing shares. The application will place the forecast beside that housing mix, affordability, housing burden, vacancy, renting, population, income, and other contextual measures. Evaluation will show how coverage and errors change with housing-stock composition so heavily multifamily tracts are not presented as though the target represents their full market.
 
 ## Required minimum product
 
 The capstone MVP includes:
 
 - a reproducible bronze, silver, and gold public-data pipeline;
-- a canonical tract-year neighborhood-state table with lineage and data-quality flags;
+- a canonical tract-year neighborhood-state table with housing composition, lineage, and data-quality flags;
 - a documented release-date and geography-alignment policy;
 - persistence, regional, and regularized-linear baselines;
 - one justified nonlinear forecasting model;
@@ -90,6 +90,7 @@ Random row splits are not acceptable for the main evaluation. Preprocessing, fea
 - Put the baseline beside the machine-learning result.
 - Give uncertainty the same visual weight as the point forecast.
 - Show source coverage and missingness for the selected tract.
+- Show the tract's housing mix and state plainly that the forecast covers the FHFA single-family segment.
 - Describe model drivers as associations, not causes.
 - Keep scenario assumptions and plausibility limits visible.
 - Avoid color scales or labels that imply moral quality.
@@ -106,7 +107,7 @@ The project is complete when:
 - geography matching, row attrition, and coverage bias are documented;
 - the final evaluation includes strong baselines, a locked time test, a geographic holdout, and uncertainty coverage;
 - the analogue and scenario components have explicit evaluation rather than only visual demonstrations;
-- the public app integrates current state, history, forecasts, uncertainty, drivers, comparisons, analogues, and scenario sensitivity;
+- the public app integrates housing mix, current state, history, forecasts, uncertainty, drivers, comparisons, analogues, and scenario sensitivity;
 - the model card and ethics discussion identify likely misuse and affected groups;
 - at least three original figures are generated by code;
 - all required capstone deliverables have a named owner and completion check.

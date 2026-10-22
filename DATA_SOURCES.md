@@ -8,11 +8,19 @@ A source appearing here is not automatically approved for modeling or redistribu
 
 | Source | Intended use | Main limitations |
 |---|---|---|
-| [FHFA House Price Index](https://www.fhfa.gov/data/hpi) | Tract-level housing target, lagged market history, and coverage analysis | Developmental local series; missing values are meaningful; single-family conforming mortgage coverage is not the full housing market |
-| [ACS five-year data](https://www.census.gov/data/developers/data-sets/acs-5year.html) | Income, population, tenure, vacancy, housing burden, housing stock, education, and commuting context | Overlapping five-year windows; margins of error; variable and geography changes; publication lag |
+| [FHFA House Price Index](https://www.fhfa.gov/data/hpi/datasets) | Annual single-family tract target, lagged market history, and coverage analysis | Developmental and non-seasonally adjusted; excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments; missing values are meaningful |
+| [ACS five-year data](https://www.census.gov/data/developers/data-sets/acs-5year.html) | Housing composition, income, population, tenure, vacancy, housing burden, education, and commuting context | Released annually but pools 60 months of responses; adjacent releases overlap; margins of error, publication lag, and variable or geography changes must be retained |
 | [2020 Census cartographic boundaries](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.2020.html) | Tract geometry for maps, joins, and adjacency | Simplified display geometry; does not contain demographic attributes |
 | [Census relationship files](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html) | Mapping earlier tract vintages to the canonical geography | Splits and merges require explicit weighting assumptions and validation |
 | [FRED API](https://fred.stlouisfed.org/docs/api/fred/) and ALFRED vintages | Mortgage rates, inflation, labor-market, and broader economic context | API key; revisions; geographic grain varies; point-in-time use may require ALFRED or pinned snapshots |
+
+## Current interpretation of the core housing data
+
+The FHFA tract HPI is the initial forecast target, but it represents annual appreciation in a filtered single-family market rather than every housing unit in a tract. The project must use the precise label `FHFA single-family HPI` in target definitions, evaluation tables, and application text. A tract with many multifamily units may still receive a forecast for its covered single-family segment, but the application must not imply that the forecast describes the tract's full housing market.
+
+ACS table B25024 or its release-specific equivalent provides counts of units in detached and attached single-family structures, buildings with two or more units, mobile homes, and other housing. The state table should derive mutually exclusive single-family, multifamily, and mobile/other shares with estimates and quality information retained. These fields support neighborhood description, similarity matching, representativeness warnings, and evaluation slices; they do not create a multifamily price index.
+
+The tract-year table may contain one row for each annual forecast origin even though the sources have different time meanings. FHFA is annual. ACS tract estimates are annual releases of rolling five-year measurements: adjacent releases share four years of responses. The pipeline must retain both the ACS release year and survey window, use the latest release actually available at each forecast origin, and avoid interpreting small adjacent-release changes as precise one-year movement.
 
 ## Staged extensions
 

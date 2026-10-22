@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The forecasting stage tests whether public tract-level context improves on strong, simple expectations about future housing-market movement. The goal is not to try every algorithm. It is to establish a fair baseline ladder, select one defensible nonlinear model, and measure what spatial and feature-family additions contribute out of time.
+The forecasting stage tests whether public tract-level context improves on strong, simple expectations about future movement in the FHFA single-family HPI. It does not forecast prices for multifamily housing or the value of every home in a tract. The goal is not to try every algorithm. It is to establish a fair baseline ladder, select one defensible nonlinear model, and measure what spatial and feature-family additions contribute out of time.
 
 ## Evaluation splits before models
 
@@ -75,7 +75,7 @@ The ablation should use the same split and model settings where practical. Its p
 
 ## Model selection
 
-Use mean absolute error as the primary point metric and inspect RMSE, median absolute error, directional accuracy against a majority-direction baseline, and performance relative to persistence and regional baselines. Selection should also consider calibration potential, geographic transfer, stability, runtime, and clarity.
+Use mean absolute error as the primary point metric and inspect RMSE, median absolute error, directional accuracy against a majority-direction baseline, and performance relative to persistence and regional baselines. Report coverage and error by housing-stock composition as well as time, geography, HPI history length, and ACS quality. Selection should also consider calibration potential, geographic transfer, stability, runtime, and clarity.
 
 Choose the champion on validation results, write the decision record, and stop broad model search. The locked test is for estimating final performance, not picking a winner.
 
@@ -96,6 +96,7 @@ Choose the champion on validation results, write the decision record, and stop b
 - baseline and model scores use identical eligible rows;
 - model output is reproducible with the recorded environment and seed;
 - geographic holdout aggregates exclude held-out future targets;
+- evaluation separates target availability and error by housing-stock composition;
 - all predictions carry model, feature, target, and split versions;
 - a complex model that fails to add meaningful value is reported honestly rather than hidden.
 
