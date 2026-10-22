@@ -12,7 +12,11 @@ from urllib.request import Request
 
 import pytest
 
-from neighborhood_twin.data.acquisition import SourceRequest, acquire_http_snapshot
+from neighborhood_twin.data.acquisition import (
+    SourceRequest,
+    acquire_http_snapshot,
+    register_existing_snapshot,
+)
 from neighborhood_twin.data.catalog import SourceDefinition
 
 
@@ -103,3 +107,25 @@ def test_acquisition_requires_timezone(tmp_path: Path) -> None:
             retrieved_at=datetime(2026, 10, 22),
             opener=lambda *_args, **_kwargs: FakeResponse(b"x"),
         )
+
+
+def test_manual_registration_preserves_upload_and_records_method(tmp_path: Path) -> None:
+    uploaded_path = tmp_path / "incoming" / "data.csv"
+    uploaded_path.parent.mkdir()
+    uploaded_path.write_bytes(b"id,value\n1,2\n")
+    destination_root = tmp_path / "volume"
+    request = SourceRequest(
+        source=_source(), url="https://example.org/data.csv", file_name="data.csv"
+    )
+
+    manifest = register_existing_snapshot(
+        request,
+        uploaded_path,
+        destination_root,
+        retrieved_at=datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc),  # noqa: UP017
+    )
+
+    assert uploaded_path.exists()
+    assert Path(manifest.file_path).read_bytes() == uploaded_path.read_bytes()
+    assert manifest.request_parameters["acquisition_method"] == "manual_upload"
+    assert manifest.validation_status == "registered"

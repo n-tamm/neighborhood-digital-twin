@@ -10,6 +10,7 @@ Content-addressed HTTP acquisition for local paths and Unity Catalog volumes.
 
 import hashlib
 import os
+import shutil
 import tempfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -182,3 +183,96 @@ def acquire_http_snapshot(
     finally:
         if temporary_path is not None and temporary_path.exists():
             temporary_path.unlink()
+
+
+def register_existing_snapshot(
+    request: SourceRequest,
+    source_path: Path,
+    destination_root: Path,
+    *,
+    retrieved_at: datetime | None = None,
+    chunk_size: int = 1024 * 1024,
+) -> SourceManifest:
+    """Hash and register a manually uploaded source when direct HTTP access is blocked."""
+
+    retrieved_at = retrieved_at or datetime.now(timezone.utc)  # noqa: UP017
+    if retrieved_at.tzinfo is None:
+        raise ValueError("retrieved_at must include a timezone")
+    if not source_path.is_file():
+        raise FileNotFoundError(f"Uploaded source file does not exist: {source_path}")
+
+    hasher = hashlib.sha256()
+    byte_size = 0
+    with source_path.open("rb") as source_file:
+        while True:
+            chunk = source_file.read(chunk_size)
+            if not chunk:
+                break
+            hasher.update(chunk)
+            byte_size += len(chunk)
+    if byte_size < request.source.minimum_bytes:
+        raise AcquisitionError(
+            f"{request.source.source_id} contains {byte_size:,} bytes; "
+            f"expected at least {request.source.minimum_bytes:,}"
+        )
+
+    sha256 = hasher.hexdigest()
+    retrieval_date = retrieved_at.date().isoformat()
+    snapshot_directory = (
+        destination_root
+        / "bronze"
+        / request.source.source_id
+        / f"retrieval_date={retrieval_date}"
+        / sha256[:16]
+    )
+    snapshot_directory.mkdir(parents=True, exist_ok=True)
+    snapshot_path = snapshot_directory / request.file_name
+    if source_path.resolve() != snapshot_path.resolve() and not snapshot_path.exists():
+        staging_root = destination_root / "_staging" / request.source.source_id
+        staging_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="wb", delete=False, dir=staging_root, prefix="register-"
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+        try:
+            shutil.copyfile(source_path, temporary_path)
+            os.replace(temporary_path, snapshot_path)
+        finally:
+            if temporary_path.exists():
+                temporary_path.unlink()
+
+    timestamp = retrieved_at.astimezone(timezone.utc).isoformat()  # noqa: UP017
+    parameters = dict(request.request_parameters)
+    parameters["acquisition_method"] = "manual_upload"
+    manifest = SourceManifest(
+        snapshot_id=f"{request.source.source_id}:{retrieval_date}:{sha256[:16]}",
+        source_id=request.source.source_id,
+        source_name=request.source.name,
+        publisher=request.source.publisher,
+        landing_page=request.source.landing_page,
+        endpoint=redact_url(request.url, request.secret_query_parameters),
+        request_parameters=parameters,
+        reference_period=request.reference_period,
+        publication_date=request.publication_date,
+        retrieval_timestamp_utc=timestamp,
+        geographic_grain=request.source.geographic_grain,
+        geography_vintage=request.source.geography_vintage,
+        file_format=request.source.file_format,
+        file_path=str(snapshot_path),
+        byte_size=byte_size,
+        sha256=sha256,
+        http_status=0,
+        content_type=None,
+        etag=None,
+        last_modified=None,
+        terms_url=request.source.terms_url,
+        known_limitations=request.source.limitations,
+        code_version=__version__,
+        validation_status="registered",
+        validation_messages=(
+            "Registered from a team-uploaded file because direct workspace acquisition "
+            "was not used.",
+        ),
+    )
+    manifest.write_sidecar()
+    return manifest

@@ -1,31 +1,51 @@
 # System Architecture
 
-The project separates reproducible analysis from the public application. Data acquisition, validation, feature construction, model training, and evaluation run as batch work. The Streamlit application reads compact, validated outputs and does not train models or download national datasets during a user session.
+GitHub is the source of truth for code while Databricks is the shared data and execution environment. Data acquisition, validation, feature construction, model training, and evaluation run as batch work against Unity Catalog. The Streamlit application reads compact, validated serving tables and does not train models or download national datasets during a user session.
 
 ```mermaid
 flowchart LR
-    A[Public data sources] --> B[Validated source data]
-    B --> C[Tract-year neighborhood state]
-    C --> D[Forecasts and uncertainty]
-    C --> E[Historical analogues]
-    D --> F[Scenario sensitivity]
-    D --> G[Validated application data]
-    E --> G
-    F --> G
-    G --> H[Streamlit application]
+    A[Public data sources] --> B[Managed volume: immutable raw snapshots]
+    B --> C[Delta bronze and silver tables]
+    C --> D[Tract-year neighborhood state]
+    D --> E[Forecasts and uncertainty]
+    D --> F[Historical analogues]
+    E --> G[Scenario sensitivity]
+    E --> H[Validated serving tables]
+    F --> H
+    G --> H
+    H --> I[Databricks Streamlit app]
+    H -. optional public bundle .-> J[Anonymous public mirror]
 ```
 
 ## Current repository boundaries
 
 - `src/neighborhood_twin/` contains reusable pipeline, modeling, evaluation, and application-data logic.
 - `tests/` verifies that logic with small, redistributable fixtures.
-- `notebooks/` is for exploration and communication, not the production pipeline.
+- `notebooks/` is for exploration, communication, and thin Databricks orchestration; reusable logic remains in `src/`.
 - `data/` holds local source and processed data that should not normally be committed.
 - `app/` contains the Streamlit interface once implementation begins.
 - `reports/` contains the report, AI appendix, and code-generated figures and tables.
 - `docs/implementation/` contains the detailed build sequence.
 
 New folders should be added only when a working implementation creates a distinct kind of file that does not fit these locations.
+
+## Databricks data boundary
+
+The shared workspace uses an existing Unity Catalog catalog. The pipeline creates a project schema and a managed volume within that catalog:
+
+```text
+<catalog>.neighborhood_twin_dev
+├── volume: source_snapshots
+│   ├── bronze/<source>/<retrieval-date>/<hash>/<raw file>
+│   └── bronze/<source>/<retrieval-date>/<hash>/<manifest JSON>
+├── table: source_snapshot_manifest
+├── table: bronze_fhfa_tract_hpi
+├── table: bronze_acs5_tract
+├── future silver and gold tables
+└── future application serving tables
+```
+
+Unity Catalog volumes hold files; Unity Catalog managed Delta tables hold tabular data. No workflow uses legacy DBFS mounts. Snapshot hashes and manifests make a source version traceable even when a publisher replaces a file at the same URL. One team member should own a canonical refresh run so two simultaneous notebook runs do not compete to publish the same snapshot.
 
 ## Data and modeling boundary
 
@@ -35,9 +55,9 @@ Training consumes versioned, validated tables. Each experiment records its featu
 
 ## Application boundary
 
-The application receives only the data needed for supported views: tract profiles, history, forecasts and intervals, analogues, explanations, scenario definitions, geometry, and version metadata. It must reject incompatible or incomplete inputs and clearly label unavailable results.
+The Databricks application receives only the data needed for supported views: tract profiles, history, forecasts and intervals, analogues, explanations, scenario definitions, geometry, and version metadata. It must reject incompatible or incomplete inputs and clearly label unavailable results. It should query dedicated serving tables through a SQL warehouse rather than reading raw or training tables.
 
-The public application should not require a Databricks token or other research credentials. Research compute may produce application data, but it is not part of the live request path.
+Databricks Apps cannot be made anonymously public. The primary Databricks application is therefore appropriate for team development, mentor review, and an authenticated demonstration. If the course or portfolio needs an anonymous URL, the same serving contract will be exported as a compact bundle for a public Streamlit mirror; raw tables and Databricks credentials will not be exposed.
 
 ## Failure boundaries
 

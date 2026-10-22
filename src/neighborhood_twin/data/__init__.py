@@ -12,6 +12,7 @@ from neighborhood_twin.data.acquisition import (
     AcquisitionError,
     SourceRequest,
     acquire_http_snapshot,
+    register_existing_snapshot,
     request_for_static_source,
 )
 from neighborhood_twin.data.catalog import CORE_FILE_SOURCES, SourceDefinition, get_source
@@ -25,5 +26,6 @@ __all__ = [
     "SourceRequest",
     "acquire_http_snapshot",
     "get_source",
+    "register_existing_snapshot",
     "request_for_static_source",
 ]

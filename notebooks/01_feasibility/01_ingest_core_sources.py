@@ -40,7 +40,11 @@ _add_repository_source()
 
 # COMMAND ----------
 
-from neighborhood_twin.data import acquire_http_snapshot, request_for_static_source
+from neighborhood_twin.data import (
+    acquire_http_snapshot,
+    register_existing_snapshot,
+    request_for_static_source,
+)
 from neighborhood_twin.data.acs import build_acs_tract_request
 from neighborhood_twin.data.databricks import (
     append_manifest,
@@ -60,6 +64,11 @@ dbutils.widgets.text("acs_release_year", "2024", "ACS five-year release")
 dbutils.widgets.text("pilot_state_fips", "04,26,42", "Pilot state FIPS codes")
 dbutils.widgets.text("secret_scope", "neighborhood-twin", "Databricks secret scope")
 dbutils.widgets.text("census_secret_key", "census-api-key", "Census key secret name")
+dbutils.widgets.text(
+    "uploaded_source_directory",
+    "",
+    "Optional volume directory containing manually uploaded source files",
+)
 
 catalog = dbutils.widgets.get("catalog").strip()
 schema = dbutils.widgets.get("schema").strip()
@@ -70,6 +79,7 @@ pilot_state_fips = tuple(
 )
 secret_scope = dbutils.widgets.get("secret_scope").strip()
 census_secret_key = dbutils.widgets.get("census_secret_key").strip()
+uploaded_source_directory = dbutils.widgets.get("uploaded_source_directory").strip()
 
 if not pilot_state_fips:
     raise ValueError("At least one pilot state FIPS code is required")
@@ -79,6 +89,15 @@ if not pilot_state_fips:
 ensure_data_objects(spark, catalog=catalog, schema=schema, volume=volume)
 raw_root = volume_root(catalog, schema, volume)
 print(f"Raw snapshots will be stored under {raw_root}")
+
+
+def _acquire_or_register(request):
+    if uploaded_source_directory:
+        uploaded_path = Path(uploaded_source_directory) / request.file_name
+        if uploaded_path.is_file():
+            return register_existing_snapshot(request, uploaded_path, raw_root)
+    return acquire_http_snapshot(request, raw_root)
+
 
 # COMMAND ----------
 
@@ -91,12 +110,12 @@ static_source_ids = (
 for source_id in static_source_ids:
     request = request_for_static_source(source_id)
     try:
-        manifest = acquire_http_snapshot(request, raw_root)
+        manifest = _acquire_or_register(request)
     except Exception as error:
         raise RuntimeError(
             f"Could not acquire {source_id}. Databricks Free Edition can restrict outbound "
-            "domains. If the source is blocked, download it locally, verify its hash, upload it "
-            "to the managed volume, and register that file before continuing."
+            "domains. If the source is blocked, download it locally, upload it to one volume "
+            "directory, and set the uploaded_source_directory widget before rerunning."
         ) from error
 
     if source_id == "fhfa_tract_hpi":
@@ -121,7 +140,7 @@ for state_fips in pilot_state_fips:
         api_key=census_api_key,
     )
     try:
-        manifest = acquire_http_snapshot(request, raw_root)
+        manifest = _acquire_or_register(request)
     except Exception as error:
         raise RuntimeError(
             f"Could not acquire the {acs_release_year} ACS tract response for state "

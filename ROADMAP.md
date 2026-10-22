@@ -157,11 +157,11 @@ This roadmap turns the [project charter](PROJECT_CHARTER.md) into weekly outcome
 - Build the compact serving bundle for selected demonstration metros.
 - Complete the map, state, history, forecast, drivers, comparison, analogues, scenario, and methods views.
 - Add caching, simplified geometry, accessibility checks, empty states, and visible model/data versions.
-- Deploy the public app and a static documentation fallback.
+- Deploy the authenticated Databricks App and add an anonymous public mirror only if required.
 
 **Exit evidence**
 
-- Public Streamlit URL.
+- Working authenticated Databricks App and, if anonymous access is required, a public Streamlit mirror.
 - Public documentation URL.
 - Deployment smoke test and recorded fallback walkthrough.
 
@@ -204,7 +204,7 @@ This roadmap turns the [project charter](PROJECT_CHARTER.md) into weekly outcome
 
 ### Solo
 
-Work in roadmap order and restrict the public app to a few representative metros. One-year forecasting, one nonlinear model, calibrated intervals, PCA analogues, and a two-variable sensitivity grid are enough for a strong end-to-end project.
+Work in roadmap order and restrict the application to a few representative metros. One-year forecasting, one nonlinear model, calibrated intervals, PCA analogues, and a two-variable sensitivity grid are enough for a strong end-to-end project.
 
 ### Two people
 
@@ -218,14 +218,16 @@ Divide ownership across data/geography, forecasting/uncertainty, representations
 
 ## Deployment target
 
-Research compute and public serving remain separate:
+Databricks is the shared data, research, and primary application environment. The application still reads a dedicated serving contract rather than raw or training tables:
 
 ```mermaid
 flowchart LR
-    D[Databricks ETL and MLflow] --> B[Versioned serving bundle]
-    B --> G[GitHub release or repository artifact]
-    G --> S[Streamlit public app]
+    G[GitHub source and review] --> D[Databricks ETL and MLflow]
+    D --> T[Versioned serving tables]
+    T --> A[Databricks Streamlit app]
+    T -. optional export .-> B[Versioned serving bundle]
+    B --> S[Anonymous Streamlit mirror]
     G --> P[GitHub Pages documentation]
 ```
 
-Databricks is used for learning and batch research work. It is not a public runtime dependency. The detailed deployment runbook belongs in `docs/implementation/12_deployment_and_operations.md`.
+Databricks Apps require authenticated access and Free Edition apps stop after 24 hours unless restarted. If the capstone needs an anonymous portfolio URL, the public mirror uses the same serving contract without querying Databricks. The detailed deployment runbook belongs in `docs/implementation/12_deployment_and_operations.md`.

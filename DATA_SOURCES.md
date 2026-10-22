@@ -8,7 +8,7 @@ A source appearing here is not automatically approved for modeling or redistribu
 
 | Source | Intended use | Main limitations |
 |---|---|---|
-| [FHFA House Price Index](https://www.fhfa.gov/data/hpi/datasets) | Annual single-family tract target, lagged market history, and coverage analysis | Developmental and non-seasonally adjusted; excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments; missing values are meaningful |
+| [FHFA House Price Index](https://www.fhfa.gov/house-price-index) | Annual single-family tract target, lagged market history, and coverage analysis | Developmental and non-seasonally adjusted; excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments; missing values are meaningful |
 | [ACS five-year data](https://www.census.gov/data/developers/data-sets/acs-5year.html) | Housing composition, income, population, tenure, vacancy, housing burden, education, and commuting context | Released annually but pools 60 months of responses; adjacent releases overlap; margins of error, publication lag, and variable or geography changes must be retained |
 | [2020 Census cartographic boundaries](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.2020.html) | Tract geometry for maps, joins, and adjacency | Simplified display geometry; does not contain demographic attributes |
 | [Census relationship files](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html) | Mapping earlier tract vintages to the canonical geography | Splits and merges require explicit weighting assumptions and validation |
@@ -62,6 +62,22 @@ Every acquired source version should record:
 - code version responsible for acquisition.
 
 Raw national data is not committed to Git. The repository may include a small fixture or compact demonstration output only after its source terms permit redistribution and its attribution is recorded.
+
+## Implemented feasibility extract
+
+The first pipeline slice uses the current FHFA tract CSV, the 2020 national tract cartographic boundary ZIP, the national 2010-to-2020 tract relationship file, and state-by-state ACS five-year API responses. The source definitions and exact endpoints live in `src/neighborhood_twin/data/` so a changed publisher URL fails visibly instead of being hidden in a notebook.
+
+The initial ACS request is deliberately focused. It retrieves estimates and margins of error for:
+
+- total population and housing units;
+- occupied and vacant units;
+- owner and renter tenure;
+- every B25024 units-in-structure category needed to calculate single-family, multifamily, and mobile/other shares;
+- median household income, median owner-occupied value, and median gross rent.
+
+This request uses 43 API variables including `NAME`, below the Census limit of 50 per request. Housing-cost burden, education, and commuting are still relevant, but they belong in separate, reviewed extracts after the feasibility run shows that the core time and geography joins work. Adding every plausible variable to the first request would make failures harder to interpret.
+
+The Census API currently requires a key for these requests. The key must be saved in a Databricks secret named by the notebook widgets and must never appear in Git, a manifest, or notebook output. The acquisition code redacts the `key` query parameter before recording the endpoint.
 
 ## Privacy and IRB position
 
