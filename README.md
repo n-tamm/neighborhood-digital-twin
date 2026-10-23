@@ -110,7 +110,7 @@ The implementation guide is numbered in dependency order. It is a living technic
 
 ## Run the current code
 
-The repository now contains tested source definitions, content-addressed acquisition, source manifests, bronze quality profiling, and separate Databricks jobs for acquisition and silver transformation. The silver tables provide typed FHFA fields, readable ACS estimates and margins of error, missing-value reasons, housing-composition ratios, lineage, and persisted quality metrics. Models and the application have not been implemented yet.
+The repository now contains tested source definitions, content-addressed acquisition, source manifests, bronze quality profiling, and separate Databricks jobs for acquisition and silver transformation. The primary ACS silver product uses one tract-release-measure row with a companion data dictionary, paired margins of error, explicit missing-value reasons, units, universes, and lineage. A generated wide table provides convenient housing-composition ratios, while the FHFA table retains its tract-year history and availability flags. Models and the application have not been implemented yet.
 
 PowerShell:
 
@@ -147,7 +147,7 @@ databricks bundle run core_source_ingestion --profile neighborhood-twin
 databricks bundle run silver_source_transforms --profile neighborhood-twin
 ```
 
-The deployment creates or updates two independent jobs. The bronze job manages source acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The silver job reads accepted bronze data and publishes the current FHFA and ACS source tables without downloading anything. Raw source files and secrets remain outside Git. Complete setup, contracts, findings, and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
+The deployment creates or updates two independent jobs. The bronze job manages source acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The silver job reads accepted bronze data and publishes the current FHFA table, normalized ACS table, ACS dictionary, and wide ACS convenience table without downloading anything. Raw source files and secrets remain outside Git. Complete setup, contracts, findings, and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
 
 ## Development workflow
 

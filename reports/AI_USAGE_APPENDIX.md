@@ -71,15 +71,24 @@ The initial Databricks bundle configuration was evaluated against the live works
 
 The bronze quality profiler was reviewed through the repository diff, 14 local unit tests, Ruff, mypy, bundle validation, and a full live Databricks run. The live review queried the persisted metrics rather than relying only on the successful job status. That check confirmed zero hard failures and zero warnings, but also exposed the more important feasibility result that only 63.2% of pilot ACS tracts had a non-null same-year FHFA HPI. The profiler was then revised to preserve both row-match coverage and usable-target coverage as separate metrics. This is an example of AI-assisted code being changed after contact with the real data rather than accepted because its initial checks passed.
 
-The silver transformation code was checked with 18 local unit tests, Ruff, mypy, bundle
+The silver transformation code was first checked with 18 local unit tests, Ruff, mypy, bundle
 validation, and two live runs of the isolated Databricks silver job. The persisted quality table
 confirmed that source row counts were preserved and that keys, GEOIDs, ACS parsing, snapshot
 selection, and derived-ratio ranges passed. Follow-up SQL checks then examined relative margins
 of error and compared ACS tract characteristics by usable FHFA coverage. That review found
 material differences between covered and uncovered tracts, so the implementation notes now
 require coverage-sliced evaluation and prevent forecasts from being generalized to the full
-ACS tract universe. The code was evaluated not only by whether it ran, but by whether its
-outputs changed the project's methodological decisions.
+ACS tract universe.
+
+The ACS silver design was then revised because the original 130-column table was readable but
+too wide to be the main interface for repeated exploration and historical expansion. The
+revision added a 29-column normalized measure table and a 21-row governed dictionary while
+keeping the wide table as a generated convenience product. It passed Ruff, mypy, all 20 local
+tests, bundle validation, and two further live Databricks runs. Each live run recorded 34
+passing checks, 11 informational measures, and no warnings or failures. Read-only SQL checks
+confirmed stable output counts after the rerun and verified per-measure missingness. This
+evaluation directly changed the data contract rather than treating a successful first version
+as final.
 
 ## Maintenance requirements
 

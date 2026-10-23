@@ -34,7 +34,9 @@ The project should converge on a small set of stable products:
 
 - `source_snapshot_manifest`: one record per acquired source object;
 - `silver_fhfa_tract_year`: standardized HPI history at the source's honest grain;
-- `silver_acs_tract_year`: ACS estimates, margins of error, and release metadata;
+- `silver_acs_tract_measure`: primary normalized ACS estimates, margins of error, definitions, and release metadata;
+- `silver_acs_measure_dictionary`: measure codes, labels, units, universes, and official metadata links;
+- `silver_acs_tract_year`: generated wide ACS convenience table and transparent housing ratios;
 - `silver_tract_geography`: canonical tract identifiers, geometry references, and region membership;
 - `gold_neighborhood_state`: point-in-time tract-year descriptive state;
 - `gold_features`: model-ready, leakage-safe feature rows;

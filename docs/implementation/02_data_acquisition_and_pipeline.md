@@ -13,17 +13,19 @@ The first working slice is now in place:
 - `acs.py` builds the focused state-level ACS request and keeps each estimate paired with its margin of error;
 - `databricks.py` creates the project schema and volume, publishes the manifest table, and validates FHFA and ACS bronze Delta tables;
 - `notebooks/01_feasibility/01_ingest_core_sources.py` is the thin Databricks entry point;
-- `transform.py` selects the latest accepted source snapshots and prepares validated,
-  human-readable FHFA and ACS silver tables;
+- `transform.py` selects the latest accepted source snapshots and prepares validated FHFA,
+  normalized ACS, ACS dictionary, and wide ACS convenience tables;
 - `notebooks/03_transformation/01_build_silver_source_tables.py` is the independent silver
   job entry point;
 - unit tests cover request limits, GEOID construction, key redaction, hashing, immutable
   placement, the manual-upload fallback, and the ACS silver missing-value policy.
 
 The acquisition job remains source-shaped bronze. The separate silver job now translates ACS
-missing values, assigns readable fields, and calculates documented housing shares. Neither job
-harmonizes older tract vintages or creates a modeling table; those responsibilities remain in
-the geography and feature stages.
+missing values, assigns readable measure definitions and universes, and calculates documented
+housing shares. The normalized table is the main analytical interface; the wide table is kept
+for convenient tract profiles and explicit derived ratios. Neither job harmonizes older tract
+vintages or creates a modeling table; those responsibilities remain in the geography and feature
+stages.
 
 ## Databricks storage contract
 
@@ -39,7 +41,9 @@ Databricks is the canonical team environment for source data and ETL. Use an exi
 | ACS bronze table | `bronze_acs5_tract` | Source variable codes plus ACS release window and snapshot lineage |
 | Quality table | `bronze_quality_metrics` | Append-only profiling results by run, source, metric, and optional dimension |
 | FHFA silver table | `silver_fhfa_tract_year` | Current standardized FHFA tract-year records with availability flags and lineage |
-| ACS silver table | `silver_acs_tract_year` | Typed ACS tract-release records with readable names, margins of error, missing reasons, and housing ratios |
+| ACS measure table | `silver_acs_tract_measure` | Primary normalized ACS table with one tract-release-measure row, uncertainty, definitions, and lineage |
+| ACS dictionary | `silver_acs_measure_dictionary` | One governed definition per selected ACS measure, including source codes, universe, unit, and official metadata link |
+| ACS wide table | `silver_acs_tract_year` | Generated tract-release convenience table with readable fields and housing ratios |
 | Silver quality table | `silver_quality_metrics` | Append-only validation and coverage metrics for each attempted silver build |
 
 Raw file paths follow:
@@ -114,21 +118,27 @@ The main results were:
 
 A follow-up join showed that the 6,340 same-year matches are also the only pilot ACS tracts with any FHFA history in the current file. The unmatched tracts therefore are not simply missing one recent year. The silver layer should preserve the full ACS tract universe, attach transparent FHFA coverage flags, and form a separate eligible modeling cohort instead of silently dropping uncovered communities. The application should still be able to describe an uncovered tract, but it must not show an FHFA forecast where the target history is unavailable. Later feasibility work will compare this target coverage with housing-stock composition and geography to identify selection bias.
 
-## First validated silver build
+## Validated silver builds
 
 The separate silver job completed successfully in Databricks Free Edition on October 23,
-2026. It reads the accepted bronze tables and does not rerun acquisition. The first build
-preserved all 2,179,042 FHFA rows and all 8,228 ACS pilot rows, selected one FHFA snapshot
-and one ACS snapshot per state/release, and reported no duplicate keys, malformed GEOIDs,
-parse failures, or out-of-range derived housing ratios.
+2026. It reads accepted bronze tables and does not rerun acquisition. The refined build
+preserved all 2,179,042 FHFA rows and all 8,228 ACS pilot tract-release rows. It produced
+172,788 normalized ACS measure rows, exactly 8,228 tracts multiplied by 21 measures, plus a
+21-row measure dictionary.
 
-The tables have deliberately different update behavior. Silver FHFA and ACS tables are
-current derived products and are overwritten from the selected accepted snapshots. Every
-row still carries its source snapshot, retrieval timestamp, silver build, and schema version.
-The silver quality table is append-only, so prior build results remain available for review.
-A second silver-only run preserved the same two table row counts, again reported zero failures
-and warnings, and added a second distinct quality-run record. This verifies that rerunning
-silver does not duplicate source rows or require a bronze refresh.
+The four current silver products are overwritten from the selected accepted snapshots. Every
+data row carries its source snapshot, retrieval timestamp, silver build, and schema version;
+the dictionary carries the build and schema version. The silver quality table is append-only,
+so prior build results remain available for review. Two consecutive runs of the refined job
+preserved the same four table counts and left one current build in each output table.
+
+The latest run recorded 34 passing checks and 11 informational measures, with no warnings or
+failures. Hard checks cover schema names and Spark types, snapshot registration and accepted
+status, source-to-silver row reconciliation, key uniqueness, GEOID format, ACS parseability,
+nonnegative published values, Census housing-account balances, geography-vintage assignment,
+derived-ratio ranges, normalized-to-wide row equivalence, dictionary uniqueness, and missing-
+reason consistency. The repeat run took about two and a half minutes. Runtime and storage
+should be monitored again when historical and national ACS coverage is added.
 
 ### Silver source contracts
 
@@ -137,17 +147,37 @@ annual percentage change, alternative-base indexes, source lineage, and explicit
 HPI and annual-change availability. Missing HPI values remain null and are never converted to
 zero. This table describes the source's filtered single-family market rather than all housing.
 
-`silver_acs_tract_year` has one row per `geoid × acs_release_year`. The survey start year,
-survey end year, and release year remain separate because an ACS five-year release is not a
-single-year measurement. Source codes are renamed to readable estimate and margin-of-error
-fields. Documented Census special values become nulls with fields such as
-`median_gross_rent_estimate_missing_reason`; unexpected text would stop publication as a
-parse failure.
+`silver_acs_tract_measure` is the primary ACS analytical table. Its key is `geoid ×
+acs_release_year × measure_name`, and its 29 columns stay usable as the project adds releases
+or measures. Each row carries the readable measure name and label, Census group, unit,
+statistical universe, estimate, margin of error, relative margin of error, missing reasons,
+survey window, geography vintage, and lineage. The survey start year, survey end year, and
+release year remain separate because an ACS five-year release is not a single-year measurement.
+
+`silver_acs_measure_dictionary` has one row per selected measure. It records the original
+estimate and margin-of-error codes and links to the official Census group metadata used to
+verify the table concept, universe, and unit. This lets a contributor understand a field
+without decoding names such as `B25064_001E`. The current definitions are checked against the
+[2024 ACS five-year group metadata](https://api.census.gov/data/2024/acs/acs5/groups.html), and
+each dictionary row links to its specific detailed-table group.
+
+`silver_acs_tract_year` remains available as a generated wide convenience table with one row
+per `geoid × acs_release_year`. It is useful for tract profiles and transformations that need
+several measures on one row, but it is not the default table for general exploration. Source
+codes are renamed to readable fields. Documented Census special values become nulls with
+fields such as `median_gross_rent_estimate_missing_reason`; unexpected text stops publication
+as a parse failure.
 
 The ACS table also includes occupancy, vacancy, tenure, and housing-structure shares. These
 are transparent ratios of published estimates, not new measurements, and no uncertainty is
 invented for them. Each underlying estimate retains its margin of error and a relative-MOE
 field. Derived-ratio uncertainty will be handled later if the ratios become model inputs.
+
+All 18 count measures are complete across the 8,228 pilot tracts. The three median-dollar
+measures have legitimate unavailable values after Census special codes are translated: median
+household income is missing for 254 tracts (3.09%), median owner-occupied value for 352
+(4.28%), and median gross rent for 704 (8.56%). Those nulls align with their stated universes
+and remain visible rather than being filled with zero.
 
 ### Findings that affect later modeling
 

@@ -6,7 +6,8 @@ Current and planned module boundaries:
 - `validate`: implemented persisted bronze profiling for schema, grain, ranges, uniqueness, parseability, source lineage, and FHFA-to-ACS tract coverage;
 - `geography`: GEOIDs, crosswalks, geometry, adjacency, and regional membership;
 - `transform`: implemented latest-snapshot selection, bronze-to-silver normalization,
-  source-specific validation, and publication for FHFA and ACS;
+  executable schema and reconciliation checks, and publication for FHFA, normalized ACS,
+  the ACS dictionary, and the generated wide ACS table;
 - `features`: point-in-time feature and target construction;
 - `models`: baselines, candidate forecasters, calibration, and model persistence;
 - `representations`: PCA or other representations, analogue search, and optional clustering;
