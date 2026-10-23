@@ -13,6 +13,8 @@ import pytest
 
 from neighborhood_twin.data.acquisition import redact_url
 from neighborhood_twin.data.acs import (
+    ACS_CORE_MEASURES,
+    acs_measure_dictionary_records,
     acs_variable_codes,
     build_acs_tract_request,
     parse_acs_api_payload,
@@ -46,3 +48,16 @@ def test_acs_parser_builds_geoid_and_time_fields() -> None:
 def test_acs_parser_rejects_missing_required_fields() -> None:
     with pytest.raises(ValueError, match="missing required columns"):
         parse_acs_api_payload(json.dumps([["NAME", "state"], ["Name", "26"]]), release_year=2024)
+
+
+def test_acs_measure_dictionary_has_one_complete_row_per_measure() -> None:
+    records = acs_measure_dictionary_records(release_year=2024)
+
+    assert len(records) == len(ACS_CORE_MEASURES)
+    assert len({record["measure_name"] for record in records}) == len(records)
+    median_rent = next(
+        record for record in records if record["measure_name"] == "median_gross_rent"
+    )
+    assert median_rent["universe"] == "Renter-occupied housing units paying cash rent"
+    assert median_rent["unit"] == "dollars"
+    assert median_rent["metadata_url"].endswith("/B25064.html")

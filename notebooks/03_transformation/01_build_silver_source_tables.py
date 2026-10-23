@@ -16,9 +16,10 @@
 # MAGIC
 # MAGIC **Inputs:** The current FHFA and ACS bronze tables.
 # MAGIC
-# MAGIC **Outputs:** One FHFA tract-year table, one ACS tract-release table, and an
-# MAGIC append-only silver quality table. This job does not harmonize older tract vintages,
-# MAGIC construct modeling targets, or impute unavailable values.
+# MAGIC **Outputs:** One FHFA tract-year table, a primary normalized ACS measure table,
+# MAGIC its data dictionary, a generated wide ACS convenience table, and an append-only
+# MAGIC silver quality table. This job does not harmonize tract vintages, construct modeling
+# MAGIC targets, or impute unavailable values.
 
 # COMMAND ----------
 
@@ -58,6 +59,16 @@ dbutils.widgets.text(
     "acs_table", "silver_acs_tract_year", "Current ACS silver table"
 )
 dbutils.widgets.text(
+    "acs_measure_table",
+    "silver_acs_tract_measure",
+    "Normalized ACS tract-release-measure table",
+)
+dbutils.widgets.text(
+    "acs_dictionary_table",
+    "silver_acs_measure_dictionary",
+    "ACS measure data dictionary",
+)
+dbutils.widgets.text(
     "quality_table", "silver_quality_metrics", "Append-only silver quality table"
 )
 
@@ -65,6 +76,8 @@ catalog = dbutils.widgets.get("catalog").strip()
 schema = dbutils.widgets.get("schema").strip()
 fhfa_table = dbutils.widgets.get("fhfa_table").strip()
 acs_table = dbutils.widgets.get("acs_table").strip()
+acs_measure_table = dbutils.widgets.get("acs_measure_table").strip()
+acs_dictionary_table = dbutils.widgets.get("acs_dictionary_table").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
 # COMMAND ----------
@@ -75,6 +88,8 @@ build = prepare_silver_build(
     schema=schema,
     fhfa_table=fhfa_table,
     acs_table=acs_table,
+    acs_measure_table=acs_measure_table,
+    acs_dictionary_table=acs_dictionary_table,
 )
 quality_table_name = write_quality_metrics(
     spark,
@@ -92,12 +107,19 @@ if failure_metrics:
     )
     raise RuntimeError(f"Silver quality checks failed before publication: {failure_names}")
 
-fhfa_table_name, acs_table_name = publish_silver_build(
+(
+    fhfa_table_name,
+    acs_table_name,
+    acs_measure_table_name,
+    acs_dictionary_table_name,
+) = publish_silver_build(
     build,
     catalog=catalog,
     schema=schema,
     fhfa_table=fhfa_table,
     acs_table=acs_table,
+    acs_measure_table=acs_measure_table,
+    acs_dictionary_table=acs_dictionary_table,
 )
 
 # COMMAND ----------
@@ -107,7 +129,8 @@ latest_metrics = spark.table(f"{catalog}.{schema}.{quality_table}").where(
 )
 display(latest_metrics.orderBy("metric_group", "table_name", "metric_name", "dimension"))
 print(
-    f"Published {fhfa_table_name} and {acs_table_name}; "
+    f"Published {fhfa_table_name}, {acs_table_name}, {acs_measure_table_name}, and "
+    f"{acs_dictionary_table_name}; "
     f"wrote {len(build.metrics)} checks to {quality_table_name} "
     f"for build {build.build_id}."
 )

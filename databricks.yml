@@ -37,8 +37,14 @@ variables:
     description: Standardized current FHFA tract-year table
     default: silver_fhfa_tract_year
   silver_acs_table:
-    description: Standardized current ACS tract-release table
+    description: Generated wide ACS tract-release convenience table
     default: silver_acs_tract_year
+  silver_acs_measure_table:
+    description: Primary normalized ACS tract-release-measure table
+    default: silver_acs_tract_measure
+  silver_acs_dictionary_table:
+    description: Governed ACS measure data dictionary
+    default: silver_acs_measure_dictionary
   silver_quality_table:
     description: Persisted silver build metrics
     default: silver_quality_metrics
@@ -88,6 +94,8 @@ resources:
               schema: ${var.schema}
               fhfa_table: ${var.silver_fhfa_table}
               acs_table: ${var.silver_acs_table}
+              acs_measure_table: ${var.silver_acs_measure_table}
+              acs_dictionary_table: ${var.silver_acs_dictionary_table}
               quality_table: ${var.silver_quality_table}
 
 targets:

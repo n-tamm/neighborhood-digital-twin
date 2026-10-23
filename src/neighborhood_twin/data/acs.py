@@ -26,6 +26,10 @@ class AcsMeasure:
     concept: str
 
     @property
+    def group_code(self) -> str:
+        return self.variable_root.split("_", maxsplit=1)[0]
+
+    @property
     def estimate_code(self) -> str:
         return f"{self.variable_root}E"
 
@@ -57,6 +61,72 @@ ACS_CORE_MEASURES: tuple[AcsMeasure, ...] = (
     AcsMeasure("median_owner_occupied_value", "B25077_001", "Median home value"),
     AcsMeasure("median_gross_rent", "B25064_001", "Median gross rent"),
 )
+
+
+@dataclass(frozen=True)
+class AcsGroupMetadata:
+    """Shared Census metadata for one ACS detailed-table group."""
+
+    concept: str
+    universe: str
+    unit: str
+    group_code: str
+
+    def metadata_url(self, release_year: int) -> str:
+        return (
+            f"https://api.census.gov/data/{release_year}/acs/acs5/groups/"
+            f"{self.group_code}.html"
+        )
+
+
+ACS_GROUP_METADATA: dict[str, AcsGroupMetadata] = {
+    "B01003": AcsGroupMetadata("Total Population", "Total population", "count", "B01003"),
+    "B25001": AcsGroupMetadata("Housing Units", "Housing units", "count", "B25001"),
+    "B25002": AcsGroupMetadata("Occupancy Status", "Housing units", "count", "B25002"),
+    "B25003": AcsGroupMetadata("Tenure", "Occupied housing units", "count", "B25003"),
+    "B25024": AcsGroupMetadata("Units in Structure", "Housing units", "count", "B25024"),
+    "B19013": AcsGroupMetadata(
+        "Median Household Income in the Past 12 Months",
+        "Households",
+        "inflation-adjusted dollars",
+        "B19013",
+    ),
+    "B25077": AcsGroupMetadata(
+        "Median Value (Dollars)",
+        "Owner-occupied housing units",
+        "dollars",
+        "B25077",
+    ),
+    "B25064": AcsGroupMetadata(
+        "Median Gross Rent (Dollars)",
+        "Renter-occupied housing units paying cash rent",
+        "dollars",
+        "B25064",
+    ),
+}
+
+
+def acs_measure_dictionary_records(*, release_year: int) -> tuple[dict[str, str | int], ...]:
+    """Return one stable, human-readable dictionary row per requested measure."""
+
+    records: list[dict[str, str | int]] = []
+    for measure_order, measure in enumerate(ACS_CORE_MEASURES, start=1):
+        group = ACS_GROUP_METADATA[measure.group_code]
+        records.append(
+            {
+                "measure_order": measure_order,
+                "measure_name": measure.name,
+                "group_code": measure.group_code,
+                "measure_label": measure.concept,
+                "table_concept": group.concept,
+                "universe": group.universe,
+                "unit": group.unit,
+                "estimate_code": measure.estimate_code,
+                "margin_of_error_code": measure.margin_of_error_code,
+                "metadata_url": group.metadata_url(release_year),
+            }
+        )
+    return tuple(records)
 
 
 def acs_variable_codes() -> tuple[str, ...]:
