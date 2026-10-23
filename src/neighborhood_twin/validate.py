@@ -655,9 +655,13 @@ def _profile_geography_match(
         fhfa.select(
             functions.col("tract").alias("geoid"),
             functions.col("year").alias("acs_release_year"),
+            functions.when(functions.col("hpi").isNotNull(), 1)
+            .otherwise(0)
+            .alias("has_usable_hpi"),
         )
         .where(functions.col("geoid").isNotNull())
-        .distinct()
+        .groupBy("geoid", "acs_release_year")
+        .agg(functions.max("has_usable_hpi").alias("has_usable_hpi"))
         .withColumn("has_same_year_fhfa", functions.lit(1))
     )
     acs_keys = acs.select("geoid", "state", "acs_release_year").distinct()
@@ -667,20 +671,30 @@ def _profile_geography_match(
         functions.sum(
             functions.coalesce(functions.col("has_same_year_fhfa"), functions.lit(0))
         ).alias("matched_tract_count"),
+        functions.sum(
+            functions.coalesce(functions.col("has_usable_hpi"), functions.lit(0))
+        ).alias("usable_hpi_count"),
     )
     state_rows = by_state.collect()
     total_acs = sum(int(row["acs_tract_count"]) for row in state_rows)
     total_matched = sum(int(row["matched_tract_count"]) for row in state_rows)
+    total_usable_hpi = sum(int(row["usable_hpi_count"]) for row in state_rows)
 
     metrics: list[QualityMetric] = []
-    for state, acs_count, matched_count in [
-        ("all", total_acs, total_matched),
+    for state, acs_count, matched_count, usable_hpi_count in [
+        ("all", total_acs, total_matched, total_usable_hpi),
         *[
-            (str(row["state"]), int(row["acs_tract_count"]), int(row["matched_tract_count"]))
+            (
+                str(row["state"]),
+                int(row["acs_tract_count"]),
+                int(row["matched_tract_count"]),
+                int(row["usable_hpi_count"]),
+            )
             for row in state_rows
         ],
     ]:
         match_rate = matched_count / acs_count if acs_count else 0.0
+        usable_hpi_rate = usable_hpi_count / acs_count if acs_count else 0.0
         metrics.extend(
             [
                 _metric(
@@ -716,6 +730,29 @@ def _profile_geography_match(
                     expectation="descriptive coverage, not a pass/fail threshold",
                     dimension=f"state={state}",
                     notes="ACS release year matched to the same FHFA observation year.",
+                ),
+                _metric(
+                    run_id=run_id,
+                    profiled_at_utc=profiled_at_utc,
+                    table_name=table_name,
+                    metric_group="geography_match",
+                    metric_name="same_year_usable_hpi_count",
+                    value=usable_hpi_count,
+                    status="info",
+                    expectation="descriptive target coverage, not a pass/fail threshold",
+                    dimension=f"state={state}",
+                ),
+                _metric(
+                    run_id=run_id,
+                    profiled_at_utc=profiled_at_utc,
+                    table_name=table_name,
+                    metric_group="geography_match",
+                    metric_name="same_year_usable_hpi_rate",
+                    value=usable_hpi_rate,
+                    status="info",
+                    expectation="descriptive target coverage, not a pass/fail threshold",
+                    dimension=f"state={state}",
+                    notes="A matching FHFA row exists and its HPI value is not null.",
                 ),
             ]
         )
