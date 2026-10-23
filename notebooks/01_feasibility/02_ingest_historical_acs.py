@@ -125,7 +125,7 @@ bronze_name = qualified_name(catalog, schema, "bronze_acs5_tract")
 manifest_name = qualified_name(catalog, schema, "source_snapshot_manifest")
 display(
     spark.table(bronze_name)
-    .where(functions.col("acs_release_year").isin(scope.release_years))
+    .where(functions.col("acs_release_year").isin(*scope.release_years))
     .groupBy("acs_release_year", "state")
     .agg(
         functions.count(functions.lit(1)).alias("tract_count"),
@@ -135,7 +135,7 @@ display(
 )
 display(
     spark.table(manifest_name)
-    .where(functions.col("snapshot_id").isin(accepted_snapshots))
+    .where(functions.col("snapshot_id").isin(*accepted_snapshots))
     .select(
         "snapshot_id",
         "reference_period",
