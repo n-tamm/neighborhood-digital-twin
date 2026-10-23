@@ -24,6 +24,12 @@ variables:
   pilot_state_fips:
     description: Comma-separated state FIPS codes used by the feasibility run
     default: "04,26,42"
+  historical_acs_release_years:
+    description: Reviewed ACS releases acquired by one bounded historical run
+    default: "2014,2019"
+  historical_acs_maximum_requests:
+    description: Safety limit for state-by-release API calls in one historical run
+    default: "25"
   secret_scope:
     description: Databricks secret scope containing the Census API key
     default: neighborhood-twin
@@ -97,6 +103,25 @@ resources:
               acs_measure_table: ${var.silver_acs_measure_table}
               acs_dictionary_table: ${var.silver_acs_dictionary_table}
               quality_table: ${var.silver_quality_table}
+    historical_acs_ingestion:
+      name: Neighborhood Digital Twin - Historical ACS Ingestion
+      description: Acquires a bounded state-by-release batch into the shared ACS bronze table.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_historical_acs
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              acs_release_years: ${var.historical_acs_release_years}
+              state_fips_codes: ${var.pilot_state_fips}
+              maximum_requests: ${var.historical_acs_maximum_requests}
+              secret_scope: ${var.secret_scope}
+              census_secret_key: ${var.census_secret_key}
 
 targets:
   team:

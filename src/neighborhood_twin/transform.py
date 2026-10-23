@@ -718,6 +718,11 @@ def _profile_silver_frames(
                 out_of_range_condition,
                 "out_of_range_ratio_row_count",
             ),
+            _count_when(
+                functions,
+                functions.col("source_geography_vintage") != "2020",
+                "unharmonized_acs_row_count",
+            ),
         )
         .first()
         .asDict()
@@ -1069,6 +1074,19 @@ def _profile_silver_frames(
             status="pass" if acs_summary["out_of_range_ratio_row_count"] == 0 else "fail",
             expectation="= 0; non-null housing ratios remain between 0 and 1",
         ),
+        _metric(
+            build_id=build_id,
+            built_at_utc=built_at_utc,
+            table_name=acs_table_name,
+            metric_group="geography",
+            metric_name="unharmonized_acs_row_count",
+            value=acs_summary["unharmonized_acs_row_count"],
+            status="info",
+            expectation=(
+                "reported and excluded from direct FHFA coverage joins until Stage 03 "
+                "geography harmonization"
+            ),
+        ),
     ]
 
     for table_name, mismatch_count in schema_mismatches.items():
@@ -1220,7 +1238,8 @@ def _profile_silver_frames(
         "hpi_available",
     )
     coverage = (
-        acs.select("geoid", "state_fips", "acs_release_year")
+        acs.where(functions.col("source_geography_vintage") == "2020")
+        .select("geoid", "state_fips", "acs_release_year")
         .join(fhfa_keys, ["geoid", "acs_release_year"], "left")
         .groupBy("state_fips")
         .agg(

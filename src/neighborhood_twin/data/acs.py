@@ -38,6 +38,18 @@ class AcsMeasure:
         return f"{self.variable_root}M"
 
 
+@dataclass(frozen=True)
+class AcsIngestionScope:
+    """Bounded state-by-release scope for one historical acquisition run."""
+
+    release_years: tuple[int, ...]
+    state_fips_codes: tuple[str, ...]
+
+    @property
+    def request_count(self) -> int:
+        return len(self.release_years) * len(self.state_fips_codes)
+
+
 ACS_CORE_MEASURES: tuple[AcsMeasure, ...] = (
     AcsMeasure("population_total", "B01003_001", "Total population"),
     AcsMeasure("housing_units_total", "B25001_001", "Total housing units"),
@@ -140,6 +152,43 @@ def acs_variable_codes() -> tuple[str, ...]:
     if len(codes) + 1 > 50:
         raise ValueError("The ACS request exceeds the 50-variable API limit")
     return codes
+
+
+def parse_acs_ingestion_scope(
+    *,
+    release_years: str,
+    state_fips_codes: str,
+    maximum_requests: int,
+) -> AcsIngestionScope:
+    """Parse and guard a comma-separated historical ACS job scope."""
+
+    if maximum_requests < 1:
+        raise ValueError("maximum_requests must be positive")
+    release_tokens = tuple(token.strip() for token in release_years.split(",") if token.strip())
+    state_tokens = tuple(token.strip() for token in state_fips_codes.split(",") if token.strip())
+    if not release_tokens or not state_tokens:
+        raise ValueError("At least one ACS release year and one state FIPS code are required")
+    if len(release_tokens) != len(set(release_tokens)):
+        raise ValueError("ACS release years must not contain duplicates")
+    if len(state_tokens) != len(set(state_tokens)):
+        raise ValueError("State FIPS codes must not contain duplicates")
+
+    try:
+        parsed_years = tuple(int(token) for token in release_tokens)
+    except ValueError as error:
+        raise ValueError("ACS release years must be comma-separated integers") from error
+    if any(year < 2009 for year in parsed_years):
+        raise ValueError("ACS five-year releases begin in 2009")
+    if any(len(code) != 2 or not code.isdigit() for code in state_tokens):
+        raise ValueError("Every state FIPS code must contain exactly two digits")
+
+    scope = AcsIngestionScope(parsed_years, state_tokens)
+    if scope.request_count > maximum_requests:
+        raise ValueError(
+            f"Requested {scope.request_count} ACS API calls, exceeding this run's "
+            f"maximum of {maximum_requests}; split the history into reviewed batches"
+        )
+    return scope
 
 
 def build_acs_tract_request(*, release_year: int, state_fips: str, api_key: str) -> SourceRequest:
