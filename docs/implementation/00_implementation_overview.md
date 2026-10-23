@@ -65,9 +65,9 @@ A result points to a source manifest, code commit, configuration hash, feature v
 
 Persistence and regional trends are strong competitors in housing. A complex model is useful only when it provides out-of-time improvement, better calibrated uncertainty, or another explicitly measured benefit.
 
-### Research compute is not public serving
+### Serving is a separate data contract
 
-The pipeline may use Databricks and large tables. The app loads a small validated bundle. This keeps the user experience fast and avoids exposing cloud credentials.
+Databricks is the shared pipeline, storage, modeling, and primary application environment. The app still reads only small validated serving tables rather than raw or training data. If anonymous public access is required, those same tables are exported as a compact bundle so the public mirror does not expose cloud credentials or depend on research compute.
 
 ## Decision gates
 

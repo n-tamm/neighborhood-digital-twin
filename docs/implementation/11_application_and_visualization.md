@@ -52,7 +52,7 @@ Expose data sources, version dates, model card, evaluation results, responsible-
 
 ## Serving contract
 
-The app should read an immutable serving bundle instead of rebuilding features or running training logic. The bundle should include:
+The Databricks app should read versioned serving tables instead of rebuilding features or running training logic. If an anonymous public mirror is needed, those tables are exported into an immutable bundle with the same schema. The serving contract should include:
 
 - a release manifest and compatible schema version;
 - tract geometries simplified for display;
@@ -64,22 +64,22 @@ The app should read an immutable serving bundle instead of rebuilding features o
 - explanation fields and quality flags;
 - data-source and model-version metadata.
 
-Document the detailed serving schema beside the export and loading code when it is implemented. The app must reject incompatible data rather than silently guessing at changed columns.
+Document the detailed serving schema beside the table, export, and loading code when it is implemented. The app must reject incompatible data rather than silently guessing at changed columns.
 
 ## Application boundaries
 
 - `app/` owns pages, components, session state, formatting, and calls to the serving layer.
 - `src/neighborhood_twin/` owns reusable data access, validation, inference, and analytical logic.
 - Generated models and application data stay outside the source package and are not ordinary Git dependencies.
-- Configuration should choose the bundle and runtime environment; application code should not contain local paths or secrets.
+- Configuration should choose the serving release and runtime environment; application code should not contain local paths or secrets.
 
 ## Performance strategy
 
 - Precompute tract-level views and common comparisons.
 - Simplify map geometry at multiple zoom levels.
 - Load only the selected region where possible.
-- Cache immutable tables and expensive transforms using keys that include the bundle version.
-- Keep the default app functional within the memory and CPU limits of the public host.
+- Cache immutable tables and expensive transforms using keys that include the serving release.
+- Keep the default app functional within Databricks Apps limits and, if used, the public mirror's limits.
 - Move heavy spatial joins, training, and batch inference out of request-time execution.
 
 Set measurable budgets after the prototype: for example, a useful first view within several seconds on a cold start and sub-second updates for cached controls.

@@ -1,8 +1,8 @@
 # `neighborhood_twin` package
 
-Planned module boundaries:
+Current and planned module boundaries:
 
-- `acquire`: source-specific downloads and raw snapshot metadata;
+- `data`: implemented source catalog, acquisition, manifests, ACS requests, and Databricks bronze helpers;
 - `validate`: schema, grain, ranges, uniqueness, and quality checks;
 - `geography`: GEOIDs, crosswalks, geometry, adjacency, and regional membership;
 - `transform`: bronze-to-silver normalization and shared table operations;
@@ -14,4 +14,4 @@ Planned module boundaries:
 - `app_data`: serving-bundle construction and contract validation;
 - `common`: shared configuration, logging, hashing, and identifiers.
 
-Dependencies should move in one direction: source and geography modules feed features; features feed models and representations; those outputs feed simulation and application exports. The Streamlit app should not import acquisition or training code.
+Dependencies should move in one direction: source and geography modules feed features; features feed models and representations; those outputs feed simulation and application exports. The Streamlit app should not import acquisition or training code. The first implemented `data` package keeps engine-neutral source logic separate from the small Spark-specific adapter so most behavior can be tested without Databricks.

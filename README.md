@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Repository and technical design are being established. The data feasibility study is the next implementation milestone. Features described below are planned unless explicitly marked complete.
+> **Project status:** The first Databricks-oriented acquisition and bronze pipeline is implemented for the core feasibility sources. The next milestone is to connect the shared workspace, run the pilot, measure coverage, and decide whether the final modeling pool can remain national. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -40,20 +40,20 @@ The name does not imply a perfect replica of a neighborhood, live sensor coverag
 
 ```mermaid
 flowchart LR
-    S[Public sources] --> B[Versioned raw snapshots]
-    B --> C[Clean source tables]
+    S[Public sources] --> B[Unity Catalog raw snapshots]
+    B --> C[Delta bronze and silver tables]
     C --> G[Tract-year neighborhood state]
     G --> F[Forecasts and uncertainty]
     G --> R[Representations and analogues]
     F --> X[Scenario engine]
     R --> X
-    F --> P[Compact serving bundle]
+    F --> P[Versioned serving tables]
     R --> P
     X --> P
-    P --> A[Public map-based application]
+    P --> A[Databricks Streamlit application]
 ```
 
-The research pipeline and public application are deliberately separated. Databricks Free Edition is the planned environment for larger transformations and MLflow experiments. The public application will load a compact, versioned bundle rather than querying Databricks or rebuilding national data during a user session.
+Databricks Free Edition is the shared environment for raw snapshots, Delta tables, transformations, experiments, and the primary Streamlit application. GitHub remains the source of truth for code and review. The application will read compact serving tables rather than downloading national data or training models during a user session. Because Databricks Apps require authenticated access, a separate public mirror remains a deployment fallback if the capstone needs an anonymous portfolio URL.
 
 ## Initial data scope
 
@@ -110,7 +110,7 @@ The implementation guide is numbered in dependency order. It is a living technic
 
 ## Run the current code
 
-The repository is currently a project scaffold with a package import test. The data pipeline, models, report figures, and application have not been implemented yet. These instructions run everything that exists today.
+The repository now contains tested source definitions, content-addressed acquisition, source manifests, focused ACS request construction, Databricks storage helpers, and a pilot notebook. Models and the application have not been implemented yet.
 
 PowerShell:
 
@@ -138,6 +138,16 @@ python -m pytest
 
 As executable pipeline stages are added, this section will list the exact commands needed to acquire permitted data, reproduce analysis, generate every reported figure and table, and launch the application. A required command is not considered complete until it works from a clean checkout using relative paths.
 
+The first cloud entry point is [01_ingest_core_sources.py](notebooks/01_feasibility/01_ingest_core_sources.py). It is deployed as a serverless Databricks job through the root [databricks.yml](databricks.yml), so a second Git clone inside the Databricks workspace is not required. After authenticating the Databricks CLI with a local profile named `neighborhood-twin`, run:
+
+```powershell
+databricks bundle validate --profile neighborhood-twin
+databricks bundle deploy --profile neighborhood-twin
+databricks bundle run core_source_ingestion --profile neighborhood-twin
+```
+
+The deployment creates or updates the job. The job run creates the shared managed raw-data volume, source-manifest table, and FHFA and ACS bronze tables. Raw source files and secrets remain outside Git. Complete setup and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
+
 ## Development workflow
 
 - `main` is treated as a protected release branch.
@@ -147,16 +157,16 @@ As executable pipeline stages are added, this section will list the exact comman
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository currently provides a minimal installable package and CI smoke test. Until the first data pipeline is implemented, it remains a documented project scaffold rather than a functioning analytical product.
+The repository now provides the first working pipeline slice, but it is not yet a functioning analytical product. A successful Databricks pilot, silver tables, feasibility analysis, models, and application still remain.
 
 ## Planned deployment
 
 - **GitHub:** source of truth, collaboration, code review, CI, releases, and documentation.
-- **Databricks Free Edition:** larger ETL jobs, Delta tables, Spark work, and MLflow experiments.
-- **Streamlit Community Cloud:** public interactive application using a compact serving bundle.
+- **Databricks Free Edition:** shared raw storage, Delta tables, ETL, Spark work, MLflow experiments, and the primary authenticated Streamlit application.
+- **Streamlit Community Cloud:** optional public mirror using a compact serving bundle if anonymous access is required.
 - **GitHub Pages:** durable methodology site and static fallback.
 
-The public app will not depend on a live Databricks session. That keeps the demonstration usable even when free compute is stopped or quota-limited. The deployment design is documented in [docs/implementation/12_deployment_and_operations.md](docs/implementation/12_deployment_and_operations.md).
+If built, the anonymous public mirror will not depend on a live Databricks session. That keeps an open portfolio demonstration usable when free compute is stopped or quota-limited. The deployment design is documented in [docs/implementation/12_deployment_and_operations.md](docs/implementation/12_deployment_and_operations.md).
 
 ## Responsible use
 

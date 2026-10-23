@@ -4,6 +4,8 @@
 
 The first technical milestone should answer whether the proposed tract-level study is possible with the data, time, and free compute available. It is cheaper to narrow the geography or target now than after the application and model interfaces are built.
 
+The October 22 endpoint check confirmed that the current FHFA file is `https://www.fhfa.gov/hpi/download/annual/hpi_at_tract.csv`, is about 90 MB, uses the columns `tract`, `state_abbr`, `year`, `annual_change`, `hpi`, `hpi1990`, and `hpi2000`, and currently includes years through 2025. The current Census API requires a key. These are implementation observations to recheck through the source manifest, not fixed assumptions about future releases.
+
 ## Questions to settle
 
 - How many tracts and forecast-origin years have usable FHFA targets?
@@ -17,7 +19,7 @@ The first technical milestone should answer whether the proposed tract-level stu
 
 ## Pilot scope
 
-Use three to five metros or states that expose different problems rather than only convenient places. Detroit is a useful candidate because it matches the project's Michigan context and prior neighborhood-trajectory literature. Add at least one faster-growing market and one place with thinner coverage. The pilot is for stress testing, not selecting favorable results.
+Use three to five metros or states that expose different problems rather than only convenient places. The initial pipeline defaults to Arizona, Michigan, and Pennsylvania. This keeps a Michigan connection while testing markets from different regions; the pilot is for stress testing, not selecting favorable results or narrowing the eventual analogue pool to these states.
 
 ## Work plan
 

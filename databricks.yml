@@ -1,0 +1,59 @@
+# AI Assistance:
+# OpenAI ChatGPT was used for code debugging, code generation, code/repo organization,
+# and code methodological brainstorming. All final modeling, implementation,
+# validation, commentary, and interpretation were performed and verified by the authors.
+# Model used: GPT-5
+
+bundle:
+  name: neighborhood-digital-twin
+  databricks_cli_version: ">= 0.218.0"
+
+variables:
+  catalog:
+    description: Existing Unity Catalog catalog used by the project
+    default: workspace
+  schema:
+    description: Shared development schema for pipeline tables
+    default: neighborhood_twin_dev
+  volume:
+    description: Managed volume for immutable source snapshots
+    default: source_snapshots
+  acs_release_year:
+    description: ACS five-year release used by the feasibility run
+    default: "2024"
+  pilot_state_fips:
+    description: Comma-separated state FIPS codes used by the feasibility run
+    default: "04,26,42"
+  secret_scope:
+    description: Databricks secret scope containing the Census API key
+    default: neighborhood-twin
+  census_secret_key:
+    description: Secret name for the Census API key
+    default: census-api-key
+
+resources:
+  jobs:
+    core_source_ingestion:
+      name: Neighborhood Digital Twin - Core Source Ingestion
+      description: Ingests the initial FHFA, Census geography, and ACS feasibility sources.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_core_sources
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/01_ingest_core_sources.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              acs_release_year: ${var.acs_release_year}
+              pilot_state_fips: ${var.pilot_state_fips}
+              secret_scope: ${var.secret_scope}
+              census_secret_key: ${var.census_secret_key}
+              uploaded_source_directory: ""
+
+targets:
+  team:
+    default: true
+

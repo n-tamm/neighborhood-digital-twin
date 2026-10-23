@@ -1,0 +1,160 @@
+"""
+AI Assistance:
+OpenAI ChatGPT was used for code debugging, code generation, code/repo organization,
+and code methodological brainstorming. All final modeling, implementation,
+validation, commentary, and interpretation were performed and verified by the authors.
+Model used: GPT-5
+
+Focused ACS five-year tract requests and raw-response parsing.
+"""
+
+import json
+from dataclasses import dataclass
+from typing import Any
+from urllib.parse import urlencode
+
+from neighborhood_twin.data.acquisition import SourceRequest
+from neighborhood_twin.data.catalog import SourceDefinition
+
+
+@dataclass(frozen=True)
+class AcsMeasure:
+    """One named ACS estimate whose estimate and margin of error travel together."""
+
+    name: str
+    variable_root: str
+    concept: str
+
+    @property
+    def estimate_code(self) -> str:
+        return f"{self.variable_root}E"
+
+    @property
+    def margin_of_error_code(self) -> str:
+        return f"{self.variable_root}M"
+
+
+ACS_CORE_MEASURES: tuple[AcsMeasure, ...] = (
+    AcsMeasure("population_total", "B01003_001", "Total population"),
+    AcsMeasure("housing_units_total", "B25001_001", "Total housing units"),
+    AcsMeasure("occupied_units", "B25002_002", "Occupied housing units"),
+    AcsMeasure("vacant_units", "B25002_003", "Vacant housing units"),
+    AcsMeasure("occupied_tenure_total", "B25003_001", "Occupied tenure universe"),
+    AcsMeasure("owner_occupied_units", "B25003_002", "Owner-occupied units"),
+    AcsMeasure("renter_occupied_units", "B25003_003", "Renter-occupied units"),
+    AcsMeasure("units_in_structure_total", "B25024_001", "Units in structure universe"),
+    AcsMeasure("single_family_detached", "B25024_002", "One detached unit"),
+    AcsMeasure("single_family_attached", "B25024_003", "One attached unit"),
+    AcsMeasure("units_in_2_unit_buildings", "B25024_004", "Two-unit buildings"),
+    AcsMeasure("units_in_3_to_4_unit_buildings", "B25024_005", "Three- or four-unit buildings"),
+    AcsMeasure("units_in_5_to_9_unit_buildings", "B25024_006", "Five- to nine-unit buildings"),
+    AcsMeasure("units_in_10_to_19_unit_buildings", "B25024_007", "Ten- to 19-unit buildings"),
+    AcsMeasure("units_in_20_to_49_unit_buildings", "B25024_008", "20- to 49-unit buildings"),
+    AcsMeasure("units_in_50_plus_unit_buildings", "B25024_009", "50-or-more-unit buildings"),
+    AcsMeasure("mobile_homes", "B25024_010", "Mobile homes"),
+    AcsMeasure("boats_rvs_vans_other", "B25024_011", "Boat, RV, van, or other"),
+    AcsMeasure("median_household_income", "B19013_001", "Median household income"),
+    AcsMeasure("median_owner_occupied_value", "B25077_001", "Median home value"),
+    AcsMeasure("median_gross_rent", "B25064_001", "Median gross rent"),
+)
+
+
+def acs_variable_codes() -> tuple[str, ...]:
+    """Return the requested estimate and margin-of-error codes."""
+
+    codes = tuple(
+        code
+        for measure in ACS_CORE_MEASURES
+        for code in (measure.estimate_code, measure.margin_of_error_code)
+    )
+    if len(codes) + 1 > 50:
+        raise ValueError("The ACS request exceeds the 50-variable API limit")
+    return codes
+
+
+def build_acs_tract_request(*, release_year: int, state_fips: str, api_key: str) -> SourceRequest:
+    """Build one state-level tract request without exposing the key in metadata."""
+
+    if not api_key.strip():
+        raise ValueError("A Census API key is required")
+    if len(state_fips) != 2 or not state_fips.isdigit():
+        raise ValueError("state_fips must contain exactly two digits")
+    if release_year < 2009:
+        raise ValueError("ACS five-year releases begin in 2009")
+
+    variables = ("NAME", *acs_variable_codes())
+    query_items = [
+        ("get", ",".join(variables)),
+        ("for", "tract:*"),
+        ("in", f"state:{state_fips}"),
+        ("in", "county:*"),
+        ("key", api_key),
+    ]
+    url = f"https://api.census.gov/data/{release_year}/acs/acs5?{urlencode(query_items)}"
+    source = SourceDefinition(
+        source_id=f"acs5_tract_{release_year}_state_{state_fips}",
+        name=f"{release_year} ACS Five-Year Tract Core Extract, State {state_fips}",
+        publisher="U.S. Census Bureau",
+        landing_page=("https://www.census.gov/data/developers/data-sets/acs-5year.html"),
+        download_url=f"https://api.census.gov/data/{release_year}/acs/acs5",
+        file_name=f"acs5_tract_{release_year}_state_{state_fips}.json",
+        file_format="json",
+        geographic_grain="ACS five-year release by census tract",
+        geography_vintage=None,
+        intended_use=(
+            "Housing mix, tenure, vacancy, affordability, and community context with margins "
+            "of error."
+        ),
+        terms_url="https://www.census.gov/about/policies/open-gov/open-data.html",
+        expected_content_types=("application/json", "text/json", "text/plain"),
+        minimum_bytes=100,
+        limitations=(
+            "The release pools 60 months of responses and is not a single-year measurement.",
+            "Adjacent releases overlap by four years.",
+            "Estimates must remain paired with margins of error and missing-value rules.",
+        ),
+    )
+    return SourceRequest(
+        source=source,
+        url=url,
+        file_name=source.file_name,
+        request_parameters={
+            "release_year": str(release_year),
+            "state_fips": state_fips,
+            "geography": "tract:* within county:*",
+            "variables": ",".join(variables),
+            "key": "[REDACTED]",
+        },
+        secret_query_parameters=frozenset({"key"}),
+        reference_period=f"{release_year - 4}-{release_year}",
+    )
+
+
+def parse_acs_api_payload(payload: str | bytes, *, release_year: int) -> list[dict[str, Any]]:
+    """Convert the Census array-of-arrays response into bronze records."""
+
+    decoded = json.loads(payload)
+    if not isinstance(decoded, list) or len(decoded) < 2:
+        raise ValueError("ACS response must contain a header and at least one data row")
+    header = decoded[0]
+    if not isinstance(header, list) or not all(isinstance(value, str) for value in header):
+        raise ValueError("ACS response header is invalid")
+    if len(header) != len(set(header)):
+        raise ValueError("ACS response contains duplicate column names")
+
+    required = {"NAME", "state", "county", "tract", *acs_variable_codes()}
+    missing = sorted(required.difference(header))
+    if missing:
+        raise ValueError(f"ACS response is missing required columns: {', '.join(missing)}")
+
+    records: list[dict[str, Any]] = []
+    for row_number, row in enumerate(decoded[1:], start=2):
+        if not isinstance(row, list) or len(row) != len(header):
+            raise ValueError(f"ACS row {row_number} does not match the header width")
+        record = dict(zip(header, row, strict=True))
+        record["geoid"] = f"{record['state']}{record['county']}{record['tract']}"
+        record["acs_release_year"] = release_year
+        record["acs_survey_start_year"] = release_year - 4
+        record["acs_survey_end_year"] = release_year
+        records.append(record)
+    return records

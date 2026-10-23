@@ -54,6 +54,7 @@ mlartifacts/
 
 # Databricks and deployment state
 .databricks/
+.databrickscfg
 .terraform/
 terraform.tfstate*
 
