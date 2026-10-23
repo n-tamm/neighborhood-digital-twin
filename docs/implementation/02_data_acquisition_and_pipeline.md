@@ -67,6 +67,19 @@ The root `databricks.yml` is the source-controlled definition of the initial ser
 
 The first deployment uploads the referenced notebook and source files to the deploying user's bundle directory and creates the job. It does not clone the GitHub repository into the Databricks workspace. Running the job creates the shared schema and volume if they do not already exist.
 
+## First validated Databricks run
+
+The `team` bundle target was validated, deployed, and run successfully in Databricks Free Edition on October 23, 2026. The run used serverless compute and confirmed that the configured secret could authenticate the ACS request and that the initial publisher domains were reachable from the workspace.
+
+The run created and the Unity Catalog API confirmed:
+
+- `workspace.neighborhood_twin_dev.bronze_acs5_tract`;
+- `workspace.neighborhood_twin_dev.bronze_fhfa_tract_hpi`;
+- `workspace.neighborhood_twin_dev.source_snapshot_manifest`;
+- the managed volume `workspace.neighborhood_twin_dev.source_snapshots`.
+
+This establishes the shared ETL and storage path; it does not complete source feasibility review. The next check is the coverage and quality profile listed under **Immediate next work** below. The bundle is currently deployed by one team member. After the second account joins the workspace, verify its catalog access and grant permission to run the job before treating the workflow as fully shared.
+
 The initial pilot defaults to Arizona (`04`), Michigan (`26`), and Pennsylvania (`42`). These states expose different housing markets and preserve Michigan relevance without limiting the final similarity pool to one region. They are a pipeline and coverage test, not the final geographic scope.
 
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
