@@ -29,6 +29,7 @@ Databricks is the canonical team environment for source data and ETL. Use an exi
 | Manifest table | `source_snapshot_manifest` | Searchable source version, checksum, request, license, and validation history |
 | FHFA bronze table | `bronze_fhfa_tract_hpi` | Source-shaped tract-year HPI records plus snapshot lineage |
 | ACS bronze table | `bronze_acs5_tract` | Source variable codes plus ACS release window and snapshot lineage |
+| Quality table | `bronze_quality_metrics` | Append-only profiling results by run, source, metric, and optional dimension |
 
 Raw file paths follow:
 
@@ -81,6 +82,20 @@ The run created and the Unity Catalog API confirmed:
 This establishes the shared ETL and storage path; it does not complete source feasibility review. The next check is the coverage and quality profile listed under **Immediate next work** below. The bundle is currently deployed by one team member. After the second account joins the workspace, verify its catalog access and grant permission to run the job before treating the workflow as fully shared.
 
 The initial pilot defaults to Arizona (`04`), Michigan (`26`), and Pennsylvania (`42`). These states expose different housing markets and preserve Michigan relevance without limiting the final similarity pool to one region. They are a pipeline and coverage test, not the final geographic scope.
+
+## Initial bronze feasibility profile
+
+The first persisted quality profile completed on October 23, 2026. It wrote an append-only set of metrics to `workspace.neighborhood_twin_dev.bronze_quality_metrics` and finished with zero hard failures and zero warnings. This means the declared keys, identifiers, parseability checks, source hashes, and ACS accounting relationships passed. It does not mean every tract has a usable modeling target.
+
+The main results were:
+
+- FHFA contains 2,179,042 tract-year rows for 63,930 tracts from 1975 through 2025. The 10th, 50th, and 90th percentiles of observed history length are 24, 34, and 41 years.
+- FHFA has 109,777 rows with no HPI value and 209,441 rows with no annual-change value. These are retained as source information rather than treated as zero or automatically imputed.
+- The 2024 ACS pilot contains 8,228 unique tracts across the three requested states, with no duplicate tract-release keys, malformed GEOIDs, or internal housing-total discrepancies.
+- The ACS special-value audit found unusable estimate placeholders in 254 median-income records, 704 median-rent records, and 352 median-owner-value records. Their paired margins of error also contain special values. Silver processing must convert these placeholders to nulls while keeping an explicit reason or quality flag.
+- 6,340 ACS tracts, or 77.1%, have a same-year FHFA row. Only 5,204 ACS tracts, or 63.2%, also have a non-null 2024 HPI. Usable target coverage is 47.0% in Arizona, 75.2% in Michigan, and 61.1% in Pennsylvania.
+
+A follow-up join showed that the 6,340 same-year matches are also the only pilot ACS tracts with any FHFA history in the current file. The unmatched tracts therefore are not simply missing one recent year. The silver layer should preserve the full ACS tract universe, attach transparent FHFA coverage flags, and form a separate eligible modeling cohort instead of silently dropping uncovered communities. The application should still be able to describe an uncovered tract, but it must not show an FHFA forecast where the target history is unavailable. Later feasibility work will compare this target coverage with housing-stock composition and geography to identify selection bias.
 
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
 
@@ -182,11 +197,11 @@ API keys come from environment variables or Databricks secrets, not configuratio
 
 ## Immediate next work
 
-After the first shared run, do not add more source families immediately. First produce a short feasibility profile from the bronze tables:
+The persisted bronze profile now covers the first direct checks below. Finish the remaining feasibility questions before adding more source families:
 
-1. FHFA row count, tract count, year range, missing HPI/annual-change rates, history length, and coverage by state;
-2. ACS rows per state, uniqueness of tract/release keys, special missing codes, and margins-of-error distributions;
-3. direct FHFA-to-ACS GEOID match rate for the pilot release;
+1. extend FHFA coverage analysis from the pilot-state join to year, state, metro, and housing-stock composition;
+2. inspect ACS margins-of-error distributions and decide how uncertainty and low-reliability flags flow into features and the application;
+3. implement silver FHFA and ACS tables with documented numeric types, missing-value reasons, human-readable names, and coverage flags;
 4. raw storage, Delta table size, runtime, and any quota or network failures;
 5. a decision on API versus ACS bulk files for national historical acquisition.
 

@@ -30,6 +30,9 @@ variables:
   census_secret_key:
     description: Secret name for the Census API key
     default: census-api-key
+  quality_table:
+    description: Persisted bronze profiling metrics
+    default: bronze_quality_metrics
 
 resources:
   jobs:
@@ -52,8 +55,16 @@ resources:
               secret_scope: ${var.secret_scope}
               census_secret_key: ${var.census_secret_key}
               uploaded_source_directory: ""
+        - task_key: profile_bronze_sources
+          depends_on:
+            - task_key: ingest_core_sources
+          notebook_task:
+            notebook_path: ./notebooks/02_data_quality/01_profile_bronze_sources.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              quality_table: ${var.quality_table}
 
 targets:
   team:
     default: true
-
