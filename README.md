@@ -138,7 +138,15 @@ python -m pytest
 
 As executable pipeline stages are added, this section will list the exact commands needed to acquire permitted data, reproduce analysis, generate every reported figure and table, and launch the application. A required command is not considered complete until it works from a clean checkout using relative paths.
 
-The first cloud entry point is [01_ingest_core_sources.py](notebooks/01_feasibility/01_ingest_core_sources.py). Run it from a Databricks Git folder after completing the setup in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md). It creates a managed raw-data volume, a source-manifest table, and FHFA and ACS bronze tables. Raw source files and secrets remain outside Git.
+The first cloud entry point is [01_ingest_core_sources.py](notebooks/01_feasibility/01_ingest_core_sources.py). It is deployed as a serverless Databricks job through the root [databricks.yml](databricks.yml), so a second Git clone inside the Databricks workspace is not required. After authenticating the Databricks CLI with a local profile named `neighborhood-twin`, run:
+
+```powershell
+databricks bundle validate --profile neighborhood-twin
+databricks bundle deploy --profile neighborhood-twin
+databricks bundle run core_source_ingestion --profile neighborhood-twin
+```
+
+The deployment creates or updates the job. The job run creates the shared managed raw-data volume, source-manifest table, and FHFA and ACS bronze tables. Raw source files and secrets remain outside Git. Complete setup and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
 
 ## Development workflow
 

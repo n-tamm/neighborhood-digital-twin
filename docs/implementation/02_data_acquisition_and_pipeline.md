@@ -45,9 +45,27 @@ Managed volumes are for raw files. Delta tables are for queryable records. Do no
 2. Confirm the Unity Catalog catalog both people can use. The notebook defaults to `workspace`, but the real catalog name must be checked in Catalog Explorer.
 3. Request a free Census API key. The current API rejects the tract requests without one.
 4. Create a Databricks-backed secret scope named `neighborhood-twin` and save the key as `census-api-key`. The widget names can be changed if the workspace uses different names.
-5. Connect this GitHub repository as a Databricks Git folder and check out the same reviewed feature branch. Merge only after review.
-6. Open `notebooks/01_feasibility/01_ingest_core_sources.py`, attach serverless notebook compute, confirm the widgets, and run all cells.
-7. Record the catalog, schema, pilot states, ACS release, Git commit, and run owner in the team notes.
+5. Install the Databricks CLI and authenticate the local development machine with an OAuth profile. The examples below use the profile name `neighborhood-twin`.
+6. Open the local Git checkout in VS Code and select the same profile in the Databricks extension. A Databricks Git-folder clone is not required for this workflow.
+7. Validate and deploy the bundle from the repository root:
+
+   ```powershell
+   databricks bundle validate --profile neighborhood-twin
+   databricks bundle deploy --profile neighborhood-twin
+   ```
+
+8. Run the deployed ingestion job:
+
+   ```powershell
+   databricks bundle run core_source_ingestion --profile neighborhood-twin
+   ```
+
+9. In Databricks, confirm that the job appears under **Jobs & Pipelines** and that Catalog Explorer contains the expected schema, volume, manifest, and bronze tables.
+10. Record the catalog, schema, pilot states, ACS release, Git commit, and run owner in the team notes.
+
+The root `databricks.yml` is the source-controlled definition of the initial serverless job. The target is named `team` because the job and its outputs belong to the project rather than to a separate local data environment. One person should own bundle deployment during the initial pilot to avoid competing updates to the same job. Both people can develop through Git branches, and the job can be shared with the second teammate through Databricks after that account has joined the workspace.
+
+The first deployment uploads the referenced notebook and source files to the deploying user's bundle directory and creates the job. It does not clone the GitHub repository into the Databricks workspace. Running the job creates the shared schema and volume if they do not already exist.
 
 The initial pilot defaults to Arizona (`04`), Michigan (`26`), and Pennsylvania (`42`). These states expose different housing markets and preserve Michigan relevance without limiting the final similarity pool to one region. They are a pipeline and coverage test, not the final geographic scope.
 
@@ -105,6 +123,8 @@ Geographic harmonization belongs to Stage 03. A silver source table may retain i
 ## Local and Databricks execution
 
 Databricks is the authoritative storage and ETL environment because both team members need the same source snapshots and tables. Engine-neutral acquisition, parsing, and validation logic remains locally testable; local development should use temporary directories or small permitted fixtures rather than creating a second canonical data lake.
+
+The normal development loop is local editing in VS Code, GitHub review, bundle validation, and an intentional Databricks deployment. Deploying the bundle updates the shared job definition; it does not move Unity Catalog data back into the local repository. The first team member acts as deployment owner until a reviewed automated deployment identity is justified. The partner can run and inspect the job after receiving Databricks job permissions, while both contributors read the same catalog tables.
 
 Databricks Free Edition uses quota-limited serverless compute and restricts outbound internet access. The implemented upload-registration path is therefore part of the normal pipeline, not an emergency workaround. Whether a snapshot arrived by HTTP or upload, downstream code receives the same hash, immutable location, manifest fields, and bronze validation.
 
