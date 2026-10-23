@@ -72,7 +72,7 @@ The initial Databricks bundle configuration was evaluated against the live works
 The bronze quality profiler was reviewed through the repository diff, 14 local unit tests, Ruff, mypy, bundle validation, and a full live Databricks run. The live review queried the persisted metrics rather than relying only on the successful job status. That check confirmed zero hard failures and zero warnings, but also exposed the more important feasibility result that only 63.2% of pilot ACS tracts had a non-null same-year FHFA HPI. The profiler was then revised to preserve both row-match coverage and usable-target coverage as separate metrics. This is an example of AI-assisted code being changed after contact with the real data rather than accepted because its initial checks passed.
 
 The silver transformation code was checked with 18 local unit tests, Ruff, mypy, bundle
-validation, and a live run of the isolated Databricks silver job. The persisted quality table
+validation, and two live runs of the isolated Databricks silver job. The persisted quality table
 confirmed that source row counts were preserved and that keys, GEOIDs, ACS parsing, snapshot
 selection, and derived-ratio ranges passed. Follow-up SQL checks then examined relative margins
 of error and compared ACS tract characteristics by usable FHFA coverage. That review found

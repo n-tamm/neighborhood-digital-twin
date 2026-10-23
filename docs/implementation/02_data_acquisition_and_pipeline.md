@@ -126,6 +126,9 @@ The tables have deliberately different update behavior. Silver FHFA and ACS tabl
 current derived products and are overwritten from the selected accepted snapshots. Every
 row still carries its source snapshot, retrieval timestamp, silver build, and schema version.
 The silver quality table is append-only, so prior build results remain available for review.
+A second silver-only run preserved the same two table row counts, again reported zero failures
+and warnings, and added a second distinct quality-run record. This verifies that rerunning
+silver does not duplicate source rows or require a bronze refresh.
 
 ### Silver source contracts
 
