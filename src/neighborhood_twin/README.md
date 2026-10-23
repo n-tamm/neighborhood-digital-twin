@@ -5,7 +5,8 @@ Current and planned module boundaries:
 - `data`: implemented source catalog, acquisition, manifests, ACS requests, and Databricks bronze helpers;
 - `validate`: implemented persisted bronze profiling for schema, grain, ranges, uniqueness, parseability, source lineage, and FHFA-to-ACS tract coverage;
 - `geography`: GEOIDs, crosswalks, geometry, adjacency, and regional membership;
-- `transform`: bronze-to-silver normalization and shared table operations;
+- `transform`: implemented latest-snapshot selection, bronze-to-silver normalization,
+  source-specific validation, and publication for FHFA and ACS;
 - `features`: point-in-time feature and target construction;
 - `models`: baselines, candidate forecasters, calibration, and model persistence;
 - `representations`: PCA or other representations, analogue search, and optional clustering;

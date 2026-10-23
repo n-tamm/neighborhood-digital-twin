@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** The first Databricks-oriented acquisition and bronze pipeline is implemented for the core feasibility sources. The next milestone is to connect the shared workspace, run the pilot, measure coverage, and decide whether the final modeling pool can remain national. Features described below are planned unless explicitly marked complete.
+> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot. The results support continuing tract-level feasibility work, but usable FHFA coverage is selective rather than universal. The next milestone is historical ACS acquisition and canonical geography alignment. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -110,7 +110,7 @@ The implementation guide is numbered in dependency order. It is a living technic
 
 ## Run the current code
 
-The repository now contains tested source definitions, content-addressed acquisition, source manifests, focused ACS request construction, Databricks storage helpers, and a pilot notebook. Models and the application have not been implemented yet.
+The repository now contains tested source definitions, content-addressed acquisition, source manifests, bronze quality profiling, and separate Databricks jobs for acquisition and silver transformation. The silver tables provide typed FHFA fields, readable ACS estimates and margins of error, missing-value reasons, housing-composition ratios, lineage, and persisted quality metrics. Models and the application have not been implemented yet.
 
 PowerShell:
 
@@ -144,9 +144,10 @@ The first cloud entry point is [01_ingest_core_sources.py](notebooks/01_feasibil
 databricks bundle validate --profile neighborhood-twin
 databricks bundle deploy --profile neighborhood-twin
 databricks bundle run core_source_ingestion --profile neighborhood-twin
+databricks bundle run silver_source_transforms --profile neighborhood-twin
 ```
 
-The deployment creates or updates the job. The job run creates the shared managed raw-data volume, source-manifest table, and FHFA and ACS bronze tables. Raw source files and secrets remain outside Git. Complete setup and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
+The deployment creates or updates two independent jobs. The bronze job manages source acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The silver job reads accepted bronze data and publishes the current FHFA and ACS source tables without downloading anything. Raw source files and secrets remain outside Git. Complete setup, contracts, findings, and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
 
 ## Development workflow
 
@@ -157,7 +158,7 @@ The deployment creates or updates the job. The job run creates the shared manage
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository now provides the first working pipeline slice, but it is not yet a functioning analytical product. A successful Databricks pilot, silver tables, feasibility analysis, models, and application still remain.
+The repository now provides validated bronze and silver pipeline slices, but it is not yet a functioning analytical product. Historical data, geography alignment, exploratory analysis, modeling, evaluation, serving tables, and the application still remain.
 
 ## Planned deployment
 

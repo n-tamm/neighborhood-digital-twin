@@ -41,7 +41,11 @@ The shared workspace uses an existing Unity Catalog catalog. The pipeline create
 ├── table: source_snapshot_manifest
 ├── table: bronze_fhfa_tract_hpi
 ├── table: bronze_acs5_tract
-├── future silver and gold tables
+├── table: bronze_quality_metrics
+├── table: silver_fhfa_tract_year
+├── table: silver_acs_tract_year
+├── table: silver_quality_metrics
+├── future geography and gold tables
 └── future application serving tables
 ```
 

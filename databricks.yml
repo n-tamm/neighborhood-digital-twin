@@ -33,6 +33,15 @@ variables:
   quality_table:
     description: Persisted bronze profiling metrics
     default: bronze_quality_metrics
+  silver_fhfa_table:
+    description: Standardized current FHFA tract-year table
+    default: silver_fhfa_tract_year
+  silver_acs_table:
+    description: Standardized current ACS tract-release table
+    default: silver_acs_tract_year
+  silver_quality_table:
+    description: Persisted silver build metrics
+    default: silver_quality_metrics
 
 resources:
   jobs:
@@ -64,6 +73,22 @@ resources:
               catalog: ${var.catalog}
               schema: ${var.schema}
               quality_table: ${var.quality_table}
+    silver_source_transforms:
+      name: Neighborhood Digital Twin - Silver Source Tables
+      description: Builds validated source-specific silver tables from accepted bronze data.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_silver_source_tables
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/01_build_silver_source_tables.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              fhfa_table: ${var.silver_fhfa_table}
+              acs_table: ${var.silver_acs_table}
+              quality_table: ${var.silver_quality_table}
 
 targets:
   team:

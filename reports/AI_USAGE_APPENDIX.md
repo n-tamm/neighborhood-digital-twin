@@ -27,6 +27,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Initial Databricks acquisition and bronze pipeline, October 22, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Initial Databricks bundle and shared ETL configuration, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Bronze quality profiling and feasibility review, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| FHFA and ACS silver source pipeline, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -69,6 +70,16 @@ The structure was accepted only after those reviews led to concrete changes. Thi
 The initial Databricks bundle configuration was evaluated against the live workspace rather than accepted because the YAML looked plausible. The configuration passed `databricks bundle validate`, deployed one serverless ingestion job, and completed its first run successfully. A separate Unity Catalog check then confirmed the expected ACS and FHFA bronze tables, source-manifest table, and managed source volume. This sequence checked configuration syntax, workspace authentication, secret access, source connectivity, job execution, and persisted outputs. The deployment would not have been considered successful based only on the job appearing in the interface.
 
 The bronze quality profiler was reviewed through the repository diff, 14 local unit tests, Ruff, mypy, bundle validation, and a full live Databricks run. The live review queried the persisted metrics rather than relying only on the successful job status. That check confirmed zero hard failures and zero warnings, but also exposed the more important feasibility result that only 63.2% of pilot ACS tracts had a non-null same-year FHFA HPI. The profiler was then revised to preserve both row-match coverage and usable-target coverage as separate metrics. This is an example of AI-assisted code being changed after contact with the real data rather than accepted because its initial checks passed.
+
+The silver transformation code was checked with 18 local unit tests, Ruff, mypy, bundle
+validation, and two live runs of the isolated Databricks silver job. The persisted quality table
+confirmed that source row counts were preserved and that keys, GEOIDs, ACS parsing, snapshot
+selection, and derived-ratio ranges passed. Follow-up SQL checks then examined relative margins
+of error and compared ACS tract characteristics by usable FHFA coverage. That review found
+material differences between covered and uncovered tracts, so the implementation notes now
+require coverage-sliced evaluation and prevent forecasts from being generalized to the full
+ACS tract universe. The code was evaluated not only by whether it ran, but by whether its
+outputs changed the project's methodological decisions.
 
 ## Maintenance requirements
 

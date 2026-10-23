@@ -13,9 +13,17 @@ The first working slice is now in place:
 - `acs.py` builds the focused state-level ACS request and keeps each estimate paired with its margin of error;
 - `databricks.py` creates the project schema and volume, publishes the manifest table, and validates FHFA and ACS bronze Delta tables;
 - `notebooks/01_feasibility/01_ingest_core_sources.py` is the thin Databricks entry point;
-- unit tests cover request limits, GEOID construction, key redaction, hashing, immutable placement, and the manual-upload fallback.
+- `transform.py` selects the latest accepted source snapshots and prepares validated,
+  human-readable FHFA and ACS silver tables;
+- `notebooks/03_transformation/01_build_silver_source_tables.py` is the independent silver
+  job entry point;
+- unit tests cover request limits, GEOID construction, key redaction, hashing, immutable
+  placement, the manual-upload fallback, and the ACS silver missing-value policy.
 
-This is a bronze feasibility pipeline. It does not yet harmonize tract vintages, translate ACS missing-value codes, calculate housing shares, or create the modeling table. Those belong in the silver and geography stages after the pilot establishes actual coverage.
+The acquisition job remains source-shaped bronze. The separate silver job now translates ACS
+missing values, assigns readable fields, and calculates documented housing shares. Neither job
+harmonizes older tract vintages or creates a modeling table; those responsibilities remain in
+the geography and feature stages.
 
 ## Databricks storage contract
 
@@ -30,6 +38,9 @@ Databricks is the canonical team environment for source data and ETL. Use an exi
 | FHFA bronze table | `bronze_fhfa_tract_hpi` | Source-shaped tract-year HPI records plus snapshot lineage |
 | ACS bronze table | `bronze_acs5_tract` | Source variable codes plus ACS release window and snapshot lineage |
 | Quality table | `bronze_quality_metrics` | Append-only profiling results by run, source, metric, and optional dimension |
+| FHFA silver table | `silver_fhfa_tract_year` | Current standardized FHFA tract-year records with availability flags and lineage |
+| ACS silver table | `silver_acs_tract_year` | Typed ACS tract-release records with readable names, margins of error, missing reasons, and housing ratios |
+| Silver quality table | `silver_quality_metrics` | Append-only validation and coverage metrics for each attempted silver build |
 
 Raw file paths follow:
 
@@ -59,6 +70,12 @@ Managed volumes are for raw files. Delta tables are for queryable records. Do no
 
    ```powershell
    databricks bundle run core_source_ingestion --profile neighborhood-twin
+   ```
+
+   After the bronze job passes, run the independent silver transformation job:
+
+   ```powershell
+   databricks bundle run silver_source_transforms --profile neighborhood-twin
    ```
 
 9. In Databricks, confirm that the job appears under **Jobs & Pipelines** and that Catalog Explorer contains the expected schema, volume, manifest, and bronze tables.
@@ -96,6 +113,67 @@ The main results were:
 - 6,340 ACS tracts, or 77.1%, have a same-year FHFA row. Only 5,204 ACS tracts, or 63.2%, also have a non-null 2024 HPI. Usable target coverage is 47.0% in Arizona, 75.2% in Michigan, and 61.1% in Pennsylvania.
 
 A follow-up join showed that the 6,340 same-year matches are also the only pilot ACS tracts with any FHFA history in the current file. The unmatched tracts therefore are not simply missing one recent year. The silver layer should preserve the full ACS tract universe, attach transparent FHFA coverage flags, and form a separate eligible modeling cohort instead of silently dropping uncovered communities. The application should still be able to describe an uncovered tract, but it must not show an FHFA forecast where the target history is unavailable. Later feasibility work will compare this target coverage with housing-stock composition and geography to identify selection bias.
+
+## First validated silver build
+
+The separate silver job completed successfully in Databricks Free Edition on October 23,
+2026. It reads the accepted bronze tables and does not rerun acquisition. The first build
+preserved all 2,179,042 FHFA rows and all 8,228 ACS pilot rows, selected one FHFA snapshot
+and one ACS snapshot per state/release, and reported no duplicate keys, malformed GEOIDs,
+parse failures, or out-of-range derived housing ratios.
+
+The tables have deliberately different update behavior. Silver FHFA and ACS tables are
+current derived products and are overwritten from the selected accepted snapshots. Every
+row still carries its source snapshot, retrieval timestamp, silver build, and schema version.
+The silver quality table is append-only, so prior build results remain available for review.
+A second silver-only run preserved the same two table row counts, again reported zero failures
+and warnings, and added a second distinct quality-run record. This verifies that rerunning
+silver does not duplicate source rows or require a bronze refresh.
+
+### Silver source contracts
+
+`silver_fhfa_tract_year` has one row per `geoid × observation_year`. It keeps the FHFA HPI,
+annual percentage change, alternative-base indexes, source lineage, and explicit booleans for
+HPI and annual-change availability. Missing HPI values remain null and are never converted to
+zero. This table describes the source's filtered single-family market rather than all housing.
+
+`silver_acs_tract_year` has one row per `geoid × acs_release_year`. The survey start year,
+survey end year, and release year remain separate because an ACS five-year release is not a
+single-year measurement. Source codes are renamed to readable estimate and margin-of-error
+fields. Documented Census special values become nulls with fields such as
+`median_gross_rent_estimate_missing_reason`; unexpected text would stop publication as a
+parse failure.
+
+The ACS table also includes occupancy, vacancy, tenure, and housing-structure shares. These
+are transparent ratios of published estimates, not new measurements, and no uncertainty is
+invented for them. Each underlying estimate retains its margin of error and a relative-MOE
+field. Derived-ratio uncertainty will be handled later if the ratios become model inputs.
+
+### Findings that affect later modeling
+
+The pilot ACS estimates have meaningful uncertainty. Across the three states, the median and
+90th-percentile relative margins of error are 18.7% and 37.7% for median household income,
+13.9% and 42.3% for median gross rent, and 10.4% and 27.7% for median owner-occupied value.
+The pipeline retains these values but does not impose a universal reliability cutoff yet.
+Exploration should examine the full distributions and test whether uncertainty flags or
+sensitivity exclusions change the conclusions.
+
+FHFA target coverage is also visibly selective. In the pooled pilot, tracts with a usable
+same-year HPI have a median single-family share of 82.5%, compared with 75.5% among uncovered
+tracts. Their mean vacancy rate is 8.0% rather than 15.0%, median household income is about
+$80,500 rather than $60,300, and median population is 3,937 rather than 2,803. These are
+descriptive comparisons, not causal findings, and pooled state differences explain part of
+the gap. The direction is also visible within Michigan and Pennsylvania, so target coverage
+cannot be assumed to be random.
+
+This does not block the tract-level project. It does require the project to:
+
+- report which tracts and housing-market segments receive forecasts;
+- compare model errors and interval coverage across housing composition and geography;
+- keep descriptive neighborhood profiles available when FHFA forecasting is unavailable;
+- avoid presenting results from FHFA-covered tracts as representative of all communities;
+- consider a county or metro fallback only as separately labeled regional context, never as
+  an invented tract target.
 
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
 
@@ -197,15 +275,20 @@ API keys come from environment variables or Databricks secrets, not configuratio
 
 ## Immediate next work
 
-The persisted bronze profile now covers the first direct checks below. Finish the remaining feasibility questions before adding more source families:
+Bronze profiling and the initial silver source tables are now complete for the pilot. The
+next data work should remain ordered:
 
-1. extend FHFA coverage analysis from the pilot-state join to year, state, metro, and housing-stock composition;
-2. inspect ACS margins-of-error distributions and decide how uncertainty and low-reliability flags flow into features and the application;
-3. implement silver FHFA and ACS tables with documented numeric types, missing-value reasons, human-readable names, and coverage flags;
-4. raw storage, Delta table size, runtime, and any quota or network failures;
-5. a decision on API versus ACS bulk files for national historical acquisition.
+1. decide between the ACS API and bulk files for reproducible national historical acquisition;
+2. add historical ACS releases in a controlled pilot and explicitly resolve their geography vintages;
+3. parse the acquired tract geometry and relationship files into validated source tables;
+4. build the canonical tract and geography-alignment products described in Stage 03;
+5. expand coverage and uncertainty analysis by year, metro, housing composition, and other
+   groups that matter for model eligibility;
+6. record Delta storage size and monitor runtime, network behavior, and free-workspace quota
+   as national history is added.
 
-Only then should the team expand ACS years, move from three states toward national coverage, build silver housing-composition fields, and add the small set of regional economic series needed for modeling.
+Only after these checks should the team move from the three-state pilot toward national
+historical coverage and add the small set of regional economic series needed for modeling.
 
 ## Handoff
 
