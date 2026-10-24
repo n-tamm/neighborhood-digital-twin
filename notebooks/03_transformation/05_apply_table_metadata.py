@@ -12,7 +12,8 @@
 # MAGIC # Apply managed-table metadata
 # MAGIC
 # MAGIC Adds a purpose and declared grain to each implemented table, then comments every existing
-# MAGIC column. It is safe to rerun after a table is rebuilt with an overwritten schema.
+# MAGIC column. It is safe to rerun after a table is rebuilt with an overwritten schema and skips
+# MAGIC column updates whose managed comment already matches.
 
 # COMMAND ----------
 

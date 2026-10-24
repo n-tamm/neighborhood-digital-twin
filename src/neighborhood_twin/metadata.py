@@ -225,10 +225,14 @@ def apply_table_metadata(spark: Any, *, catalog: str, schema: str) -> list[str]:
         name = qualified_name(catalog, schema, table)
         description = f"{metadata.description} Grain: {metadata.grain}".replace("'", "''")
         spark.sql(f"COMMENT ON TABLE {name} IS '{description}'")
-        for column in spark.table(raw_name).columns:
+        for field in spark.table(raw_name).schema.fields:
+            column = field.name
             if "`" in column:
                 raise ValueError(f"Unsafe column identifier in {raw_name}: {column!r}")
-            comment = column_comment(column).replace("'", "''")
+            desired_comment = column_comment(column)
+            if field.metadata.get("comment") == desired_comment:
+                continue
+            comment = desired_comment.replace("'", "''")
             spark.sql(f"ALTER TABLE {name} ALTER COLUMN `{column}` COMMENT '{comment}'")
         updated.append(raw_name)
     return updated
