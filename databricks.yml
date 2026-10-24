@@ -12,9 +12,24 @@ variables:
   catalog:
     description: Existing Unity Catalog catalog used by the project
     default: workspace
-  schema:
-    description: Shared development schema for pipeline tables
+  legacy_schema:
+    description: Previous shared schema retained as a read-only migration source
     default: neighborhood_twin_dev
+  bronze_schema:
+    description: Raw source-shaped tables and acquisition manifest
+    default: neighborhood_twin_bronze
+  silver_schema:
+    description: Cleaned and conformed analytical tables
+    default: neighborhood_twin_silver
+  gold_schema:
+    description: Analysis, modeling, and application-ready products
+    default: neighborhood_twin_gold
+  quality_schema:
+    description: Persisted validation and pipeline-observability outputs
+    default: neighborhood_twin_quality
+  test_schema:
+    description: Reserved schema for future integration-test fixtures and results
+    default: neighborhood_twin_test
   volume:
     description: Managed volume for immutable source snapshots
     default: source_snapshots
@@ -90,6 +105,22 @@ variables:
 
 resources:
   jobs:
+    organize_project_schemas:
+      name: Neighborhood Digital Twin - Organize Project Schemas
+      description: Creates layer schemas and safely seeds them from the prior shared schema.
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: organize_project_schemas
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/00_organize_project_schemas.py
+            base_parameters:
+              catalog: ${var.catalog}
+              legacy_schema: ${var.legacy_schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
+              volume: ${var.volume}
     core_source_ingestion:
       name: Neighborhood Digital Twin - Core Source Ingestion
       description: Ingests the initial FHFA, Census geography, and ACS feasibility sources.
@@ -102,7 +133,7 @@ resources:
             notebook_path: ./notebooks/01_feasibility/01_ingest_core_sources.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
               volume: ${var.volume}
               acs_release_year: ${var.acs_release_year}
               pilot_state_fips: ${var.pilot_state_fips}
@@ -116,7 +147,8 @@ resources:
             notebook_path: ./notebooks/02_data_quality/01_profile_bronze_sources.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
+              quality_schema: ${var.quality_schema}
               quality_table: ${var.quality_table}
     silver_source_transforms:
       name: Neighborhood Digital Twin - Silver Source Tables
@@ -130,7 +162,9 @@ resources:
             notebook_path: ./notebooks/03_transformation/01_build_silver_source_tables.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
               fhfa_table: ${var.silver_fhfa_table}
               acs_table: ${var.silver_acs_table}
               acs_measure_table: ${var.silver_acs_measure_table}
@@ -148,7 +182,7 @@ resources:
             notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
               volume: ${var.volume}
               acs_release_years: ${var.historical_acs_release_years}
               state_fips_codes: ${var.pilot_state_fips}
@@ -167,7 +201,7 @@ resources:
             notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
               volume: ${var.volume}
               acs_release_years: ${var.pilot_annual_acs_release_years}
               state_fips_codes: ${var.pilot_state_fips}
@@ -186,7 +220,7 @@ resources:
             notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
               volume: ${var.volume}
               acs_release_years: ${var.national_current_acs_release_year}
               state_fips_codes: ${var.national_state_fips}
@@ -205,7 +239,9 @@ resources:
             notebook_path: ./notebooks/03_transformation/02_build_tract_relationship.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
               relationship_table: ${var.tract_relationship_table}
               quality_table: ${var.geography_quality_table}
     display_geometry_pipeline:
@@ -220,7 +256,9 @@ resources:
             notebook_path: ./notebooks/03_transformation/03_build_display_geometry.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
               display_table: ${var.tract_display_geometry_table}
               quality_table: ${var.geography_quality_table}
           environment_key: geometry
@@ -243,7 +281,7 @@ resources:
             notebook_path: ./notebooks/01_feasibility/04_ingest_connecticut_tract_references.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
               volume: ${var.volume}
               uploaded_source_directory: ""
           environment_key: tiger
@@ -254,7 +292,9 @@ resources:
             notebook_path: ./notebooks/03_transformation/07_build_connecticut_tract_bridge.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
               bridge_table: ${var.connecticut_tract_bridge_table}
               quality_table: ${var.geography_quality_table}
       environments:
@@ -275,7 +315,8 @@ resources:
             notebook_path: ./notebooks/03_transformation/04_build_canonical_tracts.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
               table: ${var.canonical_tract_table}
               quality_table: ${var.canonical_quality_table}
     gold_current_products:
@@ -290,7 +331,9 @@ resources:
             notebook_path: ./notebooks/03_transformation/06_build_current_products.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
               demo_state_fips: ${var.application_demo_state_fips}
               quality_table: ${var.gold_quality_table}
     table_metadata_pipeline:
@@ -305,7 +348,10 @@ resources:
             notebook_path: ./notebooks/03_transformation/05_apply_table_metadata.py
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
 
 targets:
   team:

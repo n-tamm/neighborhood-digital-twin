@@ -48,7 +48,7 @@ from neighborhood_twin.data.databricks import (
 )
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
 dbutils.widgets.text("volume", "source_snapshots", "Managed raw-data volume")
 dbutils.widgets.text(
     "uploaded_source_directory",
@@ -57,7 +57,7 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+schema = dbutils.widgets.get("bronze_schema").strip()
 volume = dbutils.widgets.get("volume").strip()
 uploaded_source_directory = dbutils.widgets.get("uploaded_source_directory").strip()
 

@@ -40,12 +40,16 @@ from neighborhood_twin.products import prepare_product_build, publish_product_bu
 from neighborhood_twin.validate import hard_failures, write_quality_metrics
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("gold_schema", "neighborhood_twin_gold", "Gold schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text("demo_state_fips", "04,26,42", "Application demo state FIPS codes")
 dbutils.widgets.text("quality_table", "gold_quality_metrics", "Gold quality table")
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
+gold_schema = dbutils.widgets.get("gold_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 demo_state_fips = dbutils.widgets.get("demo_state_fips").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
@@ -54,14 +58,15 @@ quality_table = dbutils.widgets.get("quality_table").strip()
 build = prepare_product_build(
     spark,
     catalog=catalog,
-    schema=schema,
+    schema=gold_schema,
+    silver_schema=silver_schema,
     demo_state_fips=demo_state_fips,
 )
 quality_table_name = write_quality_metrics(
     spark,
     build.metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 failures = hard_failures(build.metrics)
@@ -69,7 +74,7 @@ if failures:
     names = ", ".join(metric.metric_name for metric in failures)
     raise RuntimeError(f"Gold product checks failed before publication: {names}")
 
-published = publish_product_build(build, catalog=catalog, schema=schema)
+published = publish_product_build(build, catalog=catalog, schema=gold_schema)
 display(
     spark.table(quality_table_name)
     .where(functions.col("quality_run_id") == build.build_id)

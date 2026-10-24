@@ -549,12 +549,14 @@ def prepare_geography_build(
     *,
     catalog: str,
     schema: str,
+    bronze_schema: str | None = None,
     relationship_table: str = TRACT_RELATIONSHIP_SILVER_TABLE,
     built_at: datetime | None = None,
 ) -> GeographyBuild:
     """Transform the latest validated relationship snapshot and run hard checks."""
 
-    bronze_name = f"{catalog}.{schema}.bronze_census_tract_relationship_2010_2020"
+    bronze_schema = bronze_schema or schema
+    bronze_name = f"{catalog}.{bronze_schema}.bronze_census_tract_relationship_2010_2020"
     if not spark.catalog.tableExists(bronze_name):
         raise ValueError(f"Required bronze table does not exist: {bronze_name}")
     build_id, built_at_utc = new_quality_run_id(built_at)
@@ -757,12 +759,14 @@ def prepare_display_geometry_build(
     *,
     catalog: str,
     schema: str,
+    bronze_schema: str | None = None,
     display_table: str = TRACT_DISPLAY_GEOMETRY_TABLE,
     built_at: datetime | None = None,
 ) -> DisplayGeometryBuild:
     """Build and validate the latest cartographic geometry snapshot."""
 
-    bronze_name = f"{catalog}.{schema}.bronze_census_tract_display_geometry_2020"
+    bronze_schema = bronze_schema or schema
+    bronze_name = f"{catalog}.{bronze_schema}.bronze_census_tract_display_geometry_2020"
     relationship_name = f"{catalog}.{schema}.{TRACT_RELATIONSHIP_SILVER_TABLE}"
     for required_name in (bronze_name, relationship_name):
         if not spark.catalog.tableExists(required_name):

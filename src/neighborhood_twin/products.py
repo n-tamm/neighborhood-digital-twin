@@ -332,6 +332,7 @@ def prepare_product_build(
     *,
     catalog: str,
     schema: str,
+    silver_schema: str | None = None,
     demo_state_fips: str,
     built_at: datetime | None = None,
 ) -> ProductBuild:
@@ -339,10 +340,11 @@ def prepare_product_build(
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
-    canonical_name = f"{catalog}.{schema}.silver_canonical_tract_2020"
-    acs_name = f"{catalog}.{schema}.silver_acs_tract_year"
-    fhfa_name = f"{catalog}.{schema}.silver_fhfa_tract_year"
-    bridge_name = f"{catalog}.{schema}.{CONNECTICUT_BRIDGE_TABLE}"
+    silver_schema = silver_schema or schema
+    canonical_name = f"{catalog}.{silver_schema}.silver_canonical_tract_2020"
+    acs_name = f"{catalog}.{silver_schema}.silver_acs_tract_year"
+    fhfa_name = f"{catalog}.{silver_schema}.silver_fhfa_tract_year"
+    bridge_name = f"{catalog}.{silver_schema}.{CONNECTICUT_BRIDGE_TABLE}"
     _require_tables(spark, (canonical_name, acs_name, fhfa_name, bridge_name))
     states = parse_state_fips_codes(demo_state_fips)
     build_id, built_at_utc = new_quality_run_id(built_at)

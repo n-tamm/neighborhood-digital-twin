@@ -127,6 +127,19 @@ TABLE_METADATA: dict[str, TableMetadata] = {
     ),
 }
 
+TABLE_LAYERS = {
+    table: (
+        "quality"
+        if table.endswith("quality_metrics")
+        else "bronze"
+        if table == "source_snapshot_manifest" or table.startswith("bronze_")
+        else "silver"
+        if table.startswith("silver_")
+        else "gold"
+    )
+    for table in TABLE_METADATA
+}
+
 COMMON_COLUMN_COMMENTS = {
     "geoid": "Eleven-character Census tract GEOID stored as text to preserve leading zeros.",
     "geoid_2010": "Eleven-character 2010 Census tract GEOID.",
@@ -239,15 +252,36 @@ def column_comment(column: str) -> str:
     return f"{column.replace('_', ' ').capitalize()} as defined by this table's source contract."
 
 
-def apply_table_metadata(spark: Any, *, catalog: str, schema: str) -> list[str]:
+def apply_table_metadata(
+    spark: Any,
+    *,
+    catalog: str,
+    schema: str | None = None,
+    bronze_schema: str | None = None,
+    silver_schema: str | None = None,
+    gold_schema: str | None = None,
+    quality_schema: str | None = None,
+) -> list[str]:
     """Apply idempotent table descriptions and column comments to existing managed tables."""
+
+    if schema is not None:
+        bronze_schema = silver_schema = gold_schema = quality_schema = schema
+    layer_schemas = {
+        "bronze": bronze_schema,
+        "silver": silver_schema,
+        "gold": gold_schema,
+        "quality": quality_schema,
+    }
+    if any(value is None for value in layer_schemas.values()):
+        raise ValueError("Provide schema or all four layer-specific schemas")
 
     updated: list[str] = []
     for table, metadata in TABLE_METADATA.items():
-        raw_name = f"{catalog}.{schema}.{table}"
+        table_schema = layer_schemas[TABLE_LAYERS[table]]
+        raw_name = f"{catalog}.{table_schema}.{table}"
         if not spark.catalog.tableExists(raw_name):
             continue
-        name = qualified_name(catalog, schema, table)
+        name = qualified_name(catalog, str(table_schema), table)
         description = f"{metadata.description} Grain: {metadata.grain}".replace("'", "''")
         spark.sql(f"COMMENT ON TABLE {name} IS '{description}'")
         for field in spark.table(raw_name).schema.fields:

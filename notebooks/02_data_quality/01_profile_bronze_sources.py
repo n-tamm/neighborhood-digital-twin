@@ -53,26 +53,28 @@ from neighborhood_twin.validate import (
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Shared project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text("quality_table", "bronze_quality_metrics", "Quality metric table")
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+bronze_schema = dbutils.widgets.get("bronze_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
 # COMMAND ----------
 
-metrics = profile_bronze_tables(spark, catalog=catalog, schema=schema)
+metrics = profile_bronze_tables(spark, catalog=catalog, schema=bronze_schema)
 quality_table_name = write_quality_metrics(
     spark,
     metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 quality_run_id = metrics[0].quality_run_id
 
-latest_metrics = spark.table(f"{catalog}.{schema}.{quality_table}").where(
+latest_metrics = spark.table(f"{catalog}.{quality_schema}.{quality_table}").where(
     functions.col("quality_run_id") == quality_run_id
 )
 status_order = (
