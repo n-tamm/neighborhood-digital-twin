@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from neighborhood_twin.data.acs import parse_acs_api_payload
+from neighborhood_twin.data.boundary import read_boundary_archive
 from neighborhood_twin.data.manifest import SourceManifest
 
 MANIFEST_STATUS_RANK = {"acquired": 1, "registered": 1, "bronze_validated": 2}
@@ -300,6 +301,110 @@ def ingest_tract_relationship_bronze(
     profiled_manifest.write_sidecar()
     (
         frame.withColumn("source_snapshot_id", functions.lit(manifest.snapshot_id))
+        .withColumn(
+            "source_retrieval_timestamp_utc",
+            functions.lit(manifest.retrieval_timestamp_utc),
+        )
+        .withColumn("source_file_path", functions.lit(manifest.file_path))
+        .write.format("delta")
+        .mode("append")
+        .saveAsTable(table_name)
+    )
+    return profiled_manifest
+
+
+def ingest_tract_display_geometry_bronze(
+    spark: Any,
+    manifest: SourceManifest,
+    *,
+    catalog: str,
+    schema: str,
+) -> SourceManifest:
+    """Parse and validate the 2020 cartographic tract archive for display use."""
+
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+    from pyspark.sql.types import (  # type: ignore[import-not-found]
+        BinaryType,
+        BooleanType,
+        DoubleType,
+        LongType,
+        StringType,
+        StructField,
+        StructType,
+    )
+
+    table_name = qualified_name(catalog, schema, "bronze_census_tract_display_geometry_2020")
+    raw_table_name = f"{catalog}.{schema}.bronze_census_tract_display_geometry_2020"
+    if _snapshot_exists(spark, raw_table_name, manifest.snapshot_id):
+        return manifest
+
+    archive = read_boundary_archive(Path(manifest.file_path))
+    frame_schema = StructType(
+        [
+            *[
+                StructField(column, StringType(), False)
+                for column in (
+                    "STATEFP",
+                    "COUNTYFP",
+                    "TRACTCE",
+                    "AFFGEOID",
+                    "GEOID",
+                    "NAME",
+                    "NAMELSAD",
+                    "STUSPS",
+                    "NAMELSADCO",
+                    "STATE_NAME",
+                    "LSAD",
+                )
+            ],
+            StructField("ALAND", LongType(), False),
+            StructField("AWATER", LongType(), False),
+            StructField("GEOMETRY_WKB", BinaryType(), False),
+            StructField("GEOMETRY_TYPE", StringType(), False),
+            StructField("GEOMETRY_IS_VALID", BooleanType(), False),
+            StructField("GEOMETRY_IS_EMPTY", BooleanType(), False),
+            StructField("MINIMUM_LONGITUDE", DoubleType(), False),
+            StructField("MINIMUM_LATITUDE", DoubleType(), False),
+            StructField("MAXIMUM_LONGITUDE", DoubleType(), False),
+            StructField("MAXIMUM_LATITUDE", DoubleType(), False),
+        ]
+    )
+    frame = spark.createDataFrame(archive.rows, schema=frame_schema)
+    row_count = frame.count()
+    invalid_rows = frame.where(
+        (~functions.col("GEOID").rlike("^[0-9]{11}$"))
+        | (functions.col("GEOID") != functions.concat("STATEFP", "COUNTYFP", "TRACTCE"))
+        | (functions.col("ALAND") < 0)
+        | (functions.col("AWATER") < 0)
+        | (~functions.col("GEOMETRY_TYPE").isin("Polygon", "MultiPolygon"))
+        | (~functions.col("GEOMETRY_IS_VALID"))
+        | functions.col("GEOMETRY_IS_EMPTY")
+        | (functions.col("MINIMUM_LONGITUDE") < -180)
+        | (functions.col("MAXIMUM_LONGITUDE") > 180)
+        | (functions.col("MINIMUM_LATITUDE") < -90)
+        | (functions.col("MAXIMUM_LATITUDE") > 90)
+    ).count()
+    duplicate_geoids = frame.groupBy("GEOID").count().where(functions.col("count") > 1).count()
+    if row_count == 0 or invalid_rows or duplicate_geoids:
+        raise ValueError(
+            "Census display geometry bronze validation failed: "
+            f"rows={row_count}, invalid_rows={invalid_rows}, "
+            f"duplicate_geoids={duplicate_geoids}"
+        )
+
+    schema_fingerprint = hashlib.sha256(frame.schema.json().encode("utf-8")).hexdigest()
+    profiled_manifest = manifest.with_profile(
+        row_count=row_count,
+        schema_fingerprint=schema_fingerprint,
+        validation_status="bronze_validated",
+        validation_messages=(
+            "Cartographic geometry is for display and identifier lookup only, not adjacency.",
+        ),
+    )
+    profiled_manifest.write_sidecar()
+    (
+        frame.withColumn("SOURCE_CRS_WKT", functions.lit(archive.crs_wkt))
+        .withColumn("source_snapshot_id", functions.lit(manifest.snapshot_id))
         .withColumn(
             "source_retrieval_timestamp_utc",
             functions.lit(manifest.retrieval_timestamp_utc),

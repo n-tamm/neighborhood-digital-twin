@@ -60,6 +60,9 @@ variables:
   geography_quality_table:
     description: Persisted geography validation and coverage metrics
     default: geography_quality_metrics
+  tract_display_geometry_table:
+    description: Simplified 2020 tract geometry for application maps
+    default: silver_tract_display_geometry_2020
 
 resources:
   jobs:
@@ -143,6 +146,29 @@ resources:
               schema: ${var.schema}
               relationship_table: ${var.tract_relationship_table}
               quality_table: ${var.geography_quality_table}
+    display_geometry_pipeline:
+      name: Neighborhood Digital Twin - Display Geometry Pipeline
+      description: Parses and validates simplified Census tract geometry for application maps.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_display_geometry
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/03_build_display_geometry.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              display_table: ${var.tract_display_geometry_table}
+              quality_table: ${var.geography_quality_table}
+          environment_key: geometry
+      environments:
+        - environment_key: geometry
+          spec:
+            environment_version: "2"
+            dependencies:
+              - pyshp==2.3.1
+              - shapely==2.0.6
 
 targets:
   team:

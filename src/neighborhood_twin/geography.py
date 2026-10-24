@@ -24,6 +24,7 @@ from neighborhood_twin.validate import (
 GEOGRAPHY_SCHEMA_VERSION = "1.0.0"
 TRACT_RELATIONSHIP_SILVER_TABLE = "silver_tract_relationship_2010_2020"
 GEOGRAPHY_QUALITY_TABLE = "geography_quality_metrics"
+TRACT_DISPLAY_GEOMETRY_TABLE = "silver_tract_display_geometry_2020"
 STABLE_LAND_SHARE_THRESHOLD = 0.95
 
 TRACT_RELATIONSHIP_SILVER_COLUMNS = (
@@ -64,6 +65,16 @@ class GeographyBuild:
     build_id: str
     built_at_utc: str
     relationship_frame: Any
+    metrics: list[QualityMetric]
+
+
+@dataclass(frozen=True)
+class DisplayGeometryBuild:
+    """Validated, unpublished cartographic geometry frame and quality metrics."""
+
+    build_id: str
+    built_at_utc: str
+    display_frame: Any
     metrics: list[QualityMetric]
 
 
@@ -585,5 +596,215 @@ def publish_geography_build(
     build.relationship_frame.sparkSession.sql(
         f"COMMENT ON TABLE {table_name} IS 'Official 2010-to-2020 tract overlap relationships "
         "with explicit land-share and nonadditive-measure limitations.'"
+    )
+    return table_name
+
+
+def _transform_display_geometry(
+    frame: Any,
+    *,
+    build_id: str,
+    built_at_utc: str,
+) -> Any:
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    return frame.select(
+        functions.col("GEOID").alias("geoid_2020"),
+        functions.col("STATEFP").alias("state_fips"),
+        functions.col("COUNTYFP").alias("county_fips"),
+        functions.concat("STATEFP", "COUNTYFP").alias("county_geoid"),
+        functions.col("TRACTCE").alias("tract_code"),
+        functions.col("NAME").alias("tract_name"),
+        functions.col("NAMELSAD").alias("tract_label"),
+        functions.col("STUSPS").alias("state_abbreviation"),
+        functions.col("NAMELSADCO").alias("county_name"),
+        functions.col("STATE_NAME").alias("state_name"),
+        functions.col("ALAND").alias("land_area_sqm"),
+        functions.col("AWATER").alias("water_area_sqm"),
+        functions.col("GEOMETRY_WKB").alias("geometry_wkb"),
+        functions.col("GEOMETRY_TYPE").alias("geometry_type"),
+        functions.col("GEOMETRY_IS_VALID").alias("geometry_is_valid"),
+        functions.col("GEOMETRY_IS_EMPTY").alias("geometry_is_empty"),
+        functions.col("MINIMUM_LONGITUDE").alias("minimum_longitude"),
+        functions.col("MINIMUM_LATITUDE").alias("minimum_latitude"),
+        functions.col("MAXIMUM_LONGITUDE").alias("maximum_longitude"),
+        functions.col("MAXIMUM_LATITUDE").alias("maximum_latitude"),
+        functions.col("SOURCE_CRS_WKT").alias("source_crs_wkt"),
+        functions.lit("display_only_cartographic_1_to_500000").alias("geometry_role"),
+        "source_snapshot_id",
+        functions.to_timestamp("source_retrieval_timestamp_utc").alias(
+            "source_retrieval_timestamp_utc"
+        ),
+        "source_file_path",
+        functions.lit(GEOGRAPHY_SCHEMA_VERSION).alias("geography_schema_version"),
+        functions.lit(build_id).alias("geography_build_id"),
+        functions.to_timestamp(functions.lit(built_at_utc)).alias("geography_built_at_utc"),
+    )
+
+
+def _profile_display_geometry(
+    display: Any,
+    relationship: Any,
+    *,
+    build_id: str,
+    built_at_utc: str,
+    table_name: str,
+) -> list[QualityMetric]:
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    summary = (
+        display.agg(
+            functions.count(functions.lit(1)).alias("row_count"),
+            functions.countDistinct("geoid_2020").alias("distinct_geoid_count"),
+            _count_when(
+                functions,
+                (~functions.col("geoid_2020").rlike("^[0-9]{11}$"))
+                | (
+                    functions.col("geoid_2020")
+                    != functions.concat("state_fips", "county_fips", "tract_code")
+                ),
+                "invalid_geoid_count",
+            ),
+            _count_when(
+                functions,
+                (~functions.col("geometry_is_valid"))
+                | functions.col("geometry_is_empty")
+                | (~functions.col("geometry_type").isin("Polygon", "MultiPolygon")),
+                "invalid_geometry_count",
+            ),
+            _count_when(
+                functions,
+                (functions.col("minimum_longitude") < -180)
+                | (functions.col("maximum_longitude") > 180)
+                | (functions.col("minimum_latitude") < -90)
+                | (functions.col("maximum_latitude") > 90),
+                "invalid_bounds_count",
+            ),
+        )
+        .first()
+        .asDict()
+    )
+    duplicate_count = int(summary["row_count"]) - int(summary["distinct_geoid_count"])
+    target_geoids = relationship.select("geoid_2020").distinct()
+    display_geoids = display.select("geoid_2020").distinct()
+    missing_display_count = target_geoids.join(display_geoids, "geoid_2020", "left_anti").count()
+    unrecognized_display_count = display_geoids.join(
+        target_geoids, "geoid_2020", "left_anti"
+    ).count()
+
+    metrics = [
+        _metric(
+            build_id=build_id,
+            built_at_utc=built_at_utc,
+            table_name=table_name,
+            metric_group="volume",
+            metric_name="row_count",
+            value=summary["row_count"],
+            status="pass" if summary["row_count"] > 0 else "fail",
+            expectation="> 0",
+        )
+    ]
+    for metric_name, value in (
+        ("duplicate_geoid_count", duplicate_count),
+        ("invalid_geoid_count", summary["invalid_geoid_count"]),
+        ("invalid_geometry_count", summary["invalid_geometry_count"]),
+        ("invalid_bounds_count", summary["invalid_bounds_count"]),
+        ("unrecognized_display_geoid_count", unrecognized_display_count),
+    ):
+        metrics.append(
+            _metric(
+                build_id=build_id,
+                built_at_utc=built_at_utc,
+                table_name=table_name,
+                metric_group="integrity",
+                metric_name=metric_name,
+                value=value,
+                status="pass" if value == 0 else "fail",
+                expectation="= 0",
+            )
+        )
+    metrics.append(
+        _metric(
+            build_id=build_id,
+            built_at_utc=built_at_utc,
+            table_name=table_name,
+            metric_group="coverage",
+            metric_name="relationship_tract_without_display_geometry_count",
+            value=missing_display_count,
+            status="info",
+            expectation="reported because cartographic files can omit clipped water areas",
+            notes="The display file is not the canonical analytical tract universe.",
+        )
+    )
+    failure_count = len(hard_failures(metrics))
+    metrics.append(
+        _metric(
+            build_id=build_id,
+            built_at_utc=built_at_utc,
+            table_name="display_geometry_build",
+            metric_group="run_summary",
+            metric_name="failure_count",
+            value=failure_count,
+            status="pass" if failure_count == 0 else "fail",
+            expectation="= 0",
+        )
+    )
+    return metrics
+
+
+def prepare_display_geometry_build(
+    spark: Any,
+    *,
+    catalog: str,
+    schema: str,
+    display_table: str = TRACT_DISPLAY_GEOMETRY_TABLE,
+    built_at: datetime | None = None,
+) -> DisplayGeometryBuild:
+    """Build and validate the latest cartographic geometry snapshot."""
+
+    bronze_name = f"{catalog}.{schema}.bronze_census_tract_display_geometry_2020"
+    relationship_name = f"{catalog}.{schema}.{TRACT_RELATIONSHIP_SILVER_TABLE}"
+    for required_name in (bronze_name, relationship_name):
+        if not spark.catalog.tableExists(required_name):
+            raise ValueError(f"Required geography table does not exist: {required_name}")
+    build_id, built_at_utc = new_quality_run_id(built_at)
+    display = _transform_display_geometry(
+        _latest_snapshot(spark.table(bronze_name)),
+        build_id=build_id,
+        built_at_utc=built_at_utc,
+    )
+    metrics = _profile_display_geometry(
+        display,
+        spark.table(relationship_name),
+        build_id=build_id,
+        built_at_utc=built_at_utc,
+        table_name=f"{catalog}.{schema}.{display_table}",
+    )
+    return DisplayGeometryBuild(build_id, built_at_utc, display, metrics)
+
+
+def publish_display_geometry_build(
+    build: DisplayGeometryBuild,
+    *,
+    catalog: str,
+    schema: str,
+    display_table: str = TRACT_DISPLAY_GEOMETRY_TABLE,
+) -> str:
+    """Publish simplified geometry only after hard checks pass."""
+
+    failures = hard_failures(build.metrics)
+    if failures:
+        names = ", ".join(f"{metric.metric_name}:{metric.dimension}" for metric in failures)
+        raise ValueError(f"Display geometry build has hard quality failures: {names}")
+    table_name = qualified_name(catalog, schema, display_table)
+    (
+        build.display_frame.write.format("delta")
+        .mode("overwrite")
+        .option("overwriteSchema", "true")
+        .saveAsTable(table_name)
+    )
+    build.display_frame.sparkSession.sql(
+        f"COMMENT ON TABLE {table_name} IS 'Simplified 2020 Census tract geometry for "
+        "application display only; not approved for adjacency or precise spatial analysis.'"
     )
     return table_name
