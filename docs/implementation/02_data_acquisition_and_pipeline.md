@@ -240,6 +240,28 @@ This does not block the tract-level project. It does require the project to:
 - consider a county or metro fallback only as separately labeled regional context, never as
   an invented tract target.
 
+## October 2026 expansion checkpoint
+
+The reviewed expansion is now complete. The bronze ACS table contains 201,111 source rows across
+15 releases from 2010 through 2024. The silver build selects the latest accepted snapshot for each
+state and release and publishes 192,883 tract-release rows plus 4,050,543 normalized measure rows.
+Arizona, Michigan, and Pennsylvania now have every annual ACS five-year release from 2010 through
+2024. The 2024 release covers 84,401 distinct tracts across all 50 states and the District of
+Columbia. Puerto Rico and the island areas were deliberately left outside this acquisition batch.
+
+Four current gold products are also live. The complete current profile retains all 85,528
+canonical tracts, while separate tables expose 82,486 initial similarity candidates, 50,601
+initial forecasting candidates, and an 8,182-row Arizona/Michigan/Pennsylvania application cohort.
+These are transparent availability filters, not final model populations. Their implementation is
+described in Stage 05 and their table contracts are maintained in the
+[data guide](../data/TABLE_CATALOG.md).
+
+The expanded build exposed one important geography exception. The 2022 ACS adopted Connecticut's
+new planning regions as county equivalents, changing 884 current tract GEOIDs relative to the 2020
+canonical identifiers. The project will build an explicit bridge before treating Connecticut as
+current-profile coverage. The gold profile keeps those records visible with false coverage flags
+instead of accepting a misleading direct string join.
+
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
 
 ## Acquisition design
@@ -340,21 +362,19 @@ API keys come from environment variables or Databricks secrets, not configuratio
 
 ## Immediate next work
 
-Bronze profiling, the refined silver products, the three-release ACS history pilot, and the
-national 2010-to-2020 tract relationship transform, and cartographic display-geometry transform
-are now complete. The next data work should remain ordered:
+Bronze, silver, national current ACS, the three-state annual panel, canonical geography, and the
+first current gold products are complete. The next data work should remain ordered:
 
-1. combine the validated relationship universe with optional display geometry to build and audit
-   the canonical tract product described in Stage 03;
-2. decide whether and where detailed TIGER/Line geometry is needed for analytical spatial features;
-3. expand ACS history in reviewed annual and geographic batches once the crosswalk contract is stable;
-4. expand coverage and uncertainty analysis by year, metro, housing composition, and other
-   groups that matter for model eligibility;
-5. record Delta storage size and monitor runtime, network behavior, and free-workspace quota
-   as national history is added.
-
-Only after these checks should the team move from the three-state pilot toward national
-historical coverage and add the small set of regional economic series needed for modeling.
+1. build and validate the Connecticut 2020-to-current tract bridge;
+2. profile the expanded ACS uncertainty, missingness, and cohort attrition by state and housing
+   composition rather than relying on pooled national summaries;
+3. create leakage-safe historical state/target tables for the forecast horizons;
+4. choose whether detailed TIGER/Line geometry and national adjacency are required for the first
+   model or can follow the nonspatial baselines;
+5. add a small, justified set of regional economic or housing-supply sources only where they
+   improve a stated research question;
+6. monitor Delta storage, job runtime, and free-workspace limits before considering national ACS
+   history beyond the current three-state panel.
 
 ## Handoff
 

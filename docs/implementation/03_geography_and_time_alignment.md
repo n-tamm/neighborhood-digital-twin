@@ -50,7 +50,19 @@ The Census describes cartographic boundaries as simplified small-scale mapping f
 
 ## Canonical geography
 
-The selected target geography is the 2020 census tract. The relationship table now validates every tract identifier as an 11-character string, but the canonical tract table will not be considered complete until the boundary file is parsed and joined to it.
+The selected modeling backbone is the 2020 census tract. The implemented
+`silver_canonical_tract_2020` table starts from all 85,528 distinct targets in the official
+relationship file and attaches display geometry when available. It has one row per GEOID, no
+duplicate or malformed keys, and reconciles exactly to the relationship target universe. Geometry
+is available for 85,187 tracts; the 341 missing display features do not cause row loss.
+
+Current publisher geography is not assumed to remain frozen simply because a source labels its
+tracts as 2020 Census geography. In the 2022 ACS, Connecticut replaced its eight former counties
+with nine planning regions. The tract boundaries mostly remained the same, but the county segment
+of the tract GEOID changed. The current 2024 ACS therefore has 884 Connecticut GEOIDs that do not
+directly match the canonical table, while the canonical table has 883 former-county Connecticut
+GEOIDs. One water-only tract became two. This is an identified bridge requirement, not missing data
+to be silently imputed.
 
 Maintain two geometry products:
 
@@ -126,12 +138,17 @@ For each tract and forecast origin, select the most recent source value whose av
 
 ## Immediate next work
 
-1. Publish a canonical 2020 tract dimension from the complete relationship universe, with display geometry attached when available rather than required.
-2. Decide the supported geographic scope for detailed TIGER/Line analysis geometry; national display coverage does not require national adjacency in the first model.
-3. If spatial model features remain in scope, acquire and validate detailed analysis geometry and construct adjacency with explicit handling for islands and disconnected tracts.
-4. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and margins of error before transforming any historical ACS value.
-5. Use the conservative stable subset as the first historical sensitivity analysis, then decide whether a population- or housing-weighted crosswalk is justified for additive counts.
-6. Create the aligned tract-release analytical table and begin repeatable exploratory analysis only after those decisions.
+1. Build a source-controlled Connecticut bridge from official Census geography and verify the 883
+   old identifiers, 884 current identifiers, and one water-only split explicitly.
+2. Decide the supported scope for detailed TIGER/Line analysis geometry; national display coverage
+   does not require national adjacency in the first model.
+3. If spatial model features remain in scope, acquire and validate detailed analysis geometry and
+   construct adjacency with explicit handling for islands and disconnected tracts.
+4. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and
+   margins of error before transforming historical ACS values across 2010/2020 boundaries.
+5. Use the conservative stable subset as the first historical sensitivity analysis, then decide
+   whether a population- or housing-weighted crosswalk is justified for additive counts.
+6. Create the aligned tract-release state and target tables needed for time-aware modeling.
 
 ## Handoff
 

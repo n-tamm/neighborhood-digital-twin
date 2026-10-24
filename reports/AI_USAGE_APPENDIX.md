@@ -30,6 +30,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | FHFA and ACS silver source pipeline, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical ACS pilot, October 23–24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Census tract relationship and display-geometry pipelines, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| ACS expansion, current analytical products, and data catalog, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -50,6 +51,14 @@ Routine exchanges are not preserved as a full log. The example below is included
 > Design an initial scaffold for the proposed project repo structure. Include readme files to add context and make suggestions on where organization can improve the project's design.
 
 This prompt identifies a concrete artifact—the initial repository scaffold—while asking for enough README context that another contributor could understand the design. It also leaves room to evaluate the organization rather than assuming the first folder structure is final. That mattered because the repository was developed through several rounds of review and simplification rather than accepted as a one-time generated template.
+
+### Data documentation and metadata prompt
+
+> I would like to have a data folder in docs that provides an outline/summary of each table along the pipeline so it's clear what it is for (granularity, structure, etc.). I would like you to put sample data for each table into the data folder (1,000 rows or less depending on the source should do). Finally, it would be good to have solid metadata on the Databricks tables. So a table description and column comments for now I think would be a good start.
+
+This request materially changed both the repository documentation and the governed Databricks
+objects. It produced a table catalog, small real samples for every implemented table, and
+source-controlled table and column comments rather than leaving data knowledge inside notebooks.
 
 ## How AI output is evaluated
 
@@ -125,6 +134,17 @@ geometries and one current build. A coverage comparison found 341 relationship t
 display feature: 340 are water-only and the remaining tract is a mostly-water Florida special-use
 tract. This review led to a firm scope boundary: simplified cartographic geometry can serve the
 application map, but it cannot be used for adjacency or precise spatial model features.
+
+The ACS expansion and current-product work was checked with Ruff, mypy, all 42 local unit tests,
+Databricks bundle validation, and live runs of the acquisition, silver, gold, and metadata jobs.
+The completed silver build contains 192,883 tract-release rows and 4,050,543 normalized measure
+rows. Gold reconciliation retained all 85,528 canonical tracts and reported zero hard failures.
+The live join review also found 884 current Connecticut ACS identifiers that did not match the
+2020 canonical keys. The discrepancy was traced to Connecticut's adoption of planning regions,
+not treated as random missingness. The documentation and implementation plan now require an
+explicit bridge before Connecticut is considered current-profile coverage. Finally, the sample
+export was checked for all 21 implemented tables, with five rows per file and binary geometry
+replaced by byte counts so the repository remains readable.
 
 ## Maintenance requirements
 

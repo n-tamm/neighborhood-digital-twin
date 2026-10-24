@@ -86,7 +86,7 @@ Forecast evaluation will use time-based splits and a separate geographic holdout
 |---|---|
 | [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Canonical scope, research questions, non-goals, and definition of success |
 | [ROADMAP.md](ROADMAP.md) | Twelve-week delivery plan, decision gates, and team ownership options |
-| [docs/](docs/) | System architecture and the sequenced technical implementation guide |
+| [docs/](docs/) | Architecture, implementation guide, table catalog, and small table samples |
 | [data/](data/) | Local-only raw, interim, processed, and demonstration data zones |
 | [notebooks/](notebooks/) | Numbered exploration and communication notebooks; reusable logic belongs in `src/` |
 | [src/](src/) | Reusable acquisition, validation, geography, feature, modeling, simulation, and export code |
@@ -103,14 +103,21 @@ Start with:
 1. [Project charter](PROJECT_CHARTER.md)
 2. [Twelve-week roadmap](ROADMAP.md)
 3. [Documentation index](docs/README.md)
-4. [Implementation sequence](docs/implementation/README.md)
-5. [System architecture](docs/ARCHITECTURE.md)
+4. [Data guide and table catalog](docs/data/README.md)
+5. [Implementation sequence](docs/implementation/README.md)
+6. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
 ## Run the current code
 
-The repository now contains tested source definitions, content-addressed acquisition, source manifests, bronze quality profiling, source-specific silver transformations, and the first geography-alignment product. The primary ACS silver product uses one tract-release-measure row with a companion data dictionary, paired margins of error, explicit missing-value reasons, units, universes, and lineage. A generated wide table provides convenient housing-composition ratios, while the FHFA table retains its tract-year history and availability flags. The tract relationship table preserves every official overlap and identifies conservative same-GEOID mappings without pretending that land area is a demographic weight. Models and the application have not been implemented yet.
+The repository now contains tested source acquisition, bronze and silver validation, national
+geography products, a canonical tract dimension, nationwide current ACS coverage, a three-state
+annual ACS panel, and current gold profiles for modeling and application prototypes. The primary
+ACS silver product uses one tract-release-measure row with a companion data dictionary, while a
+generated wide table supports compact feature construction. The gold layer keeps all canonical
+tracts and exposes transparent similarity, forecasting, and application-development cohorts.
+Models and the interactive application have not been implemented yet.
 
 PowerShell:
 
@@ -145,12 +152,23 @@ databricks bundle validate --profile neighborhood-twin
 databricks bundle deploy --profile neighborhood-twin
 databricks bundle run core_source_ingestion --profile neighborhood-twin
 databricks bundle run historical_acs_ingestion --profile neighborhood-twin
+databricks bundle run pilot_annual_acs_ingestion --profile neighborhood-twin
+databricks bundle run national_current_acs_ingestion --profile neighborhood-twin
 databricks bundle run silver_source_transforms --profile neighborhood-twin
 databricks bundle run geography_relationship_pipeline --profile neighborhood-twin
 databricks bundle run display_geometry_pipeline --profile neighborhood-twin
+databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
+databricks bundle run gold_current_products --profile neighborhood-twin
+databricks bundle run table_metadata_pipeline --profile neighborhood-twin
 ```
 
-The deployment creates or updates five independent jobs. The core job manages initial acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The bounded historical ACS job adds reviewed state-by-release batches without reacquiring other sources. The silver job publishes the FHFA and ACS products. The relationship job publishes typed tract overlaps and mapping diagnostics. The display-geometry job uses a pinned GIS environment and publishes simplified WKB geometry for application maps only. Raw source files and secrets remain outside Git. Complete setup and source-table details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md); geography decisions and live findings are in [Stage 03](docs/implementation/03_geography_and_time_alignment.md).
+The jobs remain separate so acquisition, transformation, geography, current products, and metadata
+can be rerun and reviewed independently. Run expansion jobs only after checking their configured
+scope, rebuild silver after new ACS snapshots arrive, and apply table metadata after any job that
+overwrites a schema. Raw source files and secrets remain outside Git. Complete table grains and
+limitations are in the [data guide](docs/data/README.md); setup and pipeline details are in
+[Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md), and geography decisions are in
+[Stage 03](docs/implementation/03_geography_and_time_alignment.md).
 
 ## Development workflow
 
@@ -161,7 +179,10 @@ The deployment creates or updates five independent jobs. The core job manages in
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository now provides validated bronze and silver pipeline slices, a small historical ACS pilot, the official tract relationship layer, and display-ready tract geometry, but it is not yet a functioning analytical product. The canonical tract table, analysis-geometry decision, measure-specific harmonization, broader history, exploratory analysis, modeling, evaluation, serving tables, and the application still remain.
+The repository now provides validated bronze, silver, canonical, and current gold products, but it
+is not yet a functioning model or application. The Connecticut current-geography bridge,
+point-in-time historical feature/target tables, exploratory analysis, modeling, evaluation, and
+interactive application still remain.
 
 ## Planned deployment
 
