@@ -63,7 +63,9 @@ def _lineage(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
 def _state_coverage(profile: Any, *, build_id: str, built_at_utc: str) -> Any:
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
-    summary = profile.groupBy("state_fips", "state_abbreviation", "state_name").agg(
+    summary = profile.groupBy("state_fips").agg(
+        functions.first("state_abbreviation", ignorenulls=True).alias("state_abbreviation"),
+        functions.first("state_name", ignorenulls=True).alias("state_name"),
         functions.count("geoid_2020").alias("canonical_tract_count"),
         functions.sum(functions.col("has_display_geometry").cast("int")).alias(
             "display_geometry_tract_count"
