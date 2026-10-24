@@ -125,6 +125,26 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Append-only integrity, reconciliation, and volume metrics for current gold products.",
         "One row per gold quality run, table, and metric.",
     ),
+    "gold_eda_state_coverage": TableMetadata(
+        "EDA checkpoint summarizing source and product eligibility across states.",
+        "One row per state or state-equivalent FIPS code.",
+    ),
+    "gold_eda_acs_measure_quality": TableMetadata(
+        "Current ACS missingness and relative-margin-of-error summary by governed measure.",
+        "One row per governed ACS measure in the latest ingested release.",
+    ),
+    "gold_eda_fhfa_history": TableMetadata(
+        "FHFA tract-history depth and usable-year coverage summarized by state.",
+        "One row per state FIPS code represented in the FHFA source.",
+    ),
+    "gold_eda_horizon_feasibility": TableMetadata(
+        "Availability and observed target distribution for tested FHFA forecast horizons.",
+        "One row per state FIPS code and forecast horizon.",
+    ),
+    "eda_readiness_quality_metrics": TableMetadata(
+        "Append-only publication checks for formal data-readiness and EDA summaries.",
+        "One row per EDA readiness run, table, and metric.",
+    ),
 }
 
 TABLE_LAYERS = {

@@ -99,6 +99,9 @@ variables:
   gold_quality_table:
     description: Persisted current-product validation metrics
     default: gold_quality_metrics
+  eda_readiness_quality_table:
+    description: Persisted checks for the formal EDA readiness summaries
+    default: eda_readiness_quality_metrics
   application_demo_state_fips:
     description: Small state scope used only for interactive application testing
     default: "04,26,42"
@@ -336,6 +339,22 @@ resources:
               quality_schema: ${var.quality_schema}
               demo_state_fips: ${var.application_demo_state_fips}
               quality_table: ${var.gold_quality_table}
+    data_readiness_eda:
+      name: Neighborhood Digital Twin - Data Readiness EDA
+      description: Builds governed coverage, uncertainty, history, and horizon summaries.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_data_readiness
+          notebook_task:
+            notebook_path: ./notebooks/04_exploration/01_build_data_readiness.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
+              quality_table: ${var.eda_readiness_quality_table}
     table_metadata_pipeline:
       name: Neighborhood Digital Twin - Table Metadata
       description: Applies table descriptions, declared grains, and column comments.
