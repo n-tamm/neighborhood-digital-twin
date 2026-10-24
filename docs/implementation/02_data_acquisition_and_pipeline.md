@@ -82,6 +82,14 @@ Managed volumes are for raw files. Delta tables are for queryable records. Do no
    databricks bundle run silver_source_transforms --profile neighborhood-twin
    ```
 
+   Historical ACS is intentionally separate. Run a reviewed batch only after confirming its
+   configured years, states, and request count:
+
+   ```powershell
+   databricks bundle run historical_acs_ingestion --profile neighborhood-twin
+   databricks bundle run silver_source_transforms --profile neighborhood-twin
+   ```
+
 9. In Databricks, confirm that the job appears under **Jobs & Pipelines** and that Catalog Explorer contains the expected schema, volume, manifest, and bronze tables.
 10. Record the catalog, schema, pilot states, ACS release, Git commit, and run owner in the team notes.
 
@@ -178,6 +186,33 @@ measures have legitimate unavailable values after Census special codes are trans
 household income is missing for 254 tracts (3.09%), median owner-occupied value for 352
 (4.28%), and median gross rent for 704 (8.56%). Those nulls align with their stated universes
 and remain visible rather than being filled with zero.
+
+## Historical ACS pilot
+
+The focused Census API remains the preferred acquisition method for the selected 21 measures.
+It downloads only the fields the project uses, preserves estimate/MOE pairs, and produced small
+state-level responses that fit comfortably within the current Databricks workflow. National
+history should still be run in reviewed batches rather than one unbounded request grid.
+
+The first historical batch added the 2014 and 2019 five-year releases for Arizona, Michigan,
+and Pennsylvania. Each release contains 7,557 unique tract rows: 1,526 in Arizona, 2,813 in
+Michigan, and 3,218 in Pennsylvania. Together with 2024, bronze and silver now contain nine
+state/release snapshots and 23,342 tract-release rows. The normalized table contains 490,182
+rows, exactly 23,342 multiplied by 21 measures, and the dictionary remains 21 rows.
+
+The historical ingestion rerun reused the accepted snapshots without adding duplicate bronze
+rows. The first job attempt had already completed all six acquisitions but failed in its final
+display because Spark Connect did not accept a tuple passed as one `isin` value. Expanding the
+tuple into separate arguments fixed the display, and the complete job then finished successfully
+without changing the persisted row counts.
+
+Both 2014 and 2019 are labeled as 2010-vintage tract geography; 2024 is labeled as 2020-vintage.
+The silver quality run reported all 15,114 older-vintage rows as not yet harmonized and excluded
+them from direct FHFA coverage joins. This is intentional: matching an older GEOID string directly
+to the current 2020-vintage FHFA table could create plausible-looking but invalid comparisons.
+After expansion, two consecutive silver runs each recorded 34 passing checks, 12 informational
+measures, and no warnings or failures. The current counts and runtime remain manageable, but this
+three-release pilot is not enough history for final forecasting or analogue evaluation.
 
 ### Findings that affect later modeling
 
@@ -305,16 +340,15 @@ API keys come from environment variables or Databricks secrets, not configuratio
 
 ## Immediate next work
 
-Bronze profiling and the initial silver source tables are now complete for the pilot. The
-next data work should remain ordered:
+Bronze profiling, the refined silver products, and the three-release ACS history pilot are now
+complete. The next data work should remain ordered:
 
-1. decide between the ACS API and bulk files for reproducible national historical acquisition;
-2. add historical ACS releases in a controlled pilot and explicitly resolve their geography vintages;
-3. parse the acquired tract geometry and relationship files into validated source tables;
-4. build the canonical tract and geography-alignment products described in Stage 03;
-5. expand coverage and uncertainty analysis by year, metro, housing composition, and other
+1. parse the acquired tract geometry and 2010-to-2020 relationship files into validated source tables;
+2. build and audit the canonical tract and geography-alignment products described in Stage 03;
+3. expand ACS history in reviewed annual and geographic batches once the crosswalk contract is stable;
+4. expand coverage and uncertainty analysis by year, metro, housing composition, and other
    groups that matter for model eligibility;
-6. record Delta storage size and monitor runtime, network behavior, and free-workspace quota
+5. record Delta storage size and monitor runtime, network behavior, and free-workspace quota
    as national history is added.
 
 Only after these checks should the team move from the three-state pilot toward national

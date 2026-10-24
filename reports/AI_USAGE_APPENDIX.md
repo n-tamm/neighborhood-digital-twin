@@ -28,6 +28,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Initial Databricks bundle and shared ETL configuration, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Bronze quality profiling and feasibility review, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | FHFA and ACS silver source pipeline, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Historical ACS pilot, October 23–24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -89,6 +90,17 @@ passing checks, 11 informational measures, and no warnings or failures. Read-onl
 confirmed stable output counts after the rerun and verified per-measure missingness. This
 evaluation directly changed the data contract rather than treating a successful first version
 as final.
+
+The historical ACS job was evaluated with a deliberately small six-request batch before any
+national expansion. All six source responses were acquired, parsed, and written correctly, but
+the first job attempt still ended as failed because its final diagnostic display passed a tuple
+to Spark Connect as one `isin` value. The persisted bronze partitions were inspected directly
+to separate that display problem from acquisition or data loss. The call was corrected to
+expand the values, and the rerun completed without duplicating rows. Silver was then rebuilt
+twice over 2014, 2019, and 2024. Both runs preserved 23,342 tract-release rows, generated exactly
+490,182 tract-release-measure rows, retained one current build per output, and passed all 34
+hard checks. The review also confirmed that 15,114 older-vintage rows were labeled and excluded
+from direct 2020-vintage FHFA coverage joins until geography harmonization is implemented.
 
 ## Maintenance requirements
 
