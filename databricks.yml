@@ -63,6 +63,12 @@ variables:
   tract_display_geometry_table:
     description: Simplified 2020 tract geometry for application maps
     default: silver_tract_display_geometry_2020
+  canonical_tract_table:
+    description: Complete relationship-defined 2020 tract dimension
+    default: silver_canonical_tract_2020
+  canonical_quality_table:
+    description: Persisted canonical geography validation metrics
+    default: canonical_geography_quality_metrics
 
 resources:
   jobs:
@@ -169,6 +175,21 @@ resources:
             dependencies:
               - pyshp==2.3.1
               - shapely==2.0.6
+    canonical_geography_pipeline:
+      name: Neighborhood Digital Twin - Canonical Geography Pipeline
+      description: Builds the complete 2020 tract dimension with optional display geometry.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_canonical_tracts
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/04_build_canonical_tracts.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              table: ${var.canonical_tract_table}
+              quality_table: ${var.canonical_quality_table}
 
 targets:
   team:
