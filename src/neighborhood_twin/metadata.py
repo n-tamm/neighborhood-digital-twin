@@ -46,6 +46,11 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Parsed source attributes and WKB from the simplified 2020 tract cartographic archive.",
         "One row per displayable 2020 Census tract GEOID.",
     ),
+    "bronze_census_connecticut_tract_reference": TableMetadata(
+        "Source-shaped Connecticut tract identifiers and attributes from the reviewed 2020 "
+        "and 2024 TIGER/Line archives.",
+        "One row per source snapshot, geography vintage, and Connecticut tract GEOID.",
+    ),
     "bronze_quality_metrics": TableMetadata(
         "Append-only validation and feasibility metrics for bronze data builds.",
         "One row per quality run, table, metric, and dimension.",
@@ -78,6 +83,11 @@ TABLE_METADATA: dict[str, TableMetadata] = {
     "silver_tract_display_geometry_2020": TableMetadata(
         "Simplified WKB tract geometry for application maps; not approved for spatial analysis.",
         "One row per displayable 2020 Census tract GEOID.",
+    ),
+    "silver_connecticut_tract_bridge_2020_2024": TableMetadata(
+        "Audited one-to-one identity bridge for Connecticut non-water tracts affected by the "
+        "change from counties to planning regions.",
+        "One row per safely mapped 2020 and current Connecticut land tract pair.",
     ),
     "geography_quality_metrics": TableMetadata(
         "Append-only validation and coverage metrics for relationship and display geometry builds.",
@@ -120,11 +130,25 @@ COMMON_COLUMN_COMMENTS = {
     "geoid": "Eleven-character Census tract GEOID stored as text to preserve leading zeros.",
     "geoid_2010": "Eleven-character 2010 Census tract GEOID.",
     "geoid_2020": "Eleven-character 2020 Census tract GEOID.",
+    "geoid_current": "Eleven-character current Census tract GEOID.",
+    "acs_source_geoid": (
+        "Tract GEOID used by the current ACS source before any governed geography bridge."
+    ),
+    "geography_vintage": "Year of the tract geography represented by the source row.",
     "state_fips": "Two-character state FIPS code.",
     "county_fips": "Three-character county FIPS code within a state.",
     "county_geoid": "Five-character state and county FIPS identifier.",
     "tract_code": "Six-character Census tract code within a county.",
     "tract_name": "Human-readable Census tract name supplied by the source.",
+    "tract_label": "Census label for the tract.",
+    "county_fips_2020": "Former three-character Connecticut county FIPS code in the 2020 file.",
+    "county_fips_current": (
+        "Three-character Connecticut planning-region county-equivalent FIPS code."
+    ),
+    "mapping_method": "Governed rule used to connect the two tract identities.",
+    "is_statistical_profile_safe": (
+        "True only when the bridge permits a current tract profile to join to the 2020 identity."
+    ),
     "observation_year": "Calendar year of the FHFA HPI observation.",
     "acs_release_year": "Year identifying the published ACS five-year release.",
     "acs_survey_start_year": "First year included in the ACS five-year survey window.",

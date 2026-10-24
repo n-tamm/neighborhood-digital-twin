@@ -21,7 +21,7 @@ def test_similarity_features_are_available_in_current_profile() -> None:
     assert len(SIMILARITY_FEATURE_COLUMNS) == len(set(SIMILARITY_FEATURE_COLUMNS))
 
 
-def test_connecticut_is_the_only_reviewed_current_geoid_exception() -> None:
+def test_connecticut_is_the_only_reviewed_residual_water_geoid_exception() -> None:
     assert KNOWN_CURRENT_ACS_GEOID_EXCEPTION_STATES == ("09",)
 
 

@@ -15,6 +15,7 @@ from datetime import datetime
 from functools import reduce
 from typing import Any
 
+from neighborhood_twin.connecticut import CONNECTICUT_BRIDGE_TABLE
 from neighborhood_twin.data.databricks import qualified_name
 from neighborhood_twin.validate import QualityMetric, hard_failures, new_quality_run_id
 
@@ -172,6 +173,7 @@ def _build_current_profile(
     canonical: Any,
     acs: Any,
     fhfa: Any,
+    connecticut_bridge: Any,
     *,
     build_id: str,
     built_at_utc: str,
@@ -182,15 +184,25 @@ def _build_current_profile(
     current_acs = (
         acs.where(functions.col("acs_release_year") == current_acs_year)
         .select("geoid", *ACS_PROFILE_COLUMNS)
-        .withColumnRenamed("geoid", "acs_geoid")
+        .withColumnRenamed("geoid", "acs_source_geoid")
+        .join(
+            connecticut_bridge.select("geoid_current", "geoid_2020"),
+            functions.col("acs_source_geoid") == functions.col("geoid_current"),
+            "left",
+        )
+        .withColumn(
+            "acs_join_geoid",
+            functions.coalesce("geoid_2020", "acs_source_geoid"),
+        )
+        .drop("geoid_current", "geoid_2020")
     )
     hpi_summary, latest_source_year = _build_fhfa_summary(fhfa)
     hpi_summary = hpi_summary.withColumnRenamed("geoid", "fhfa_geoid")
 
     joined = (
         canonical.select(*PROFILE_IDENTIFIER_COLUMNS)
-        .join(current_acs, functions.col("geoid_2020") == functions.col("acs_geoid"), "left")
-        .drop("acs_geoid")
+        .join(current_acs, functions.col("geoid_2020") == functions.col("acs_join_geoid"), "left")
+        .drop("acs_join_geoid")
         .join(hpi_summary, functions.col("geoid_2020") == functions.col("fhfa_geoid"), "left")
         .drop("fhfa_geoid")
     )
@@ -241,6 +253,7 @@ def _build_current_profile(
         .withColumn("product_built_at_utc", functions.to_timestamp(functions.lit(built_at_utc)))
         .select(
             *PROFILE_IDENTIFIER_COLUMNS,
+            "acs_source_geoid",
             *ACS_PROFILE_COLUMNS,
             "hpi_observation_count",
             "hpi_first_year",
@@ -329,7 +342,8 @@ def prepare_product_build(
     canonical_name = f"{catalog}.{schema}.silver_canonical_tract_2020"
     acs_name = f"{catalog}.{schema}.silver_acs_tract_year"
     fhfa_name = f"{catalog}.{schema}.silver_fhfa_tract_year"
-    _require_tables(spark, (canonical_name, acs_name, fhfa_name))
+    bridge_name = f"{catalog}.{schema}.{CONNECTICUT_BRIDGE_TABLE}"
+    _require_tables(spark, (canonical_name, acs_name, fhfa_name, bridge_name))
     states = parse_state_fips_codes(demo_state_fips)
     build_id, built_at_utc = new_quality_run_id(built_at)
 
@@ -339,6 +353,7 @@ def prepare_product_build(
         canonical,
         acs,
         spark.table(fhfa_name),
+        spark.table(bridge_name),
         build_id=build_id,
         built_at_utc=built_at_utc,
     )
@@ -373,9 +388,29 @@ def prepare_product_build(
         .distinct()
     )
     canonical_geoids = canonical.select("geoid_2020").distinct()
-    unmatched_current = current_acs_geoids.join(
+    bridge_geoids = spark.table(bridge_name).select("geoid_current", "geoid_2020").distinct()
+    mapped_current = (
+        current_acs_geoids.join(
+            bridge_geoids,
+            current_acs_geoids.geoid == bridge_geoids.geoid_current,
+            "left",
+        )
+        .withColumn("canonical_geoid", functions.coalesce("geoid_2020", "geoid"))
+        .drop("geoid_current", "geoid_2020")
+    )
+    direct_match_count = current_acs_geoids.join(
         canonical_geoids,
         current_acs_geoids.geoid == canonical_geoids.geoid_2020,
+        "inner",
+    ).count()
+    bridge_match_count = current_acs_geoids.join(
+        bridge_geoids,
+        current_acs_geoids.geoid == bridge_geoids.geoid_current,
+        "inner",
+    ).count()
+    unmatched_current = mapped_current.join(
+        canonical_geoids,
+        mapped_current.canonical_geoid == canonical_geoids.geoid_2020,
         "left_anti",
     )
     source_count = current_acs_geoids.count()
@@ -384,9 +419,10 @@ def prepare_product_build(
         functions.col("state_fips").isin(*KNOWN_CURRENT_ACS_GEOID_EXCEPTION_STATES)
     ).count()
     unexpected_unmatched_count = unmatched_count - known_exception_count
+    mapped_current_geoids = mapped_current.select("canonical_geoid").distinct()
     canonical_without_current_count = canonical_geoids.join(
-        current_acs_geoids,
-        canonical_geoids.geoid_2020 == current_acs_geoids.geoid,
+        mapped_current_geoids,
+        canonical_geoids.geoid_2020 == mapped_current_geoids.canonical_geoid,
         "left_anti",
     ).count()
     coverage_metrics = (
@@ -399,24 +435,31 @@ def prepare_product_build(
         ),
         (
             "current_acs_direct_match_count",
-            source_count - unmatched_count,
+            direct_match_count,
             "info",
             "reported",
             "Current ACS GEOIDs found directly in the canonical 2020 tract dimension.",
+        ),
+        (
+            "current_acs_connecticut_bridge_match_count",
+            bridge_match_count,
+            "pass" if bridge_match_count > 0 else "fail",
+            "> 0",
+            "Current Connecticut land tracts mapped to their canonical 2020 GEOIDs.",
         ),
         (
             "current_acs_unmatched_count",
             unmatched_count,
             "warn" if unmatched_count else "pass",
             "= 0 or documented geography exception",
-            "Includes Connecticut planning-region GEOID changes beginning with the 2022 ACS.",
+            "Expected remainder is limited to Connecticut water-only tracts.",
         ),
         (
             "known_geography_exception_unmatched_count",
             known_exception_count,
             "info",
-            "reported until an explicit bridge is implemented",
-            "Current exception scope is Connecticut (state FIPS 09).",
+            "reported after explicit bridge",
+            "Connecticut water-only tracts are intentionally not assigned demographic profiles.",
         ),
         (
             "unexpected_current_acs_unmatched_count",
@@ -430,7 +473,7 @@ def prepare_product_build(
             canonical_without_current_count,
             "info",
             "reported",
-            "Includes excluded territories, source omissions, and Connecticut legacy GEOIDs.",
+            "Includes excluded territories, source omissions, and legacy water-only tracts.",
         ),
     )
     for metric_name, value, status, expectation, notes in coverage_metrics:
