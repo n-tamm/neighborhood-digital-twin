@@ -74,6 +74,7 @@ for schema_name in (silver_schema, gold_schema, quality_schema):
 results = []
 for table, layer in TABLE_LAYERS.items():
     source_name = f"{catalog}.{legacy_schema}.{table}"
+    source_qualified_name = qualified_name(catalog, legacy_schema, table)
     target_schema = layer_schemas[layer]
     target_raw_name = f"{catalog}.{target_schema}.{table}"
     target_name = qualified_name(catalog, target_schema, table)
@@ -85,9 +86,8 @@ for table, layer in TABLE_LAYERS.items():
         results.append((table, layer, "source_not_present", None))
         continue
 
-    source_frame = spark.table(source_name)
-    source_count = source_frame.count()
-    (source_frame.write.format("delta").mode("errorifexists").saveAsTable(target_name))
+    source_count = spark.table(source_name).count()
+    spark.sql(f"CREATE TABLE {target_name} USING DELTA AS SELECT * FROM {source_qualified_name}")
     target_count = spark.table(target_raw_name).count()
     if target_count != source_count:
         raise RuntimeError(
