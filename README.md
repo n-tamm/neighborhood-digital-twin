@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot, including 2014, 2019, and 2024 ACS releases. The national Census 2010-to-2020 tract relationship file is also parsed, validated, and published with explicit mapping and stability flags. Usable FHFA coverage remains selective, and the relationship file does not provide population or housing weights. The next milestone is tract geometry and the canonical 2020 geography product before broader historical expansion. Features described below are planned unless explicitly marked complete.
+> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot, including 2014, 2019, and 2024 ACS releases. The national Census tract relationship and simplified display-geometry products are also live and validated. Usable FHFA coverage remains selective, the relationship file does not provide population or housing weights, and display geometry is not suitable for scientific adjacency. The next milestone is the canonical 2020 tract dimension and a separate analysis-geometry decision before broader historical expansion. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -147,9 +147,10 @@ databricks bundle run core_source_ingestion --profile neighborhood-twin
 databricks bundle run historical_acs_ingestion --profile neighborhood-twin
 databricks bundle run silver_source_transforms --profile neighborhood-twin
 databricks bundle run geography_relationship_pipeline --profile neighborhood-twin
+databricks bundle run display_geometry_pipeline --profile neighborhood-twin
 ```
 
-The deployment creates or updates four independent jobs. The core job manages initial acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The bounded historical ACS job adds reviewed state-by-release batches without reacquiring other sources. The silver job publishes the current FHFA table, normalized ACS table, ACS dictionary, and wide ACS convenience table without downloading anything. The geography job validates the registered national relationship file and publishes its typed overlap and mapping table. Raw source files and secrets remain outside Git. Complete setup and source-table details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md); geography decisions and live findings are in [Stage 03](docs/implementation/03_geography_and_time_alignment.md).
+The deployment creates or updates five independent jobs. The core job manages initial acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The bounded historical ACS job adds reviewed state-by-release batches without reacquiring other sources. The silver job publishes the FHFA and ACS products. The relationship job publishes typed tract overlaps and mapping diagnostics. The display-geometry job uses a pinned GIS environment and publishes simplified WKB geometry for application maps only. Raw source files and secrets remain outside Git. Complete setup and source-table details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md); geography decisions and live findings are in [Stage 03](docs/implementation/03_geography_and_time_alignment.md).
 
 ## Development workflow
 
@@ -160,7 +161,7 @@ The deployment creates or updates four independent jobs. The core job manages in
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository now provides validated bronze and silver pipeline slices, a small historical ACS pilot, and the official tract relationship layer, but it is not yet a functioning analytical product. Geometry processing, the canonical tract table, measure-specific harmonization decisions, broader history, exploratory analysis, modeling, evaluation, serving tables, and the application still remain.
+The repository now provides validated bronze and silver pipeline slices, a small historical ACS pilot, the official tract relationship layer, and display-ready tract geometry, but it is not yet a functioning analytical product. The canonical tract table, analysis-geometry decision, measure-specific harmonization, broader history, exploratory analysis, modeling, evaluation, serving tables, and the application still remain.
 
 ## Planned deployment
 

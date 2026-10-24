@@ -22,4 +22,6 @@ The first entry point is `01_feasibility/01_ingest_core_sources.py`. It calls te
 
 `03_transformation/02_build_tract_relationship.py` validates the registered official Census relationship snapshot, upgrades its manifest status, and publishes the typed relationship and geography-quality tables. It deliberately stops short of transforming ACS measures: the source contains land overlap, not population or housing weights.
 
+`03_transformation/03_build_display_geometry.py` parses the registered 1:500,000 cartographic archive in a pinned GIS environment. It publishes valid WKB geometry for application maps and labels it as display-only so later spatial modeling cannot silently reuse it for adjacency or precise measurements.
+
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.

@@ -29,7 +29,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Bronze quality profiling and feasibility review, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | FHFA and ACS silver source pipeline, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical ACS pilot, October 23–24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
-| Census tract relationship pipeline, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Census tract relationship and display-geometry pipelines, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -115,6 +115,16 @@ silver build, eight passing checks, and no warnings or failures. Review of the o
 layout also changed the analytical plan: because the source supplies area overlap rather than
 population or housing weights, the project will not use it to redistribute medians, rates, or
 indexes.
+
+The display-geometry stage was preceded by a temporary live compatibility probe because no GIS
+reader was present in the default Databricks serverless image. A pinned environment with pyshp
+2.3.1 and Shapely 2.0.6 successfully opened the registered archive before those dependencies were
+added to the production job. The implementation then passed Ruff, mypy, all 33 local tests,
+bundle validation, and two live runs. The published table contains 85,187 unique, valid
+geometries and one current build. A coverage comparison found 341 relationship tracts without a
+display feature: 340 are water-only and the remaining tract is a mostly-water Florida special-use
+tract. This review led to a firm scope boundary: simplified cartographic geometry can serve the
+application map, but it cannot be used for adjacency or precise spatial model features.
 
 ## Maintenance requirements
 

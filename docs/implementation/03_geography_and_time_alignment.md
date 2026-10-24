@@ -34,6 +34,20 @@ The Census relationship file provides land and water overlap only. It does not c
 
 This decision protects the application from presenting a mathematically convenient area-weighted value as though it represented where people or housing units moved across tract boundaries.
 
+## Display geometry
+
+The separate `display_geometry_pipeline` job now parses the registered national 1:500,000 Census cartographic-boundary archive with pinned `pyshp` and Shapely dependencies. It publishes:
+
+- `bronze_census_tract_display_geometry_2020`, containing the source attributes, original CRS text, WKB geometry, bounds, validity fields, and snapshot lineage;
+- `silver_tract_display_geometry_2020`, containing readable tract and county identifiers, names, areas, WKB geometry, bounds, and an explicit `display_only_cartographic_1_to_500000` role;
+- run metrics in the existing `geography_quality_metrics` table.
+
+The output contains 85,187 unique GEOIDs, including 84,784 polygons and 403 multipolygons. No geometry is empty or invalid, no GEOID is duplicated, and all bounds fall within longitude and latitude limits. A second run preserved one bronze snapshot, one manifest row, 85,187 silver rows, and one current build.
+
+The relationship universe contains 341 tracts without a cartographic display feature. Of those, 340 have zero land area and positive water area. The remaining feature is Florida tract `12057980100`, a mostly-water special-use tract with 513,480 square meters of land and 16,360,255 square meters of water. The display layer therefore remains optional in the future canonical tract dimension rather than defining which tracts exist.
+
+The Census describes cartographic boundaries as simplified small-scale mapping files and advises against using them for precise geographic analysis. This project will use this table for application maps and lookup only. Adjacency, distance, area, and other spatial model features require a separate reviewed analysis-geometry source, likely detailed TIGER/Line data for the supported scope.
+
 ## Canonical geography
 
 The selected target geography is the 2020 census tract. The relationship table now validates every tract identifier as an 11-character string, but the canonical tract table will not be considered complete until the boundary file is parsed and joined to it.
@@ -112,13 +126,12 @@ For each tract and forecast origin, select the most recent source value whose av
 
 ## Immediate next work
 
-1. Parse and validate the acquired 2020 cartographic-boundary archive without weakening geometry fidelity needed for adjacency.
-2. Publish a canonical 2020 tract table with names, state and county membership, analysis geometry metadata, and lineage.
-3. Build and test a separate simplified display-geometry product for the application.
-4. Construct tract adjacency from the analysis geometry and handle islands or disconnected tracts explicitly.
-5. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and margins of error before transforming any historical ACS value.
-6. Use the conservative stable subset as the first historical sensitivity analysis, then decide whether a population- or housing-weighted crosswalk is justified for additive counts.
-7. Only after those decisions, create the aligned tract-release analytical table and begin repeatable exploratory analysis.
+1. Publish a canonical 2020 tract dimension from the complete relationship universe, with display geometry attached when available rather than required.
+2. Decide the supported geographic scope for detailed TIGER/Line analysis geometry; national display coverage does not require national adjacency in the first model.
+3. If spatial model features remain in scope, acquire and validate detailed analysis geometry and construct adjacency with explicit handling for islands and disconnected tracts.
+4. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and margins of error before transforming any historical ACS value.
+5. Use the conservative stable subset as the first historical sensitivity analysis, then decide whether a population- or housing-weighted crosswalk is justified for additive counts.
+6. Create the aligned tract-release analytical table and begin repeatable exploratory analysis only after those decisions.
 
 ## Handoff
 
