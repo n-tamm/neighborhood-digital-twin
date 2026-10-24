@@ -141,12 +141,12 @@ def _fhfa_history(fhfa: Any, *, build_id: str, built_at_utc: str) -> Any:
     by_tract = fhfa.groupBy("state_fips", "state_abbr", "geoid").agg(
         functions.count(functions.lit(1)).alias("source_row_count"),
         functions.count("hpi").alias("usable_hpi_year_count"),
-        functions.min(functions.when(functions.col("hpi_available"), "observation_year")).alias(
-            "first_usable_hpi_year"
-        ),
-        functions.max(functions.when(functions.col("hpi_available"), "observation_year")).alias(
-            "last_usable_hpi_year"
-        ),
+        functions.min(
+            functions.when(functions.col("hpi_available"), functions.col("observation_year"))
+        ).alias("first_usable_hpi_year"),
+        functions.max(
+            functions.when(functions.col("hpi_available"), functions.col("observation_year"))
+        ).alias("last_usable_hpi_year"),
     )
     summary = by_tract.groupBy("state_fips", "state_abbr").agg(
         functions.count("geoid").alias("source_tract_count"),
@@ -257,6 +257,40 @@ def _metrics(
                     notes="EDA checkpoint publication check.",
                 )
             )
+        if table == FHFA_HISTORY_TABLE:
+            from pyspark.sql import functions  # type: ignore[import-not-found]
+
+            types = dict(frame.dtypes)
+            type_mismatch_count = sum(
+                types[column] not in {"int", "bigint"}
+                for column in ("earliest_usable_hpi_year", "latest_usable_hpi_year")
+            )
+            invalid_range_count = frame.where(
+                functions.col("earliest_usable_hpi_year").isNull()
+                | functions.col("latest_usable_hpi_year").isNull()
+                | (
+                    functions.col("earliest_usable_hpi_year")
+                    > functions.col("latest_usable_hpi_year")
+                )
+            ).count()
+            for metric_name, value in (
+                ("year_type_mismatch_count", type_mismatch_count),
+                ("invalid_year_range_count", invalid_range_count),
+            ):
+                metrics.append(
+                    QualityMetric(
+                        quality_run_id=build_id,
+                        profiled_at_utc=built_at_utc,
+                        table_name=f"{catalog}.{schema}.{table}",
+                        metric_group="readiness",
+                        metric_name=metric_name,
+                        dimension="all",
+                        metric_value=float(value),
+                        status="pass" if value == 0 else "fail",
+                        expectation="= 0",
+                        notes="FHFA history-year contract check.",
+                    )
+                )
     return metrics
 
 
