@@ -61,8 +61,15 @@ tracts as 2020 Census geography. In the 2022 ACS, Connecticut replaced its eight
 with nine planning regions. The tract boundaries mostly remained the same, but the county segment
 of the tract GEOID changed. The current 2024 ACS therefore has 884 Connecticut GEOIDs that do not
 directly match the canonical table, while the canonical table has 883 former-county Connecticut
-GEOIDs. One water-only tract became two. This is an identified bridge requirement, not missing data
-to be silently imputed.
+GEOIDs.
+
+That requirement is now implemented from the official 2020 and 2024 Connecticut TIGER/Line tract
+archives. Both sources contain the same 879 unique positive-land-area tract codes, so the silver
+bridge maps those land tracts one-to-one and fails if either vintage becomes ambiguous or
+incomplete. The 2020 source contains four water-only tracts and the current source contains five;
+those records are reconciled but never assigned demographic profiles. This leaves 879 governed
+bridge matches, five expected current water-only exceptions, and zero unexpected current ACS
+mismatches. The bridge retains both GEOIDs so source identity is never overwritten or hidden.
 
 Maintain two geometry products:
 
@@ -138,17 +145,15 @@ For each tract and forecast origin, select the most recent source value whose av
 
 ## Immediate next work
 
-1. Build a source-controlled Connecticut bridge from official Census geography and verify the 883
-   old identifiers, 884 current identifiers, and one water-only split explicitly.
-2. Decide the supported scope for detailed TIGER/Line analysis geometry; national display coverage
+1. Decide the supported scope for detailed TIGER/Line analysis geometry; national display coverage
    does not require national adjacency in the first model.
-3. If spatial model features remain in scope, acquire and validate detailed analysis geometry and
+2. If spatial model features remain in scope, acquire and validate detailed analysis geometry and
    construct adjacency with explicit handling for islands and disconnected tracts.
-4. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and
+3. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and
    margins of error before transforming historical ACS values across 2010/2020 boundaries.
-5. Use the conservative stable subset as the first historical sensitivity analysis, then decide
+4. Use the conservative stable subset as the first historical sensitivity analysis, then decide
    whether a population- or housing-weighted crosswalk is justified for additive counts.
-6. Create the aligned tract-release state and target tables needed for time-aware modeling.
+5. Create the aligned tract-release state and target tables needed for time-aware modeling.
 
 ## Handoff
 

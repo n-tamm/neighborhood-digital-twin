@@ -10,10 +10,15 @@
 - **Purpose:** is the main current-state product for modeling and application prototypes. It joins
   a compact, readable set of ACS housing and community fields with summarized FHFA history while
   retaining every canonical tract.
-- **Main structure:** place identity, current ACS estimates and uncertainty, housing-mix rates,
-  recent and historical HPI fields, coverage flags, transparent candidate flags, and build lineage.
+- **Main structure:** canonical place identity, `acs_source_geoid` before any bridge, current ACS
+  estimates and uncertainty, housing-mix rates, recent and historical HPI fields, coverage flags,
+  transparent candidate flags, and build lineage.
 - **Caution:** absent source coverage remains null and is explained by flags. This table is a
   feature-ready profile, not a trained model output.
+
+Connecticut's 879 land tracts now receive current ACS profiles through the governed bridge. The
+five current water-only tracts remain unmatched, and the quality table confirms that no
+unreviewed ACS-to-canonical mismatches remain.
 
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.

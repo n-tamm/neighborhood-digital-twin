@@ -90,7 +90,8 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "One row per safely mapped 2020 and current Connecticut land tract pair.",
     ),
     "geography_quality_metrics": TableMetadata(
-        "Append-only validation and coverage metrics for relationship and display geometry builds.",
+        "Append-only validation and coverage metrics for relationship, display geometry, and "
+        "Connecticut bridge builds.",
         "One row per geography quality run, metric, and dimension.",
     ),
     "silver_canonical_tract_2020": TableMetadata(

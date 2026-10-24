@@ -18,6 +18,11 @@ population, tenure, affordability, and housing-type fields with summarized FHFA 
 absence remains null and is accompanied by explicit `has_current_acs_profile` and
 `has_fhfa_history` flags.
 
+The table retains `acs_source_geoid` alongside the canonical `geoid_2020`. For most states these
+values are the same. In Connecticut, 879 current ACS land-tract GEOIDs are connected through the
+validated planning-region bridge, so their current descriptive profiles are available without
+erasing the source identifier. Water-only tracts remain unprofiled.
+
 Three filtered tables make downstream work easier without redefining the full project scope:
 
 - `gold_similarity_candidate_current` requires current ACS coverage, positive population and

@@ -250,17 +250,18 @@ Arizona, Michigan, and Pennsylvania now have every annual ACS five-year release 
 Columbia. Puerto Rico and the island areas were deliberately left outside this acquisition batch.
 
 Four current gold products are also live. The complete current profile retains all 85,528
-canonical tracts, while separate tables expose 82,486 initial similarity candidates, 50,601
+canonical tracts, while separate tables expose 83,359 initial similarity candidates, 50,601
 initial forecasting candidates, and an 8,182-row Arizona/Michigan/Pennsylvania application cohort.
 These are transparent availability filters, not final model populations. Their implementation is
 described in Stage 05 and their table contracts are maintained in the
 [data guide](../data/README.md).
 
 The expanded build exposed one important geography exception. The 2022 ACS adopted Connecticut's
-new planning regions as county equivalents, changing 884 current tract GEOIDs relative to the 2020
-canonical identifiers. The project will build an explicit bridge before treating Connecticut as
-current-profile coverage. The gold profile keeps those records visible with false coverage flags
-instead of accepting a misleading direct string join.
+new planning regions as county equivalents, changing its current tract GEOIDs relative to the 2020
+canonical identifiers. The implemented pipeline now ingests official 2020 and 2024 TIGER/Line
+references and publishes 879 safe one-to-one land-tract mappings. The five current water-only
+tracts remain explicit exceptions. The refreshed gold build reports 879 Connecticut bridge
+matches and zero unexpected ACS-to-canonical mismatches.
 
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
 
@@ -365,15 +366,14 @@ API keys come from environment variables or Databricks secrets, not configuratio
 Bronze, silver, national current ACS, the three-state annual panel, canonical geography, and the
 first current gold products are complete. The next data work should remain ordered:
 
-1. build and validate the Connecticut 2020-to-current tract bridge;
-2. profile the expanded ACS uncertainty, missingness, and cohort attrition by state and housing
+1. profile the expanded ACS uncertainty, missingness, and cohort attrition by state and housing
    composition rather than relying on pooled national summaries;
-3. create leakage-safe historical state/target tables for the forecast horizons;
-4. choose whether detailed TIGER/Line geometry and national adjacency are required for the first
+2. create leakage-safe historical state/target tables for the forecast horizons;
+3. choose whether detailed TIGER/Line geometry and national adjacency are required for the first
    model or can follow the nonspatial baselines;
-5. add a small, justified set of regional economic or housing-supply sources only where they
+4. add a small, justified set of regional economic or housing-supply sources only where they
    improve a stated research question;
-6. monitor Delta storage, job runtime, and free-workspace limits before considering national ACS
+5. monitor Delta storage, job runtime, and free-workspace limits before considering national ACS
    history beyond the current three-state panel.
 
 ## Handoff

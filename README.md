@@ -157,6 +157,7 @@ databricks bundle run national_current_acs_ingestion --profile neighborhood-twin
 databricks bundle run silver_source_transforms --profile neighborhood-twin
 databricks bundle run geography_relationship_pipeline --profile neighborhood-twin
 databricks bundle run display_geometry_pipeline --profile neighborhood-twin
+databricks bundle run connecticut_geography_pipeline --profile neighborhood-twin
 databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
 databricks bundle run gold_current_products --profile neighborhood-twin
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin
@@ -179,10 +180,10 @@ limitations are in the [data guide](docs/data/README.md); setup and pipeline det
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository now provides validated bronze, silver, canonical, and current gold products, but it
-is not yet a functioning model or application. The Connecticut current-geography bridge,
-point-in-time historical feature/target tables, exploratory analysis, modeling, evaluation, and
-interactive application still remain.
+The repository now provides validated bronze, silver, canonical, and current gold products,
+including the Connecticut current-geography bridge, but it is not yet a functioning model or
+application. Point-in-time historical feature/target tables, exploratory analysis, modeling,
+evaluation, and the interactive application still remain.
 
 ## Planned deployment
 

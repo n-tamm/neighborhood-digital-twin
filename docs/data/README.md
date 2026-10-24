@@ -34,28 +34,30 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 3. [`bronze_acs5_tract`](03_bronze_acs5_tract.md)
 4. [`bronze_census_tract_relationship_2010_2020`](04_bronze_census_tract_relationship_2010_2020.md)
 5. [`bronze_census_tract_display_geometry_2020`](05_bronze_census_tract_display_geometry_2020.md)
-6. [`bronze_quality_metrics`](06_bronze_quality_metrics.md)
+6. [`bronze_census_connecticut_tract_reference`](22_bronze_census_connecticut_tract_reference.md)
+7. [`bronze_quality_metrics`](06_bronze_quality_metrics.md)
 
 ### Silver analytical source tables
 
-7. [`silver_fhfa_tract_year`](07_silver_fhfa_tract_year.md)
-8. [`silver_acs_tract_measure`](08_silver_acs_tract_measure.md)
-9. [`silver_acs_measure_dictionary`](09_silver_acs_measure_dictionary.md)
-10. [`silver_acs_tract_year`](10_silver_acs_tract_year.md)
-11. [`silver_quality_metrics`](11_silver_quality_metrics.md)
-12. [`silver_tract_relationship_2010_2020`](12_silver_tract_relationship_2010_2020.md)
-13. [`silver_tract_display_geometry_2020`](13_silver_tract_display_geometry_2020.md)
-14. [`geography_quality_metrics`](14_geography_quality_metrics.md)
-15. [`silver_canonical_tract_2020`](15_silver_canonical_tract_2020.md)
-16. [`canonical_geography_quality_metrics`](16_canonical_geography_quality_metrics.md)
+8. [`silver_fhfa_tract_year`](07_silver_fhfa_tract_year.md)
+9. [`silver_acs_tract_measure`](08_silver_acs_tract_measure.md)
+10. [`silver_acs_measure_dictionary`](09_silver_acs_measure_dictionary.md)
+11. [`silver_acs_tract_year`](10_silver_acs_tract_year.md)
+12. [`silver_quality_metrics`](11_silver_quality_metrics.md)
+13. [`silver_tract_relationship_2010_2020`](12_silver_tract_relationship_2010_2020.md)
+14. [`silver_tract_display_geometry_2020`](13_silver_tract_display_geometry_2020.md)
+15. [`silver_connecticut_tract_bridge_2020_2024`](23_silver_connecticut_tract_bridge_2020_2024.md)
+16. [`geography_quality_metrics`](14_geography_quality_metrics.md)
+17. [`silver_canonical_tract_2020`](15_silver_canonical_tract_2020.md)
+18. [`canonical_geography_quality_metrics`](16_canonical_geography_quality_metrics.md)
 
 ### Gold current products
 
-17. [`gold_tract_profile_current`](17_gold_tract_profile_current.md)
-18. [`gold_similarity_candidate_current`](18_gold_similarity_candidate_current.md)
-19. [`gold_forecast_candidate_current`](19_gold_forecast_candidate_current.md)
-20. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
-21. [`gold_quality_metrics`](21_gold_quality_metrics.md)
+19. [`gold_tract_profile_current`](17_gold_tract_profile_current.md)
+20. [`gold_similarity_candidate_current`](18_gold_similarity_candidate_current.md)
+21. [`gold_forecast_candidate_current`](19_gold_forecast_candidate_current.md)
+22. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
+23. [`gold_quality_metrics`](21_gold_quality_metrics.md)
 
 ## Working conventions
 
@@ -76,14 +78,13 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 ## Current coverage
 
 As of October 24, 2026, the development schema contains nationwide 2024 ACS coverage for the 50
-states and District of Columbia, annual 2010–2024 ACS coverage for Arizona, Michigan, and
+states and District of Columbia, annual 2010-2024 ACS coverage for Arizona, Michigan, and
 Pennsylvania, national FHFA tract HPI history through 2025, and national Census geography support.
 Puerto Rico and the other island areas are present in parts of the geography source but were not
 included in the current ACS acquisition.
 
-Connecticut requires special handling. Beginning with the 2022 ACS, its former counties were
-[replaced by planning regions](https://www.census.gov/programs-surveys/acs/technical-documentation/user-notes/2023-01.html),
-which changed tract GEOIDs even though almost all tract shapes stayed the same. The current gold
-join therefore leaves Connecticut ACS fields unavailable until an explicit, validated
-2020-to-current Connecticut bridge is added. The records remain visible in the complete tract
-profile rather than being silently dropped.
+Connecticut requires a geography bridge because the 2022 ACS replaced its former counties with
+[planning regions](https://www.census.gov/programs-surveys/acs/technical-documentation/user-notes/2023-01.html).
+The implemented bridge maps all 879 land tracts one-to-one between the 2020 and 2024 TIGER
+vintages. Current ACS profiles now populate those canonical tracts. Five current water-only tracts
+remain deliberately unmatched; this leaves zero unexpected current ACS mismatches.

@@ -142,10 +142,13 @@ The completed silver build contains 192,883 tract-release rows and 4,050,543 nor
 rows. Gold reconciliation retained all 85,528 canonical tracts and reported zero hard failures.
 The live join review also found 884 current Connecticut ACS identifiers that did not match the
 2020 canonical keys. The discrepancy was traced to Connecticut's adoption of planning regions,
-not treated as random missingness. The documentation and implementation plan now require an
-explicit bridge before Connecticut is considered current-profile coverage. Finally, the sample
-export was checked for all 21 implemented tables, with five rows per file and binary geometry
-replaced by byte counts so the repository remains readable.
+not treated as random missingness. The resulting implementation was checked against official 2020
+and 2024 TIGER/Line files: 879 land tracts were unique in both vintages, while the water-only
+universe changed from four records to five. The pipeline therefore maps only the 879 one-to-one
+land tracts. Local linting, type checks, all 45 unit tests, bundle validation, and three live
+Databricks jobs passed. The refreshed gold metrics report 879 bridge matches, five documented
+water-only exceptions, and zero unexpected current ACS mismatches. Finally, real samples and
+individual table documents were checked for all 23 implemented tables.
 
 ## Maintenance requirements
 
