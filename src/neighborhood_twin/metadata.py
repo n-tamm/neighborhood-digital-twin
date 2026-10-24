@@ -91,6 +91,29 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Append-only reconciliation and coverage metrics for canonical tract builds.",
         "One row per canonical geography quality run and metric.",
     ),
+    "gold_tract_profile_current": TableMetadata(
+        "Current national tract profile joining canonical geography, ACS context, "
+        "and FHFA history.",
+        "One row per 2020 Census tract GEOID.",
+    ),
+    "gold_similarity_candidate_current": TableMetadata(
+        "Current tracts meeting the documented minimum feature-availability screen "
+        "for similarity modeling.",
+        "One row per candidate 2020 Census tract GEOID.",
+    ),
+    "gold_forecast_candidate_current": TableMetadata(
+        "Current tracts with sufficient recent FHFA history for initial forecasting experiments.",
+        "One row per candidate 2020 Census tract GEOID.",
+    ),
+    "gold_application_demo_tract": TableMetadata(
+        "Small configurable state cohort for application development; it does not "
+        "define final scope.",
+        "One row per displayable current-profile tract in the configured demo states.",
+    ),
+    "gold_quality_metrics": TableMetadata(
+        "Append-only integrity, reconciliation, and volume metrics for current gold products.",
+        "One row per gold quality run, table, and metric.",
+    ),
 }
 
 COMMON_COLUMN_COMMENTS = {
@@ -118,6 +141,12 @@ COMMON_COLUMN_COMMENTS = {
     "annual_change_pct": "FHFA annual percentage change; null remains distinct from zero change.",
     "hpi_available": "True when the FHFA HPI value is usable for this tract-year.",
     "annual_change_available": "True when the FHFA annual-change value is usable.",
+    "latest_hpi_year": "Most recent year with a usable FHFA HPI value for the tract.",
+    "latest_hpi": "Most recent usable FHFA annual single-family house price index value.",
+    "latest_hpi_annual_change_pct": "Annual HPI percentage change paired with the latest HPI year.",
+    "hpi_observation_count": "Number of years with a usable FHFA HPI value for the tract.",
+    "hpi_first_year": "Earliest year with a usable FHFA HPI value for the tract.",
+    "hpi_last_year": "Latest year with a usable FHFA HPI value for the tract.",
     "has_display_geometry": "True when simplified cartographic geometry is available for mapping.",
     "display_geometry_wkb": "Simplified cartographic geometry encoded as well-known binary.",
     "geometry_wkb": "Geometry encoded as well-known binary.",
@@ -141,6 +170,19 @@ COMMON_COLUMN_COMMENTS = {
     "status": "Quality result: pass, warn, fail, or info.",
     "expectation": "Human-readable condition used to interpret the metric.",
     "notes": "Additional interpretation or limitation for the metric.",
+    "has_current_acs_profile": "True when the tract has data in the latest ingested ACS release.",
+    "has_fhfa_history": "True when at least one usable FHFA HPI observation exists for the tract.",
+    "similarity_feature_count": (
+        "Number of the 12 governed similarity inputs available for the tract."
+    ),
+    "similarity_candidate": (
+        "True when current ACS, positive scale fields, and at least eight similarity "
+        "inputs are available."
+    ),
+    "forecast_candidate": (
+        "True when current ACS and at least ten recent usable FHFA HPI observations "
+        "are available."
+    ),
 }
 
 
@@ -157,6 +199,8 @@ def column_comment(column: str) -> str:
         return "Published or transparently derived ACS estimate; see the measure dictionary."
     if column.endswith("_margin_of_error"):
         return "Published ACS 90 percent margin of error for the associated estimate."
+    if column.endswith("_moe"):
+        return "Published ACS 90 percent margin of error paired with the named estimate."
     if column.endswith("_rate") or column.endswith("_share"):
         return (
             "Derived proportion on a zero-to-one scale unless the table description says otherwise."
