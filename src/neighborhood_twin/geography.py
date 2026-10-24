@@ -292,14 +292,38 @@ def _profile_relationship(
             ),
             _count_when(
                 functions,
-                functions.col("source_land_share").isNull()
-                | functions.col("target_land_share").isNull()
+                (
+                    functions.col("source_land_share").isNull()
+                    & (functions.col("land_area_2010_sqm") > 0)
+                )
+                | (
+                    functions.col("target_land_share").isNull()
+                    & (functions.col("land_area_2020_sqm") > 0)
+                )
                 | (functions.col("source_land_share") < 0)
                 | (functions.col("source_land_share") > 1.000001)
                 | (functions.col("target_land_share") < 0)
                 | (functions.col("target_land_share") > 1.000001),
                 "invalid_land_share_count",
             ),
+            _count_when(
+                functions,
+                (functions.col("land_area_2010_sqm") == 0)
+                | (functions.col("land_area_2020_sqm") == 0),
+                "zero_land_area_relationship_count",
+            ),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("land_area_2010_sqm") == 0,
+                    functions.col("geoid_2010"),
+                )
+            ).alias("zero_land_area_source_tract_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("land_area_2020_sqm") == 0,
+                    functions.col("geoid_2020"),
+                )
+            ).alias("zero_land_area_target_tract_count"),
             _count_when(
                 functions,
                 functions.col("is_stable_measure_mapping"),
@@ -386,6 +410,18 @@ def _profile_relationship(
     for metric_name, value in (
         ("stable_measure_mapping_count", summary["stable_measure_mapping_count"]),
         ("dominant_source_mapping_count", summary["dominant_source_mapping_count"]),
+        (
+            "zero_land_area_relationship_count",
+            summary["zero_land_area_relationship_count"],
+        ),
+        (
+            "zero_land_area_source_tract_count",
+            summary["zero_land_area_source_tract_count"],
+        ),
+        (
+            "zero_land_area_target_tract_count",
+            summary["zero_land_area_target_tract_count"],
+        ),
     ):
         metrics.append(
             _metric(
@@ -396,21 +432,31 @@ def _profile_relationship(
                 metric_name=metric_name,
                 value=value,
                 status="info",
-                expectation="reported, not treated as universal crosswalk coverage",
+                expectation="reported for interpretation, not used as a pass/fail threshold",
+                notes=(
+                    "Zero-land-area tracts represent valid water-only geographies; their "
+                    "land shares are intentionally null."
+                    if metric_name.startswith("zero_land_area")
+                    else ""
+                ),
             )
         )
-        metrics.append(
-            _metric(
-                build_id=build_id,
-                built_at_utc=built_at_utc,
-                table_name=table_name,
-                metric_group="mapping_coverage",
-                metric_name=f"{metric_name.removesuffix('_count')}_rate",
-                value=value / source_count if source_count else 0,
-                status="info",
-                expectation="reported, not treated as a quality threshold",
+        if metric_name in {
+            "stable_measure_mapping_count",
+            "dominant_source_mapping_count",
+        }:
+            metrics.append(
+                _metric(
+                    build_id=build_id,
+                    built_at_utc=built_at_utc,
+                    table_name=table_name,
+                    metric_group="mapping_coverage",
+                    metric_name=f"{metric_name.removesuffix('_count')}_rate",
+                    value=value / source_count if source_count else 0,
+                    status="info",
+                    expectation="reported, not treated as a quality threshold",
+                )
             )
-        )
 
     mapping_counts = frame.groupBy("mapping_type").count().collect()
     for row in mapping_counts:
