@@ -16,6 +16,7 @@ from typing import Any
 from neighborhood_twin.data.acs import parse_acs_api_payload
 from neighborhood_twin.data.boundary import read_boundary_archive
 from neighborhood_twin.data.manifest import SourceManifest
+from neighborhood_twin.data.tiger import read_tiger_tract_archive
 
 MANIFEST_STATUS_RANK = {"acquired": 1, "registered": 1, "bronze_validated": 2}
 
@@ -405,6 +406,116 @@ def ingest_tract_display_geometry_bronze(
     (
         frame.withColumn("SOURCE_CRS_WKT", functions.lit(archive.crs_wkt))
         .withColumn("source_snapshot_id", functions.lit(manifest.snapshot_id))
+        .withColumn(
+            "source_retrieval_timestamp_utc",
+            functions.lit(manifest.retrieval_timestamp_utc),
+        )
+        .withColumn("source_file_path", functions.lit(manifest.file_path))
+        .write.format("delta")
+        .mode("append")
+        .saveAsTable(table_name)
+    )
+    return profiled_manifest
+
+
+def ingest_connecticut_tract_reference_bronze(
+    spark: Any,
+    manifest: SourceManifest,
+    *,
+    geography_vintage: int,
+    catalog: str,
+    schema: str,
+) -> SourceManifest:
+    """Validate and append Connecticut tract identifiers from one TIGER archive."""
+
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+    from pyspark.sql.types import (  # type: ignore[import-not-found]
+        DoubleType,
+        IntegerType,
+        LongType,
+        StringType,
+        StructField,
+        StructType,
+    )
+
+    if geography_vintage not in {2020, 2024}:
+        raise ValueError("Connecticut tract reference vintage must be 2020 or 2024")
+    table_name = qualified_name(catalog, schema, "bronze_census_connecticut_tract_reference")
+    raw_table_name = f"{catalog}.{schema}.bronze_census_connecticut_tract_reference"
+    if _snapshot_exists(spark, raw_table_name, manifest.snapshot_id):
+        return manifest
+
+    archive = read_tiger_tract_archive(Path(manifest.file_path))
+    records = [
+        {
+            "geography_vintage": geography_vintage,
+            "state_fips": str(row["STATEFP"]),
+            "county_fips": str(row["COUNTYFP"]),
+            "tract_code": str(row["TRACTCE"]),
+            "geoid": str(row["GEOID"]),
+            "tract_name": str(row["NAME"]),
+            "tract_label": str(row["NAMELSAD"]),
+            "feature_class_code": str(row["MTFCC"]),
+            "functional_status": str(row["FUNCSTAT"]),
+            "land_area_sqm": int(row["ALAND"]),
+            "water_area_sqm": int(row["AWATER"]),
+            "internal_point_latitude": float(row["INTPTLAT"]),
+            "internal_point_longitude": float(row["INTPTLON"]),
+        }
+        for row in archive.rows
+    ]
+    frame_schema = StructType(
+        [
+            StructField("geography_vintage", IntegerType(), False),
+            StructField("state_fips", StringType(), False),
+            StructField("county_fips", StringType(), False),
+            StructField("tract_code", StringType(), False),
+            StructField("geoid", StringType(), False),
+            StructField("tract_name", StringType(), False),
+            StructField("tract_label", StringType(), False),
+            StructField("feature_class_code", StringType(), False),
+            StructField("functional_status", StringType(), False),
+            StructField("land_area_sqm", LongType(), False),
+            StructField("water_area_sqm", LongType(), False),
+            StructField("internal_point_latitude", DoubleType(), False),
+            StructField("internal_point_longitude", DoubleType(), False),
+        ]
+    )
+    frame = spark.createDataFrame(records, schema=frame_schema)
+    row_count = frame.count()
+    invalid_rows = frame.where(
+        (functions.col("state_fips") != "09")
+        | (~functions.col("geoid").rlike("^09[0-9]{9}$"))
+        | (
+            functions.col("geoid")
+            != functions.concat("state_fips", "county_fips", "tract_code")
+        )
+        | (functions.col("land_area_sqm") < 0)
+        | (functions.col("water_area_sqm") < 0)
+        | (~functions.col("internal_point_latitude").between(-90, 90))
+        | (~functions.col("internal_point_longitude").between(-180, 180))
+    ).count()
+    duplicate_geoids = frame.groupBy("geoid").count().where(functions.col("count") > 1).count()
+    if row_count == 0 or invalid_rows or duplicate_geoids:
+        raise ValueError(
+            "Connecticut tract reference bronze validation failed: "
+            f"rows={row_count}, invalid_rows={invalid_rows}, "
+            f"duplicate_geoids={duplicate_geoids}"
+        )
+
+    schema_fingerprint = hashlib.sha256(frame.schema.json().encode("utf-8")).hexdigest()
+    profiled_manifest = manifest.with_profile(
+        row_count=row_count,
+        schema_fingerprint=schema_fingerprint,
+        validation_status="bronze_validated",
+        validation_messages=(
+            "Reference attributes support Connecticut tract identity reconciliation; "
+            "water-only tracts are not used to transfer ACS profiles.",
+        ),
+    )
+    profiled_manifest.write_sidecar()
+    (
+        frame.withColumn("source_snapshot_id", functions.lit(manifest.snapshot_id))
         .withColumn(
             "source_retrieval_timestamp_utc",
             functions.lit(manifest.retrieval_timestamp_utc),

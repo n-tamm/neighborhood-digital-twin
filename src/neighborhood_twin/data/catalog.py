@@ -32,6 +32,54 @@ class SourceDefinition:
 
 
 CORE_FILE_SOURCES: dict[str, SourceDefinition] = {
+    "census_connecticut_tracts_2020": SourceDefinition(
+        source_id="census_connecticut_tracts_2020",
+        name="2020 Connecticut Census Tract TIGER/Line File",
+        publisher="U.S. Census Bureau",
+        landing_page=(
+            "https://www.census.gov/geographies/mapping-files/time-series/geo/"
+            "tiger-line-file.2020.html"
+        ),
+        download_url=(
+            "https://www2.census.gov/geo/tiger/TIGER2020/TRACT/tl_2020_09_tract.zip"
+        ),
+        file_name="tl_2020_09_tract.zip",
+        file_format="zip/shapefile",
+        geographic_grain="2020 Connecticut census tract",
+        geography_vintage="2020",
+        intended_use="Reference attributes for the Connecticut tract-vintage bridge.",
+        terms_url="https://www.census.gov/about/policies/open-gov/open-data.html",
+        expected_content_types=("application/zip", "application/octet-stream"),
+        minimum_bytes=1_000_000,
+        limitations=(
+            "TIGER/Line files contain geography rather than demographic estimates.",
+            "Water-only tracts are retained for reconciliation but excluded from profile transfer.",
+        ),
+    ),
+    "census_connecticut_tracts_2024": SourceDefinition(
+        source_id="census_connecticut_tracts_2024",
+        name="2024 Connecticut Census Tract TIGER/Line File",
+        publisher="U.S. Census Bureau",
+        landing_page=(
+            "https://www.census.gov/geographies/mapping-files/time-series/geo/"
+            "tiger-line-file.2024.html"
+        ),
+        download_url=(
+            "https://www2.census.gov/geo/tiger/TIGER2024/TRACT/tl_2024_09_tract.zip"
+        ),
+        file_name="tl_2024_09_tract.zip",
+        file_format="zip/shapefile",
+        geographic_grain="2024 Connecticut census tract",
+        geography_vintage="2024",
+        intended_use="Reference attributes for the Connecticut tract-vintage bridge.",
+        terms_url="https://www.census.gov/about/policies/open-gov/open-data.html",
+        expected_content_types=("application/zip", "application/octet-stream"),
+        minimum_bytes=1_000_000,
+        limitations=(
+            "Uses Connecticut planning regions as county equivalents.",
+            "Water-only tracts are retained for reconciliation but excluded from profile transfer.",
+        ),
+    ),
     "fhfa_tract_hpi": SourceDefinition(
         source_id="fhfa_tract_hpi",
         name="Annual Census Tract House Price Index",
