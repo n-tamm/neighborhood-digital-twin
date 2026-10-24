@@ -4,9 +4,39 @@
 
 Neighborhood analysis fails quietly when tract boundaries, regional membership, and source dates are treated as simple join columns. This stage creates a canonical spatial and temporal frame while preserving the uncertainty introduced by harmonization.
 
+## Current implementation
+
+The first part of this stage is live in Databricks. The `geography_relationship_pipeline` job reads the registered national [Census 2010-to-2020 tract relationship file](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html), validates its [official record layout](https://www.census.gov/programs-surveys/geography/technical-documentation/records-layout/2020-comp-record-layout.html), and publishes three managed Delta products:
+
+- `bronze_census_tract_relationship_2010_2020`, which preserves the 16 source columns and adds snapshot lineage;
+- `silver_tract_relationship_2010_2020`, which uses readable typed fields, calculates land-overlap shares, classifies mapping structure, and retains build lineage;
+- `geography_quality_metrics`, which records hard integrity checks and descriptive mapping coverage for every run.
+
+The national output contains 126,450 unique relationship rows connecting 74,134 source tracts to 85,528 target tracts. A repeat run left one bronze snapshot, one manifest row, 126,450 silver rows, and one current silver build, so the stage is idempotent at its declared grains. The latest successful run recorded eight passing checks, 69 informational diagnostics, and no warnings or failures.
+
+The live data also exposed 597 relationship rows involving a zero-land-area tract. These represent 352 source and 368 target water-only tracts, all with nonzero water area. Their land shares are intentionally null and reported separately; unexpected nulls or out-of-range shares still stop publication.
+
+## Relationship interpretation
+
+Each source-target edge is labeled `one_to_one`, `split`, `merge`, or `complex` from its exact graph degrees. This is useful structural information, but very small boundary slivers can make an otherwise similar tract look complex. The silver table therefore carries two additional flags:
+
+- `is_dominant_source_mapping` identifies the largest target overlap when it contains at least 95% of the source tract's land;
+- `is_stable_measure_mapping` is deliberately stricter: the source and target GEOID must be the same, the edge must rank first for the source tract, and both source and target land shares must be at least 95%.
+
+Nationally, 62,544 source tracts have a dominant 95% land-overlap mapping and 60,512 meet the conservative stable-measure rule. In the current pilot, the stable rule retains 1,227 of 1,526 Arizona source tracts, 2,415 of 2,813 Michigan tracts, and 2,873 of 3,218 Pennsylvania tracts. These are coverage facts, not evidence that every retained ACS value is automatically comparable.
+
+The Census relationship file provides land and water overlap only. It does not contain population or housing-unit allocation factors. For that reason:
+
+- land shares are diagnostics and boundary-overlap descriptors;
+- they must not be used to average or redistribute medians, rates, ratios, indexes, or margins of error;
+- the stable subset can support a transparent sensitivity analysis for nonadditive measures;
+- count harmonization remains deferred until the team chooses and validates a defensible population or housing-weight source and conservation rule.
+
+This decision protects the application from presenting a mathematically convenient area-weighted value as though it represented where people or housing units moved across tract boundaries.
+
 ## Canonical geography
 
-The proposed analytical geography is the 2020 census tract. Confirm that choice during feasibility and record it in a decision document. Every tract identifier should be a validated 11-character GEOID stored as a string.
+The selected target geography is the 2020 census tract. The relationship table now validates every tract identifier as an 11-character string, but the canonical tract table will not be considered complete until the boundary file is parsed and joined to it.
 
 Maintain two geometry products:
 
@@ -79,6 +109,16 @@ For each tract and forecast origin, select the most recent source value whose av
 - Adjacency is reproducible from the stated geometry and method.
 - No selected source release occurs after its row's forecast origin.
 - Temporal lags and stale observations are measurable, not hidden.
+
+## Immediate next work
+
+1. Parse and validate the acquired 2020 cartographic-boundary archive without weakening geometry fidelity needed for adjacency.
+2. Publish a canonical 2020 tract table with names, state and county membership, analysis geometry metadata, and lineage.
+3. Build and test a separate simplified display-geometry product for the application.
+4. Construct tract adjacency from the analysis geometry and handle islands or disconnected tracts explicitly.
+5. Define a field-family harmonization matrix for counts, medians, rates, ratios, indexes, and margins of error before transforming any historical ACS value.
+6. Use the conservative stable subset as the first historical sensitivity analysis, then decide whether a population- or housing-weighted crosswalk is justified for additive counts.
+7. Only after those decisions, create the aligned tract-release analytical table and begin repeatable exploratory analysis.
 
 ## Handoff
 

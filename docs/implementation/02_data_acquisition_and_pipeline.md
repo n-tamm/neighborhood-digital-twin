@@ -340,11 +340,13 @@ API keys come from environment variables or Databricks secrets, not configuratio
 
 ## Immediate next work
 
-Bronze profiling, the refined silver products, and the three-release ACS history pilot are now
-complete. The next data work should remain ordered:
+Bronze profiling, the refined silver products, the three-release ACS history pilot, and the
+national 2010-to-2020 tract relationship transform are now complete. The next data work should
+remain ordered:
 
-1. parse the acquired tract geometry and 2010-to-2020 relationship files into validated source tables;
-2. build and audit the canonical tract and geography-alignment products described in Stage 03;
+1. parse the acquired 2020 tract geometry archive into a validated source table;
+2. combine geometry with the validated relationship product to build and audit the canonical
+   tract and geography-alignment products described in Stage 03;
 3. expand ACS history in reviewed annual and geographic batches once the crosswalk contract is stable;
 4. expand coverage and uncertainty analysis by year, metro, housing composition, and other
    groups that matter for model eligibility;

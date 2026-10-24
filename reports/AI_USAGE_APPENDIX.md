@@ -29,6 +29,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Bronze quality profiling and feasibility review, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | FHFA and ACS silver source pipeline, October 23, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical ACS pilot, October 23–24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Census tract relationship pipeline, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -101,6 +102,19 @@ twice over 2014, 2019, and 2024. Both runs preserved 23,342 tract-release rows, 
 490,182 tract-release-measure rows, retained one current build per output, and passed all 34
 hard checks. The review also confirmed that 15,114 older-vintage rows were labeled and excluded
 from direct 2020-vintage FHFA coverage joins until geography harmonization is implemented.
+
+The Census tract relationship pipeline was reviewed with Ruff, mypy, all 31 local tests,
+Databricks bundle validation, and live workspace runs. The first live run was correctly blocked
+because 597 rows produced null land shares. Rather than weakening the rule immediately, the
+source rows were queried and shown to involve valid zero-land-area, water-only tracts: 352 source
+tracts and 368 target tracts, with no tract having both zero land and zero water area. The quality
+contract was revised to report those cases explicitly while continuing to fail on unexpected
+nulls, negative shares, or shares above tolerance. Two subsequent runs succeeded, and a direct
+table check confirmed one bronze snapshot, one manifest row, 126,450 silver rows, one current
+silver build, eight passing checks, and no warnings or failures. Review of the official record
+layout also changed the analytical plan: because the source supplies area overlap rather than
+population or housing weights, the project will not use it to redistribute medians, rates, or
+indexes.
 
 ## Maintenance requirements
 
