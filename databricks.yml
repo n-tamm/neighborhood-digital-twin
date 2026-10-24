@@ -54,6 +54,12 @@ variables:
   silver_quality_table:
     description: Persisted silver build metrics
     default: silver_quality_metrics
+  tract_relationship_table:
+    description: Typed 2010-to-2020 Census tract relationship table
+    default: silver_tract_relationship_2010_2020
+  geography_quality_table:
+    description: Persisted geography validation and coverage metrics
+    default: geography_quality_metrics
 
 resources:
   jobs:
@@ -122,6 +128,21 @@ resources:
               maximum_requests: ${var.historical_acs_maximum_requests}
               secret_scope: ${var.secret_scope}
               census_secret_key: ${var.census_secret_key}
+    geography_relationship_pipeline:
+      name: Neighborhood Digital Twin - Tract Relationship Pipeline
+      description: Validates and transforms the official 2010-to-2020 tract relationship file.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_tract_relationship
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/02_build_tract_relationship.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              relationship_table: ${var.tract_relationship_table}
+              quality_table: ${var.geography_quality_table}
 
 targets:
   team:

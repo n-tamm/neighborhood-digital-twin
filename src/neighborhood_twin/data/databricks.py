@@ -16,6 +16,27 @@ from typing import Any
 from neighborhood_twin.data.acs import parse_acs_api_payload
 from neighborhood_twin.data.manifest import SourceManifest
 
+MANIFEST_STATUS_RANK = {"acquired": 1, "registered": 1, "bronze_validated": 2}
+
+TRACT_RELATIONSHIP_COLUMNS = (
+    "OID_TRACT_20",
+    "GEOID_TRACT_20",
+    "NAMELSAD_TRACT_20",
+    "AREALAND_TRACT_20",
+    "AREAWATER_TRACT_20",
+    "MTFCC_TRACT_20",
+    "FUNCSTAT_TRACT_20",
+    "OID_TRACT_10",
+    "GEOID_TRACT_10",
+    "NAMELSAD_TRACT_10",
+    "AREALAND_TRACT_10",
+    "AREAWATER_TRACT_10",
+    "MTFCC_TRACT_10",
+    "FUNCSTAT_TRACT_10",
+    "AREALAND_PART",
+    "AREAWATER_PART",
+)
+
 
 def _quoted_identifier(value: str) -> str:
     if not value or "`" in value:
@@ -62,21 +83,26 @@ def _snapshot_exists(spark: Any, table_name: str, snapshot_id: str) -> bool:
 
 
 def append_manifest(spark: Any, manifest: SourceManifest, *, catalog: str, schema: str) -> None:
-    """Append a source manifest once to the governed manifest Delta table."""
+    """Insert a manifest once or upgrade its validation fields in place."""
 
     table_name = qualified_name(catalog, schema, "source_snapshot_manifest")
     raw_table_name = f"{catalog}.{schema}.source_snapshot_manifest"
+    existing_status: str | None = None
     if spark.catalog.tableExists(raw_table_name):
         from pyspark.sql import functions as functions  # type: ignore[import-not-found]
 
-        exists = (
+        existing = (
             spark.table(raw_table_name)
             .where(functions.col("snapshot_id") == manifest.snapshot_id)
+            .select("validation_status")
             .limit(1)
-            .count()
-            > 0
+            .first()
         )
-        if exists:
+        if existing is not None:
+            existing_status = str(existing["validation_status"])
+        if existing_status is not None and MANIFEST_STATUS_RANK.get(
+            existing_status, 0
+        ) >= MANIFEST_STATUS_RANK.get(manifest.validation_status, 0):
             return
     from pyspark.sql.types import (  # type: ignore[import-not-found]
         LongType,
@@ -116,9 +142,21 @@ def append_manifest(spark: Any, manifest: SourceManifest, *, catalog: str, schem
             StructField("validation_messages_json", StringType(), False),
         ]
     )
-    spark.createDataFrame([manifest.to_spark_record()], schema=manifest_schema).write.format(
-        "delta"
-    ).mode("append").saveAsTable(table_name)
+    manifest_frame = spark.createDataFrame([manifest.to_spark_record()], schema=manifest_schema)
+    if existing_status is None:
+        manifest_frame.write.format("delta").mode("append").saveAsTable(table_name)
+        return
+
+    from delta.tables import DeltaTable  # type: ignore[import-not-found]
+
+    (
+        DeltaTable.forName(spark, raw_table_name)
+        .alias("target")
+        .merge(manifest_frame.alias("source"), "target.snapshot_id = source.snapshot_id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute()
+    )
 
 
 def ingest_fhfa_bronze(
@@ -158,6 +196,99 @@ def ingest_fhfa_bronze(
         raise ValueError(
             "FHFA bronze validation failed: "
             f"rows={row_count}, invalid_geoids={invalid_geoids}, duplicate_keys={duplicate_keys}"
+        )
+
+    schema_fingerprint = hashlib.sha256(frame.schema.json().encode("utf-8")).hexdigest()
+    profiled_manifest = manifest.with_profile(
+        row_count=row_count,
+        schema_fingerprint=schema_fingerprint,
+        validation_status="bronze_validated",
+    )
+    profiled_manifest.write_sidecar()
+    (
+        frame.withColumn("source_snapshot_id", functions.lit(manifest.snapshot_id))
+        .withColumn(
+            "source_retrieval_timestamp_utc",
+            functions.lit(manifest.retrieval_timestamp_utc),
+        )
+        .withColumn("source_file_path", functions.lit(manifest.file_path))
+        .write.format("delta")
+        .mode("append")
+        .saveAsTable(table_name)
+    )
+    return profiled_manifest
+
+
+def ingest_tract_relationship_bronze(
+    spark: Any,
+    manifest: SourceManifest,
+    *,
+    catalog: str,
+    schema: str,
+) -> SourceManifest:
+    """Validate and append the national 2010-to-2020 tract relationship snapshot."""
+
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    table_name = qualified_name(catalog, schema, "bronze_census_tract_relationship_2010_2020")
+    raw_table_name = f"{catalog}.{schema}.bronze_census_tract_relationship_2010_2020"
+    if _snapshot_exists(spark, raw_table_name, manifest.snapshot_id):
+        return manifest
+
+    raw = (
+        spark.read.option("header", True)
+        .option("delimiter", "|")
+        .option("mode", "FAILFAST")
+        .csv(manifest.file_path)
+    )
+    if tuple(raw.columns) != TRACT_RELATIONSHIP_COLUMNS:
+        raise ValueError(
+            "Census tract relationship schema changed: "
+            f"expected={TRACT_RELATIONSHIP_COLUMNS}, actual={tuple(raw.columns)}"
+        )
+
+    numeric_columns = {
+        "AREALAND_TRACT_20",
+        "AREAWATER_TRACT_20",
+        "AREALAND_TRACT_10",
+        "AREAWATER_TRACT_10",
+        "AREALAND_PART",
+        "AREAWATER_PART",
+    }
+    frame = raw.select(
+        *[
+            functions.col(column).cast("long").alias(column)
+            if column in numeric_columns
+            else functions.col(column)
+            for column in TRACT_RELATIONSHIP_COLUMNS
+        ]
+    )
+    row_count = frame.count()
+    invalid_geoids = frame.where(
+        (~functions.col("GEOID_TRACT_10").rlike("^[0-9]{11}$"))
+        | (~functions.col("GEOID_TRACT_20").rlike("^[0-9]{11}$"))
+    ).count()
+    duplicate_pairs = (
+        frame.groupBy("GEOID_TRACT_10", "GEOID_TRACT_20")
+        .count()
+        .where(functions.col("count") > 1)
+        .count()
+    )
+    invalid_areas = frame.where(
+        functions.col("AREALAND_PART").isNull()
+        | functions.col("AREAWATER_PART").isNull()
+        | (functions.col("AREALAND_PART") < 0)
+        | (functions.col("AREAWATER_PART") < 0)
+        | (functions.col("AREALAND_PART") > functions.col("AREALAND_TRACT_10"))
+        | (functions.col("AREALAND_PART") > functions.col("AREALAND_TRACT_20"))
+        | (functions.col("AREAWATER_PART") > functions.col("AREAWATER_TRACT_10"))
+        | (functions.col("AREAWATER_PART") > functions.col("AREAWATER_TRACT_20"))
+    ).count()
+    if row_count == 0 or invalid_geoids or duplicate_pairs or invalid_areas:
+        raise ValueError(
+            "Census tract relationship bronze validation failed: "
+            f"rows={row_count}, invalid_geoids={invalid_geoids}, "
+            f"duplicate_pairs={duplicate_pairs}, invalid_areas={invalid_areas}"
         )
 
     schema_fingerprint = hashlib.sha256(frame.schema.json().encode("utf-8")).hexdigest()
