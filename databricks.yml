@@ -237,6 +237,19 @@ resources:
               schema: ${var.schema}
               table: ${var.canonical_tract_table}
               quality_table: ${var.canonical_quality_table}
+    table_metadata_pipeline:
+      name: Neighborhood Digital Twin - Table Metadata
+      description: Applies table descriptions, declared grains, and column comments.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: apply_table_metadata
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/05_apply_table_metadata.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
 
 targets:
   team:
