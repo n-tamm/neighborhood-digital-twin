@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Silver analytical source tables
-- **Databricks table:** `workspace.neighborhood_twin_dev.silver_quality_metrics`
+- **Databricks table:** `workspace.neighborhood_twin_quality.silver_quality_metrics`
 - **Sample:** [silver_quality_metrics.jsonl](../../data/samples/silver_quality_metrics.jsonl)
 
 - **Grain and key:** one row per quality run, table, metric, and dimension.

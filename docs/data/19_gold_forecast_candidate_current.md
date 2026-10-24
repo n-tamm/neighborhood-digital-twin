@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Gold current products
-- **Databricks table:** `workspace.neighborhood_twin_dev.gold_forecast_candidate_current`
+- **Databricks table:** `workspace.neighborhood_twin_gold.gold_forecast_candidate_current`
 - **Sample:** [gold_forecast_candidate_current.jsonl](../../data/samples/gold_forecast_candidate_current.jsonl)
 
 - **Grain and key:** one row per candidate 2020 tract GEOID.

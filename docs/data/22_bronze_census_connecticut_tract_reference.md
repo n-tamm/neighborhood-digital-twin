@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Bronze
-- **Databricks table:** `workspace.neighborhood_twin_dev.bronze_census_connecticut_tract_reference`
+- **Databricks table:** `workspace.neighborhood_twin_bronze.bronze_census_connecticut_tract_reference`
 - **Sample:** [bronze_census_connecticut_tract_reference.jsonl](../../data/samples/bronze_census_connecticut_tract_reference.jsonl)
 
 - **Grain and key:** one row per source snapshot, geography vintage, and Connecticut tract GEOID.

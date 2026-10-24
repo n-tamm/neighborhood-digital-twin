@@ -4,6 +4,37 @@
 
 Exploration should determine what the data can support, where it is biased or uncertain, and which relationships deserve formal testing. It is not a gallery of univariate charts and should not leak the final test period into model design.
 
+## Implemented readiness checkpoint
+
+The first repeatable EDA job is `data_readiness_eda`. It publishes four compact summaries in the
+gold schema and records its publication checks in the quality schema:
+
+- state-level attrition from canonical geography through ACS, FHFA, similarity, and forecast
+  eligibility;
+- current ACS missingness and relative margins of error by measure;
+- FHFA history depth by state;
+- one-, three-, and five-year FHFA tract-origin feasibility and observed annualized-change ranges.
+
+The October 24, 2026 run retained 85,528 canonical tracts, 84,396 current ACS profiles, 63,930
+tracts with FHFA history, 83,359 similarity candidates, and 51,263 current forecast candidates.
+The source supports about 1.97 million one-year, 1.85 million three-year, and 1.73 million
+five-year FHFA tract-origin pairs before feature timing and split rules reduce the sample.
+
+The checkpoint also resolved Connecticut rather than accepting its prior zero forecast count. All
+728 Connecticut FHFA identifiers use the new planning-region GEOIDs; all match the current side of
+the audited bridge, and 662 tracts now pass the current forecast-availability screen. The gold job
+now fails if a Connecticut FHFA identifier is not covered by that bridge.
+
+ACS uncertainty is not uniform across feature families. Current total population has a median
+relative MOE near 13.8%, while small housing categories can have median relative MOE above 100%.
+For example, two-unit buildings exceed 50% relative MOE in about 58% of tracts. Feature selection
+should therefore favor stable totals and broader housing shares, retain uncertainty indicators,
+and test whether fine categories improve held-out performance enough to justify their noise.
+
+This checkpoint does not complete EDA. The next pass must add housing-composition coverage slices,
+retained-versus-excluded comparisons, temporal plots, maps, and report-ready figures. It should use
+the persisted summaries rather than recomputing national joins inside plotting cells.
+
 ## Exploration layers
 
 ### Coverage and attrition

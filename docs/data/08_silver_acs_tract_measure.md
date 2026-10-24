@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Silver analytical source tables
-- **Databricks table:** `workspace.neighborhood_twin_dev.silver_acs_tract_measure`
+- **Databricks table:** `workspace.neighborhood_twin_silver.silver_acs_tract_measure`
 - **Sample:** [silver_acs_tract_measure.jsonl](../../data/samples/silver_acs_tract_measure.jsonl)
 
 - **Grain and key:** one row per tract GEOID, ACS release year, and governed measure.

@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Silver analytical source tables
-- **Databricks table:** `workspace.neighborhood_twin_dev.silver_tract_display_geometry_2020`
+- **Databricks table:** `workspace.neighborhood_twin_silver.silver_tract_display_geometry_2020`
 - **Sample:** [silver_tract_display_geometry_2020.jsonl](../../data/samples/silver_tract_display_geometry_2020.jsonl)
 
 - **Grain and key:** one row per displayable 2020 tract GEOID.

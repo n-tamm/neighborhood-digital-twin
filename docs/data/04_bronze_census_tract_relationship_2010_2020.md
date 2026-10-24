@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Governance and bronze
-- **Databricks table:** `workspace.neighborhood_twin_dev.bronze_census_tract_relationship_2010_2020`
+- **Databricks table:** `workspace.neighborhood_twin_bronze.bronze_census_tract_relationship_2010_2020`
 - **Sample:** [bronze_census_tract_relationship_2010_2020.jsonl](../../data/samples/bronze_census_tract_relationship_2010_2020.jsonl)
 
 - **Grain and key:** one row per unique 2010-tract to 2020-tract relationship edge.

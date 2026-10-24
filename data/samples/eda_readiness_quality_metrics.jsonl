@@ -1,0 +1,3 @@
+{"quality_run_id":"20261024T232933633974Z","table_name":"workspace.neighborhood_twin_gold.gold_eda_state_coverage","metric_group":"readiness","metric_name":"duplicate_key_count","metric_value":0.0,"status":"pass","expectation":"= 0"}
+{"quality_run_id":"20261024T232933633974Z","table_name":"workspace.neighborhood_twin_gold.gold_eda_horizon_feasibility","metric_group":"readiness","metric_name":"row_count","metric_value":153.0,"status":"pass","expectation":"> 0"}
+{"quality_run_id":"20261024T232933633974Z","table_name":"workspace.neighborhood_twin_gold.gold_eda_acs_measure_quality","metric_group":"readiness","metric_name":"duplicate_key_count","metric_value":0.0,"status":"pass","expectation":"= 0"}

@@ -5,8 +5,9 @@ GitHub is the source of truth for code while Databricks is the shared data and e
 ```mermaid
 flowchart LR
     A[Public data sources] --> B[Managed volume: immutable raw snapshots]
-    B --> C[Delta bronze and silver tables]
-    C --> D[Tract-year neighborhood state]
+    B --> C[Bronze schema]
+    C --> D1[Silver schema]
+    D1 --> D[Gold neighborhood state]
     D --> E[Forecasts and uncertainty]
     D --> F[Historical analogues]
     E --> G[Scenario sensitivity]

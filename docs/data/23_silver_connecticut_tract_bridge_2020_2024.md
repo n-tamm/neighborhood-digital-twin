@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Silver geography
-- **Databricks table:** `workspace.neighborhood_twin_dev.silver_connecticut_tract_bridge_2020_2024`
+- **Databricks table:** `workspace.neighborhood_twin_silver.silver_connecticut_tract_bridge_2020_2024`
 - **Sample:** [silver_connecticut_tract_bridge_2020_2024.jsonl](../../data/samples/silver_connecticut_tract_bridge_2020_2024.jsonl)
 
 - **Grain and key:** one row per safely matched pair of 2020 and current Connecticut land-tract

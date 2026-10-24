@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Gold current products
-- **Databricks table:** `workspace.neighborhood_twin_dev.gold_tract_profile_current`
+- **Databricks table:** `workspace.neighborhood_twin_gold.gold_tract_profile_current`
 - **Sample:** [gold_tract_profile_current.jsonl](../../data/samples/gold_tract_profile_current.jsonl)
 
 - **Grain and key:** exactly one row per canonical 2020 tract GEOID.
@@ -18,7 +18,8 @@
 
 Connecticut's 879 land tracts now receive current ACS profiles through the governed bridge. The
 five current water-only tracts remain unmatched, and the quality table confirms that no
-unreviewed ACS-to-canonical mismatches remain.
+unreviewed ACS-to-canonical mismatches remain. FHFA uses the same current planning-region GEOIDs;
+the bridge now maps all 728 FHFA Connecticut tracts to their canonical 2020 identities as well.
 
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.

@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot, including 2014, 2019, and 2024 ACS releases. The national Census tract relationship and simplified display-geometry products are also live and validated. Usable FHFA coverage remains selective, the relationship file does not provide population or housing weights, and display geometry is not suitable for scientific adjacency. The next milestone is the canonical 2020 tract dimension and a separate analysis-geometry decision before broader historical expansion. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include nationwide current ACS profiles, national FHFA history, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, and the first formal EDA readiness summaries. Usable FHFA coverage remains selective, older ACS releases are not yet harmonized to 2020 tracts, and display geometry is not suitable for scientific adjacency. The next milestone is completing visual and coverage-focused EDA, then defining the point-in-time historical modeling contract. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -41,8 +41,9 @@ The name does not imply a perfect replica of a neighborhood, live sensor coverag
 ```mermaid
 flowchart LR
     S[Public sources] --> B[Unity Catalog raw snapshots]
-    B --> C[Delta bronze and silver tables]
-    C --> G[Tract-year neighborhood state]
+    B --> C[Bronze schema]
+    C --> D[Silver schema]
+    D --> G[Gold neighborhood state]
     G --> F[Forecasts and uncertainty]
     G --> R[Representations and analogues]
     F --> X[Scenario engine]

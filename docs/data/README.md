@@ -1,6 +1,7 @@
 # Data Guide
 
-This folder explains the tables that currently exist in the shared Databricks schema. It is the
+This folder explains the tables that currently exist across the shared Databricks bronze, silver,
+gold, and quality schemas. It is the
 starting point for understanding what a row represents, which table should be used for a given
 task, and where important limitations enter the pipeline.
 
@@ -59,6 +60,14 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 22. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
 23. [`gold_quality_metrics`](21_gold_quality_metrics.md)
 
+### Gold exploration and readiness
+
+24. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
+25. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
+26. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
+27. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
+28. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
+
 ## Working conventions
 
 - Census tract identifiers are strings so leading zeros are never lost.
@@ -77,7 +86,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 24, 2026, the development schema contains nationwide 2024 ACS coverage for the 50
+As of October 24, 2026, the organized schemas contain nationwide 2024 ACS coverage for the 50
 states and District of Columbia, annual 2010-2024 ACS coverage for Arizona, Michigan, and
 Pennsylvania, national FHFA tract HPI history through 2025, and national Census geography support.
 Puerto Rico and the other island areas are present in parts of the geography source but were not
@@ -87,4 +96,6 @@ Connecticut requires a geography bridge because the 2022 ACS replaced its former
 [planning regions](https://www.census.gov/programs-surveys/acs/technical-documentation/user-notes/2023-01.html).
 The implemented bridge maps all 879 land tracts one-to-one between the 2020 and 2024 TIGER
 vintages. Current ACS profiles now populate those canonical tracts. Five current water-only tracts
-remain deliberately unmatched; this leaves zero unexpected current ACS mismatches.
+remain deliberately unmatched; this leaves zero unexpected current ACS mismatches. FHFA also
+uses the newer planning-region identifiers for 728 Connecticut tracts. Applying the same audited
+bridge restores FHFA history for all 728 and produces 662 current forecast candidates.

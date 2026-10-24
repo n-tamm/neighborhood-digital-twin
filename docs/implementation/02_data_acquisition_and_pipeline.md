@@ -269,7 +269,9 @@ Columbia. Puerto Rico and the island areas were deliberately left outside this a
 
 Four current gold products are also live. The complete current profile retains all 85,528
 canonical tracts, while separate tables expose 83,359 initial similarity candidates, 50,601
-initial forecasting candidates, and an 8,182-row Arizona/Michigan/Pennsylvania application cohort.
+initial forecasting candidates before FHFA geography reconciliation, and an 8,182-row
+Arizona/Michigan/Pennsylvania application cohort. Applying the reviewed Connecticut bridge to
+FHFA as well as ACS raises the current forecast screen to 51,263 tracts.
 These are transparent availability filters, not final model populations. Their implementation is
 described in Stage 05 and their table contracts are maintained in the
 [data guide](../data/README.md).
@@ -280,6 +282,9 @@ canonical identifiers. The implemented pipeline now ingests official 2020 and 20
 references and publishes 879 safe one-to-one land-tract mappings. The five current water-only
 tracts remain explicit exceptions. The refreshed gold build reports 879 Connecticut bridge
 matches and zero unexpected ACS-to-canonical mismatches.
+FHFA uses the same current planning-region identifiers for 728 Connecticut tracts. All 728 map
+through the bridge, leaving zero unmapped Connecticut FHFA identifiers and restoring 662 current
+forecast candidates in the state.
 
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
 

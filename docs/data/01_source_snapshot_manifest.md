@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Governance and bronze
-- **Databricks table:** `workspace.neighborhood_twin_dev.source_snapshot_manifest`
+- **Databricks table:** `workspace.neighborhood_twin_bronze.source_snapshot_manifest`
 - **Sample:** [source_snapshot_manifest.jsonl](../../data/samples/source_snapshot_manifest.jsonl)
 
 - **Grain and key:** one row per immutable source snapshot; keyed by `source_snapshot_id`.

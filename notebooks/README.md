@@ -24,4 +24,9 @@ The first entry point is `01_feasibility/01_ingest_core_sources.py`. It calls te
 
 `03_transformation/03_build_display_geometry.py` parses the registered 1:500,000 cartographic archive in a pinned GIS environment. It publishes valid WKB geometry for application maps and labels it as display-only so later spatial modeling cannot silently reuse it for adjacency or precise measurements.
 
+`04_exploration/01_build_data_readiness.py` is the first formal EDA checkpoint. It publishes
+reusable state coverage, ACS uncertainty, FHFA history-depth, and forecast-horizon summaries
+instead of recomputing national joins in presentation cells. Its publication checks are stored in
+the quality schema, including failed attempts that explain why a run was corrected.
+
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.
