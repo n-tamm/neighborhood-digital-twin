@@ -24,6 +24,7 @@ SIMILARITY_CANDIDATE_TABLE = "gold_similarity_candidate_current"
 FORECAST_CANDIDATE_TABLE = "gold_forecast_candidate_current"
 APPLICATION_DEMO_TABLE = "gold_application_demo_tract"
 PRODUCT_QUALITY_TABLE = "gold_quality_metrics"
+KNOWN_CURRENT_ACS_GEOID_EXCEPTION_STATES = ("09",)
 
 SIMILARITY_FEATURE_COLUMNS = (
     "population_total_estimate",
@@ -333,9 +334,10 @@ def prepare_product_build(
     build_id, built_at_utc = new_quality_run_id(built_at)
 
     canonical = spark.table(canonical_name)
+    acs = spark.table(acs_name)
     profile = _build_current_profile(
         canonical,
-        spark.table(acs_name),
+        acs,
         spark.table(fhfa_name),
         build_id=build_id,
         built_at_utc=built_at_utc,
@@ -362,6 +364,87 @@ def prepare_product_build(
                 table_name=f"{catalog}.{schema}.{table}",
                 expect_complete_canonical=table == CURRENT_PROFILE_TABLE,
                 canonical_count=canonical_count,
+            )
+        )
+    current_acs_year = int(acs.agg(functions.max("acs_release_year")).first()[0])
+    current_acs_geoids = (
+        acs.where(functions.col("acs_release_year") == current_acs_year)
+        .select("geoid", "state_fips")
+        .distinct()
+    )
+    canonical_geoids = canonical.select("geoid_2020").distinct()
+    unmatched_current = current_acs_geoids.join(
+        canonical_geoids,
+        current_acs_geoids.geoid == canonical_geoids.geoid_2020,
+        "left_anti",
+    )
+    source_count = current_acs_geoids.count()
+    unmatched_count = unmatched_current.count()
+    known_exception_count = unmatched_current.where(
+        functions.col("state_fips").isin(*KNOWN_CURRENT_ACS_GEOID_EXCEPTION_STATES)
+    ).count()
+    unexpected_unmatched_count = unmatched_count - known_exception_count
+    canonical_without_current_count = canonical_geoids.join(
+        current_acs_geoids,
+        canonical_geoids.geoid_2020 == current_acs_geoids.geoid,
+        "left_anti",
+    ).count()
+    coverage_metrics = (
+        (
+            "current_acs_source_tract_count",
+            source_count,
+            "pass" if source_count > 0 else "fail",
+            "> 0",
+            f"Distinct tract GEOIDs in ACS release {current_acs_year}.",
+        ),
+        (
+            "current_acs_direct_match_count",
+            source_count - unmatched_count,
+            "info",
+            "reported",
+            "Current ACS GEOIDs found directly in the canonical 2020 tract dimension.",
+        ),
+        (
+            "current_acs_unmatched_count",
+            unmatched_count,
+            "warn" if unmatched_count else "pass",
+            "= 0 or documented geography exception",
+            "Includes Connecticut planning-region GEOID changes beginning with the 2022 ACS.",
+        ),
+        (
+            "known_geography_exception_unmatched_count",
+            known_exception_count,
+            "info",
+            "reported until an explicit bridge is implemented",
+            "Current exception scope is Connecticut (state FIPS 09).",
+        ),
+        (
+            "unexpected_current_acs_unmatched_count",
+            unexpected_unmatched_count,
+            "pass" if unexpected_unmatched_count == 0 else "fail",
+            "= 0",
+            "Unmatched current ACS GEOIDs outside reviewed geography exceptions.",
+        ),
+        (
+            "canonical_without_current_acs_count",
+            canonical_without_current_count,
+            "info",
+            "reported",
+            "Includes excluded territories, source omissions, and Connecticut legacy GEOIDs.",
+        ),
+    )
+    for metric_name, value, status, expectation, notes in coverage_metrics:
+        metrics.append(
+            _metric(
+                build_id=build_id,
+                built_at_utc=built_at_utc,
+                table_name=f"{catalog}.{schema}.{CURRENT_PROFILE_TABLE}",
+                metric_group="coverage",
+                metric_name=metric_name,
+                value=value,
+                status=status,
+                expectation=expectation,
+                notes=notes,
             )
         )
     metrics.append(

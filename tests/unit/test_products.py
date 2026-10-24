@@ -10,6 +10,7 @@ import pytest
 
 from neighborhood_twin.products import (
     ACS_PROFILE_COLUMNS,
+    KNOWN_CURRENT_ACS_GEOID_EXCEPTION_STATES,
     SIMILARITY_FEATURE_COLUMNS,
     parse_state_fips_codes,
 )
@@ -18,6 +19,10 @@ from neighborhood_twin.products import (
 def test_similarity_features_are_available_in_current_profile() -> None:
     assert set(SIMILARITY_FEATURE_COLUMNS).issubset(ACS_PROFILE_COLUMNS)
     assert len(SIMILARITY_FEATURE_COLUMNS) == len(set(SIMILARITY_FEATURE_COLUMNS))
+
+
+def test_connecticut_is_the_only_reviewed_current_geoid_exception() -> None:
+    assert KNOWN_CURRENT_ACS_GEOID_EXCEPTION_STATES == ("09",)
 
 
 def test_demo_state_scope_is_normalized() -> None:
