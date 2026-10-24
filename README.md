@@ -86,7 +86,7 @@ Forecast evaluation will use time-based splits and a separate geographic holdout
 |---|---|
 | [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Canonical scope, research questions, non-goals, and definition of success |
 | [ROADMAP.md](ROADMAP.md) | Twelve-week delivery plan, decision gates, and team ownership options |
-| [docs/](docs/) | Architecture, implementation guide, table catalog, and small table samples |
+| [docs/](docs/) | Architecture, implementation guide, and one reference document per data table |
 | [data/](data/) | Local-only raw, interim, processed, and demonstration data zones |
 | [notebooks/](notebooks/) | Numbered exploration and communication notebooks; reusable logic belongs in `src/` |
 | [src/](src/) | Reusable acquisition, validation, geography, feature, modeling, simulation, and export code |
@@ -103,7 +103,7 @@ Start with:
 1. [Project charter](PROJECT_CHARTER.md)
 2. [Twelve-week roadmap](ROADMAP.md)
 3. [Documentation index](docs/README.md)
-4. [Data guide and table catalog](docs/data/README.md)
+4. [Data guide and per-table documentation](docs/data/README.md)
 5. [Implementation sequence](docs/implementation/README.md)
 6. [System architecture](docs/ARCHITECTURE.md)
 

@@ -21,10 +21,41 @@ gold tables                             joined profiles and explicit candidate c
           +---------------------> modeling, evaluation, and the interactive application
 ```
 
-Use [TABLE_CATALOG.md](TABLE_CATALOG.md) for table-by-table grain, keys, purpose, and cautions.
-The [samples](samples/) folder contains small, real extracts from the development tables so a
-teammate can inspect their shape without opening Databricks. These samples are documentation,
-not substitutes for the governed tables.
+Each implemented table has its own document below. Small, real extracts live in the repository's
+main [data samples folder](../../data/samples/) so a teammate can inspect table shape without
+opening Databricks. The samples are documentation aids, not substitutes for the governed tables.
+
+## Table documents
+
+### Governance and bronze
+
+1. [`source_snapshot_manifest`](01_source_snapshot_manifest.md)
+2. [`bronze_fhfa_tract_hpi`](02_bronze_fhfa_tract_hpi.md)
+3. [`bronze_acs5_tract`](03_bronze_acs5_tract.md)
+4. [`bronze_census_tract_relationship_2010_2020`](04_bronze_census_tract_relationship_2010_2020.md)
+5. [`bronze_census_tract_display_geometry_2020`](05_bronze_census_tract_display_geometry_2020.md)
+6. [`bronze_quality_metrics`](06_bronze_quality_metrics.md)
+
+### Silver analytical source tables
+
+7. [`silver_fhfa_tract_year`](07_silver_fhfa_tract_year.md)
+8. [`silver_acs_tract_measure`](08_silver_acs_tract_measure.md)
+9. [`silver_acs_measure_dictionary`](09_silver_acs_measure_dictionary.md)
+10. [`silver_acs_tract_year`](10_silver_acs_tract_year.md)
+11. [`silver_quality_metrics`](11_silver_quality_metrics.md)
+12. [`silver_tract_relationship_2010_2020`](12_silver_tract_relationship_2010_2020.md)
+13. [`silver_tract_display_geometry_2020`](13_silver_tract_display_geometry_2020.md)
+14. [`geography_quality_metrics`](14_geography_quality_metrics.md)
+15. [`silver_canonical_tract_2020`](15_silver_canonical_tract_2020.md)
+16. [`canonical_geography_quality_metrics`](16_canonical_geography_quality_metrics.md)
+
+### Gold current products
+
+17. [`gold_tract_profile_current`](17_gold_tract_profile_current.md)
+18. [`gold_similarity_candidate_current`](18_gold_similarity_candidate_current.md)
+19. [`gold_forecast_candidate_current`](19_gold_forecast_candidate_current.md)
+20. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
+21. [`gold_quality_metrics`](21_gold_quality_metrics.md)
 
 ## Working conventions
 

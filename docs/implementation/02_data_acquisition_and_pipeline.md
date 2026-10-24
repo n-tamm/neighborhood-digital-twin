@@ -254,7 +254,7 @@ canonical tracts, while separate tables expose 82,486 initial similarity candida
 initial forecasting candidates, and an 8,182-row Arizona/Michigan/Pennsylvania application cohort.
 These are transparent availability filters, not final model populations. Their implementation is
 described in Stage 05 and their table contracts are maintained in the
-[data guide](../data/TABLE_CATALOG.md).
+[data guide](../data/README.md).
 
 The expanded build exposed one important geography exception. The 2022 ACS adopted Connecticut's
 new planning regions as county equivalents, changing 884 current tract GEOIDs relative to the 2020

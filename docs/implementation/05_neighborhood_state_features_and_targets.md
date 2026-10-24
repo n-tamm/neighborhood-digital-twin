@@ -30,7 +30,7 @@ Three filtered tables make downstream work easier without redefining the full pr
 These filters are intentionally called candidates. Feature selection, preprocessing, historical
 target construction, time-aware evaluation, and subgroup diagnostics still determine whether a row
 belongs in a final model. The full contracts and small real samples are in the
-[data guide](../data/TABLE_CATALOG.md).
+[current-profile table document](../data/17_gold_tract_profile_current.md).
 
 ## Neighborhood-state contract
 

@@ -1,5 +1,7 @@
 # Table Samples
 
+[Data folder overview](../README.md) | [Table documentation](../../docs/data/README.md)
+
 This folder contains small JSON Lines extracts from every implemented Databricks table. Each line
 is one real development-table row serialized as JSON, and each file contains at most five rows.
 JSON Lines keeps data types and nulls clearer than a very wide CSV while remaining easy to inspect
