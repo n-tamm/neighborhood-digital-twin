@@ -26,12 +26,28 @@ class AcsMeasure:
     concept: str
 
     @property
+    def group_code(self) -> str:
+        return self.variable_root.split("_", maxsplit=1)[0]
+
+    @property
     def estimate_code(self) -> str:
         return f"{self.variable_root}E"
 
     @property
     def margin_of_error_code(self) -> str:
         return f"{self.variable_root}M"
+
+
+@dataclass(frozen=True)
+class AcsIngestionScope:
+    """Bounded state-by-release scope for one historical acquisition run."""
+
+    release_years: tuple[int, ...]
+    state_fips_codes: tuple[str, ...]
+
+    @property
+    def request_count(self) -> int:
+        return len(self.release_years) * len(self.state_fips_codes)
 
 
 ACS_CORE_MEASURES: tuple[AcsMeasure, ...] = (
@@ -59,6 +75,72 @@ ACS_CORE_MEASURES: tuple[AcsMeasure, ...] = (
 )
 
 
+@dataclass(frozen=True)
+class AcsGroupMetadata:
+    """Shared Census metadata for one ACS detailed-table group."""
+
+    concept: str
+    universe: str
+    unit: str
+    group_code: str
+
+    def metadata_url(self, release_year: int) -> str:
+        return (
+            f"https://api.census.gov/data/{release_year}/acs/acs5/groups/"
+            f"{self.group_code}.html"
+        )
+
+
+ACS_GROUP_METADATA: dict[str, AcsGroupMetadata] = {
+    "B01003": AcsGroupMetadata("Total Population", "Total population", "count", "B01003"),
+    "B25001": AcsGroupMetadata("Housing Units", "Housing units", "count", "B25001"),
+    "B25002": AcsGroupMetadata("Occupancy Status", "Housing units", "count", "B25002"),
+    "B25003": AcsGroupMetadata("Tenure", "Occupied housing units", "count", "B25003"),
+    "B25024": AcsGroupMetadata("Units in Structure", "Housing units", "count", "B25024"),
+    "B19013": AcsGroupMetadata(
+        "Median Household Income in the Past 12 Months",
+        "Households",
+        "inflation-adjusted dollars",
+        "B19013",
+    ),
+    "B25077": AcsGroupMetadata(
+        "Median Value (Dollars)",
+        "Owner-occupied housing units",
+        "dollars",
+        "B25077",
+    ),
+    "B25064": AcsGroupMetadata(
+        "Median Gross Rent (Dollars)",
+        "Renter-occupied housing units paying cash rent",
+        "dollars",
+        "B25064",
+    ),
+}
+
+
+def acs_measure_dictionary_records(*, release_year: int) -> tuple[dict[str, str | int], ...]:
+    """Return one stable, human-readable dictionary row per requested measure."""
+
+    records: list[dict[str, str | int]] = []
+    for measure_order, measure in enumerate(ACS_CORE_MEASURES, start=1):
+        group = ACS_GROUP_METADATA[measure.group_code]
+        records.append(
+            {
+                "measure_order": measure_order,
+                "measure_name": measure.name,
+                "group_code": measure.group_code,
+                "measure_label": measure.concept,
+                "table_concept": group.concept,
+                "universe": group.universe,
+                "unit": group.unit,
+                "estimate_code": measure.estimate_code,
+                "margin_of_error_code": measure.margin_of_error_code,
+                "metadata_url": group.metadata_url(release_year),
+            }
+        )
+    return tuple(records)
+
+
 def acs_variable_codes() -> tuple[str, ...]:
     """Return the requested estimate and margin-of-error codes."""
 
@@ -70,6 +152,43 @@ def acs_variable_codes() -> tuple[str, ...]:
     if len(codes) + 1 > 50:
         raise ValueError("The ACS request exceeds the 50-variable API limit")
     return codes
+
+
+def parse_acs_ingestion_scope(
+    *,
+    release_years: str,
+    state_fips_codes: str,
+    maximum_requests: int,
+) -> AcsIngestionScope:
+    """Parse and guard a comma-separated historical ACS job scope."""
+
+    if maximum_requests < 1:
+        raise ValueError("maximum_requests must be positive")
+    release_tokens = tuple(token.strip() for token in release_years.split(",") if token.strip())
+    state_tokens = tuple(token.strip() for token in state_fips_codes.split(",") if token.strip())
+    if not release_tokens or not state_tokens:
+        raise ValueError("At least one ACS release year and one state FIPS code are required")
+    if len(release_tokens) != len(set(release_tokens)):
+        raise ValueError("ACS release years must not contain duplicates")
+    if len(state_tokens) != len(set(state_tokens)):
+        raise ValueError("State FIPS codes must not contain duplicates")
+
+    try:
+        parsed_years = tuple(int(token) for token in release_tokens)
+    except ValueError as error:
+        raise ValueError("ACS release years must be comma-separated integers") from error
+    if any(year < 2009 for year in parsed_years):
+        raise ValueError("ACS five-year releases begin in 2009")
+    if any(len(code) != 2 or not code.isdigit() for code in state_tokens):
+        raise ValueError("Every state FIPS code must contain exactly two digits")
+
+    scope = AcsIngestionScope(parsed_years, state_tokens)
+    if scope.request_count > maximum_requests:
+        raise ValueError(
+            f"Requested {scope.request_count} ACS API calls, exceeding this run's "
+            f"maximum of {maximum_requests}; split the history into reviewed batches"
+        )
+    return scope
 
 
 def build_acs_tract_request(*, release_year: int, state_fips: str, api_key: str) -> SourceRequest:

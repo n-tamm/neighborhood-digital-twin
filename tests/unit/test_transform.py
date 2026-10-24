@@ -9,8 +9,11 @@ Model used: GPT-5
 from neighborhood_twin.data.acs import ACS_CORE_MEASURES
 from neighborhood_twin.transform import (
     ACS_DERIVED_RATIO_COLUMNS,
+    ACS_DICTIONARY_SILVER_COLUMNS,
+    ACS_MEASURE_SILVER_COLUMNS,
     SILVER_SCHEMA_VERSION,
     acs_silver_measure_columns,
+    acs_wide_silver_columns,
     parse_acs_numeric_value,
 )
 
@@ -40,6 +43,15 @@ def test_acs_silver_measure_columns_are_complete_and_unique() -> None:
 
 
 def test_silver_contract_version_and_ratio_names_are_stable() -> None:
-    assert SILVER_SCHEMA_VERSION == "1.0.0"
+    assert SILVER_SCHEMA_VERSION == "1.1.0"
     assert "single_family_share_estimate" in ACS_DERIVED_RATIO_COLUMNS
     assert "multifamily_share_estimate" in ACS_DERIVED_RATIO_COLUMNS
+
+
+def test_normalized_acs_contracts_are_unique_and_readable() -> None:
+    assert len(acs_wide_silver_columns()) == len(set(acs_wide_silver_columns()))
+    assert len(ACS_MEASURE_SILVER_COLUMNS) == len(set(ACS_MEASURE_SILVER_COLUMNS))
+    assert len(ACS_DICTIONARY_SILVER_COLUMNS) == len(set(ACS_DICTIONARY_SILVER_COLUMNS))
+    assert "estimate" in ACS_MEASURE_SILVER_COLUMNS
+    assert "universe" in ACS_MEASURE_SILVER_COLUMNS
+    assert "metadata_url" in ACS_DICTIONARY_SILVER_COLUMNS

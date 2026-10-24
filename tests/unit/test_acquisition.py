@@ -18,6 +18,7 @@ from neighborhood_twin.data.acquisition import (
     register_existing_snapshot,
 )
 from neighborhood_twin.data.catalog import SourceDefinition
+from neighborhood_twin.data.manifest import SourceManifest
 
 
 class FakeResponse:
@@ -129,3 +130,23 @@ def test_manual_registration_preserves_upload_and_records_method(tmp_path: Path)
     assert Path(manifest.file_path).read_bytes() == uploaded_path.read_bytes()
     assert manifest.request_parameters["acquisition_method"] == "manual_upload"
     assert manifest.validation_status == "registered"
+
+
+def test_manifest_sidecar_round_trip_preserves_tuple_fields(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    request = SourceRequest(
+        source=_source(), url="https://example.org/data.csv", file_name="data.csv"
+    )
+    manifest = acquire_http_snapshot(
+        request,
+        tmp_path / "volume",
+        retrieved_at=datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc),  # noqa: UP017
+        opener=lambda *_args, **_kwargs: FakeResponse(b"id,value\n1,2\n"),
+    )
+    manifest.write_json(manifest_path)
+
+    restored = SourceManifest.read_json(manifest_path)
+
+    assert restored == manifest
+    assert isinstance(restored.known_limitations, tuple)
+    assert isinstance(restored.validation_messages, tuple)

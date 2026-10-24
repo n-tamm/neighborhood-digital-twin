@@ -10,6 +10,33 @@ This stage turns aligned source tables into the project's central analytical pro
 
 That separation lets the app describe a neighborhood without forcing every descriptive field into the predictive model.
 
+## Current implementation
+
+`gold_tract_profile_current` is the first implemented current-state product. It keeps exactly one
+row for each of the 85,528 canonical tracts and joins a deliberately compact set of ACS housing,
+population, tenure, affordability, and housing-type fields with summarized FHFA history. Source
+absence remains null and is accompanied by explicit `has_current_acs_profile` and
+`has_fhfa_history` flags.
+
+The table retains `acs_source_geoid` alongside the canonical `geoid_2020`. For most states these
+values are the same. In Connecticut, 879 current ACS land-tract GEOIDs are connected through the
+validated planning-region bridge, so their current descriptive profiles are available without
+erasing the source identifier. Water-only tracts remain unprofiled.
+
+Three filtered tables make downstream work easier without redefining the full project scope:
+
+- `gold_similarity_candidate_current` requires current ACS coverage, positive population and
+  housing-unit estimates, and at least eight of twelve governed similarity inputs;
+- `gold_forecast_candidate_current` requires current ACS context plus at least ten usable FHFA
+  observations with recent target coverage;
+- `gold_application_demo_tract` keeps displayable current-profile tracts in Arizona, Michigan, and
+  Pennsylvania for early application development.
+
+These filters are intentionally called candidates. Feature selection, preprocessing, historical
+target construction, time-aware evaluation, and subgroup diagnostics still determine whether a row
+belongs in a final model. The full contracts and small real samples are in the
+[current-profile table document](../data/17_gold_tract_profile_current.md).
+
 ## Neighborhood-state contract
 
 The state table should have one row per canonical tract and state year. Required identity and lineage fields include:
@@ -103,7 +130,8 @@ Scaling, imputation, encoding, feature selection, and dimensionality reduction a
 
 ## Required outputs
 
-- `gold_neighborhood_state`;
+- current profile and explicit candidate cohorts (implemented as the four current gold tables);
+- a historical `gold_neighborhood_state` or equivalent point-in-time panel;
 - horizon-specific `gold_features` and `gold_targets` or a clearly partitioned equivalent;
 - feature registry and data dictionary draft;
 - row-attrition and missingness report;

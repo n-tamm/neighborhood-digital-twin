@@ -72,6 +72,25 @@ class SourceManifest:
         value["validation_messages"] = list(self.validation_messages)
         return value
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "SourceManifest":
+        """Reconstruct a manifest from its JSON-compatible representation."""
+
+        normalized = dict(value)
+        normalized["request_parameters"] = dict(normalized.get("request_parameters", {}))
+        normalized["known_limitations"] = tuple(normalized.get("known_limitations", ()))
+        normalized["validation_messages"] = tuple(normalized.get("validation_messages", ()))
+        return cls(**normalized)
+
+    @classmethod
+    def read_json(cls, path: Path) -> "SourceManifest":
+        """Load a sidecar manifest written by :meth:`write_json`."""
+
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise ValueError("Source manifest JSON must contain an object")
+        return cls.from_dict(value)
+
     def to_spark_record(self) -> dict[str, Any]:
         """Flatten nested fields so Spark can append a stable Delta record."""
 

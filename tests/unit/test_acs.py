@@ -13,9 +13,12 @@ import pytest
 
 from neighborhood_twin.data.acquisition import redact_url
 from neighborhood_twin.data.acs import (
+    ACS_CORE_MEASURES,
+    acs_measure_dictionary_records,
     acs_variable_codes,
     build_acs_tract_request,
     parse_acs_api_payload,
+    parse_acs_ingestion_scope,
 )
 
 
@@ -46,3 +49,50 @@ def test_acs_parser_builds_geoid_and_time_fields() -> None:
 def test_acs_parser_rejects_missing_required_fields() -> None:
     with pytest.raises(ValueError, match="missing required columns"):
         parse_acs_api_payload(json.dumps([["NAME", "state"], ["Name", "26"]]), release_year=2024)
+
+
+def test_acs_measure_dictionary_has_one_complete_row_per_measure() -> None:
+    records = acs_measure_dictionary_records(release_year=2024)
+
+    assert len(records) == len(ACS_CORE_MEASURES)
+    assert len({record["measure_name"] for record in records}) == len(records)
+    median_rent = next(
+        record for record in records if record["measure_name"] == "median_gross_rent"
+    )
+    assert median_rent["universe"] == "Renter-occupied housing units paying cash rent"
+    assert median_rent["unit"] == "dollars"
+    assert median_rent["metadata_url"].endswith("/B25064.html")
+
+
+def test_historical_scope_parses_a_bounded_state_year_grid() -> None:
+    scope = parse_acs_ingestion_scope(
+        release_years="2014, 2019",
+        state_fips_codes="04,26,42",
+        maximum_requests=6,
+    )
+
+    assert scope.release_years == (2014, 2019)
+    assert scope.state_fips_codes == ("04", "26", "42")
+    assert scope.request_count == 6
+
+
+@pytest.mark.parametrize(
+    ("release_years", "state_fips_codes", "maximum_requests", "message"),
+    [
+        ("2019,2019", "26", 2, "duplicates"),
+        ("2019", "2", 1, "two digits"),
+        ("2014,2019", "04,26", 3, "split the history"),
+    ],
+)
+def test_historical_scope_rejects_ambiguous_or_excessive_requests(
+    release_years: str,
+    state_fips_codes: str,
+    maximum_requests: int,
+    message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        parse_acs_ingestion_scope(
+            release_years=release_years,
+            state_fips_codes=state_fips_codes,
+            maximum_requests=maximum_requests,
+        )

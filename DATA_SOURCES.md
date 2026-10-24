@@ -10,7 +10,8 @@ A source appearing here is not automatically approved for modeling or redistribu
 |---|---|---|
 | [FHFA House Price Index](https://www.fhfa.gov/house-price-index) | Annual single-family tract target, lagged market history, and coverage analysis | Developmental and non-seasonally adjusted; excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments; missing values are meaningful |
 | [ACS five-year data](https://www.census.gov/data/developers/data-sets/acs-5year.html) | Housing composition, income, population, tenure, vacancy, housing burden, education, and commuting context | Released annually but pools 60 months of responses; adjacent releases overlap; margins of error, publication lag, and variable or geography changes must be retained |
-| [2020 Census cartographic boundaries](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.2020.html) | Tract geometry for maps, joins, and adjacency | Simplified display geometry; does not contain demographic attributes |
+| [2020 Census cartographic boundaries](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.2020.html) | Simplified tract geometry for application maps and identifier lookup | Display-only geometry; Census advises against using it for precise geographic analysis, so it will not define adjacency, area, or distance features |
+| [Census TIGER/Line tract files](https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html) | Official tract identifiers and reference attributes for the Connecticut 2020-to-current bridge | Geography rather than demographic data; annual boundary maintenance means identity matching does not imply identical geometry |
 | [Census relationship files](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html) | Mapping earlier tract vintages to the canonical geography | Splits and merges require explicit weighting assumptions and validation |
 | [FRED API](https://fred.stlouisfed.org/docs/api/fred/) and ALFRED vintages | Mortgage rates, inflation, labor-market, and broader economic context | API key; revisions; geographic grain varies; point-in-time use may require ALFRED or pinned snapshots |
 
@@ -65,7 +66,11 @@ Raw national data is not committed to Git. The repository may include a small fi
 
 ## Implemented feasibility extract
 
-The first pipeline slice uses the current FHFA tract CSV, the 2020 national tract cartographic boundary ZIP, the national 2010-to-2020 tract relationship file, and state-by-state ACS five-year API responses. The source definitions and exact endpoints live in `src/neighborhood_twin/data/` so a changed publisher URL fails visibly instead of being hidden in a notebook.
+The implemented pipeline uses the current FHFA tract CSV, the 2020 national tract cartographic
+boundary ZIP, the national 2010-to-2020 tract relationship file, state-by-state ACS five-year API
+responses, and the official 2020 and 2024 Connecticut TIGER/Line tract archives. The source
+definitions and exact endpoints live in `src/neighborhood_twin/data/` so a changed publisher URL
+fails visibly instead of being hidden in a notebook.
 
 The initial ACS request is deliberately focused. It retrieves estimates and margins of error for:
 

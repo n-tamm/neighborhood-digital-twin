@@ -24,6 +24,21 @@ variables:
   pilot_state_fips:
     description: Comma-separated state FIPS codes used by the feasibility run
     default: "04,26,42"
+  historical_acs_release_years:
+    description: Reviewed ACS releases acquired by one bounded historical run
+    default: "2014,2019"
+  historical_acs_maximum_requests:
+    description: Safety limit for state-by-release API calls in one historical run
+    default: "25"
+  pilot_annual_acs_release_years:
+    description: Missing annual releases needed to complete the 2010-2024 pilot panel
+    default: "2010,2011,2012,2013,2015,2016,2017,2018,2020,2021,2022,2023"
+  national_current_acs_release_year:
+    description: Current ACS release used to expand descriptive and similarity coverage
+    default: "2024"
+  national_state_fips:
+    description: Fifty states and District of Columbia for national current ACS coverage
+    default: "01,02,04,05,06,08,09,10,11,12,13,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,53,54,55,56"
   secret_scope:
     description: Databricks secret scope containing the Census API key
     default: neighborhood-twin
@@ -37,11 +52,41 @@ variables:
     description: Standardized current FHFA tract-year table
     default: silver_fhfa_tract_year
   silver_acs_table:
-    description: Standardized current ACS tract-release table
+    description: Generated wide ACS tract-release convenience table
     default: silver_acs_tract_year
+  silver_acs_measure_table:
+    description: Primary normalized ACS tract-release-measure table
+    default: silver_acs_tract_measure
+  silver_acs_dictionary_table:
+    description: Governed ACS measure data dictionary
+    default: silver_acs_measure_dictionary
   silver_quality_table:
     description: Persisted silver build metrics
     default: silver_quality_metrics
+  tract_relationship_table:
+    description: Typed 2010-to-2020 Census tract relationship table
+    default: silver_tract_relationship_2010_2020
+  geography_quality_table:
+    description: Persisted geography validation and coverage metrics
+    default: geography_quality_metrics
+  tract_display_geometry_table:
+    description: Simplified 2020 tract geometry for application maps
+    default: silver_tract_display_geometry_2020
+  connecticut_tract_bridge_table:
+    description: Safe 2020-to-current Connecticut non-water tract identity bridge
+    default: silver_connecticut_tract_bridge_2020_2024
+  canonical_tract_table:
+    description: Complete relationship-defined 2020 tract dimension
+    default: silver_canonical_tract_2020
+  canonical_quality_table:
+    description: Persisted canonical geography validation metrics
+    default: canonical_geography_quality_metrics
+  gold_quality_table:
+    description: Persisted current-product validation metrics
+    default: gold_quality_metrics
+  application_demo_state_fips:
+    description: Small state scope used only for interactive application testing
+    default: "04,26,42"
 
 resources:
   jobs:
@@ -88,7 +133,179 @@ resources:
               schema: ${var.schema}
               fhfa_table: ${var.silver_fhfa_table}
               acs_table: ${var.silver_acs_table}
+              acs_measure_table: ${var.silver_acs_measure_table}
+              acs_dictionary_table: ${var.silver_acs_dictionary_table}
               quality_table: ${var.silver_quality_table}
+    historical_acs_ingestion:
+      name: Neighborhood Digital Twin - Historical ACS Ingestion
+      description: Acquires a bounded state-by-release batch into the shared ACS bronze table.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_historical_acs
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              acs_release_years: ${var.historical_acs_release_years}
+              state_fips_codes: ${var.pilot_state_fips}
+              maximum_requests: ${var.historical_acs_maximum_requests}
+              secret_scope: ${var.secret_scope}
+              census_secret_key: ${var.census_secret_key}
+    pilot_annual_acs_ingestion:
+      name: Neighborhood Digital Twin - Pilot Annual ACS Expansion
+      description: Completes annual ACS history for the three-state feasibility panel.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_pilot_annual_acs
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              acs_release_years: ${var.pilot_annual_acs_release_years}
+              state_fips_codes: ${var.pilot_state_fips}
+              maximum_requests: "40"
+              secret_scope: ${var.secret_scope}
+              census_secret_key: ${var.census_secret_key}
+    national_current_acs_ingestion:
+      name: Neighborhood Digital Twin - National Current ACS Expansion
+      description: Adds current ACS coverage for fifty states and the District of Columbia.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_national_current_acs
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              acs_release_years: ${var.national_current_acs_release_year}
+              state_fips_codes: ${var.national_state_fips}
+              maximum_requests: "55"
+              secret_scope: ${var.secret_scope}
+              census_secret_key: ${var.census_secret_key}
+    geography_relationship_pipeline:
+      name: Neighborhood Digital Twin - Tract Relationship Pipeline
+      description: Validates and transforms the official 2010-to-2020 tract relationship file.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_tract_relationship
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/02_build_tract_relationship.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              relationship_table: ${var.tract_relationship_table}
+              quality_table: ${var.geography_quality_table}
+    display_geometry_pipeline:
+      name: Neighborhood Digital Twin - Display Geometry Pipeline
+      description: Parses and validates simplified Census tract geometry for application maps.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_display_geometry
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/03_build_display_geometry.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              display_table: ${var.tract_display_geometry_table}
+              quality_table: ${var.geography_quality_table}
+          environment_key: geometry
+      environments:
+        - environment_key: geometry
+          spec:
+            environment_version: "2"
+            dependencies:
+              - pyshp==2.3.1
+              - shapely==2.0.6
+    connecticut_geography_pipeline:
+      name: Neighborhood Digital Twin - Connecticut Geography Bridge
+      description: Ingests official tract vintages and maps Connecticut planning-region GEOIDs.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_connecticut_tract_references
+          notebook_task:
+            notebook_path: ./notebooks/01_feasibility/04_ingest_connecticut_tract_references.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              volume: ${var.volume}
+              uploaded_source_directory: ""
+          environment_key: tiger
+        - task_key: build_connecticut_tract_bridge
+          depends_on:
+            - task_key: ingest_connecticut_tract_references
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/07_build_connecticut_tract_bridge.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              bridge_table: ${var.connecticut_tract_bridge_table}
+              quality_table: ${var.geography_quality_table}
+      environments:
+        - environment_key: tiger
+          spec:
+            environment_version: "2"
+            dependencies:
+              - pyshp==2.3.1
+    canonical_geography_pipeline:
+      name: Neighborhood Digital Twin - Canonical Geography Pipeline
+      description: Builds the complete 2020 tract dimension with optional display geometry.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_canonical_tracts
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/04_build_canonical_tracts.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              table: ${var.canonical_tract_table}
+              quality_table: ${var.canonical_quality_table}
+    gold_current_products:
+      name: Neighborhood Digital Twin - Current Analytical Products
+      description: Builds the national current tract profile and explicit modeling and app cohorts.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_current_products
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/06_build_current_products.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              demo_state_fips: ${var.application_demo_state_fips}
+              quality_table: ${var.gold_quality_table}
+    table_metadata_pipeline:
+      name: Neighborhood Digital Twin - Table Metadata
+      description: Applies table descriptions, declared grains, and column comments.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: apply_table_metadata
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/05_apply_table_metadata.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
 
 targets:
   team:

@@ -158,8 +158,7 @@ def _profile_fhfa(
             functions.max("year").alias("maximum_year"),
             _count_when(
                 functions,
-                functions.col("tract").isNull()
-                | (~functions.col("tract").rlike("^[0-9]{11}$")),
+                functions.col("tract").isNull() | (~functions.col("tract").rlike("^[0-9]{11}$")),
                 "invalid_geoid_count",
             ),
             _count_when(functions, functions.col("year").isNull(), "null_year_count"),
@@ -179,17 +178,14 @@ def _profile_fhfa(
         .asDict()
     )
     duplicate_key_count = (
-        frame.groupBy("tract", "year")
-        .count()
-        .where(functions.col("count") > 1)
-        .count()
+        frame.groupBy("tract", "year").count().where(functions.col("count") > 1).count()
     )
-    history = frame.where(
-        functions.col("tract").isNotNull() & functions.col("year").isNotNull()
-    ).groupBy("tract").agg(functions.countDistinct("year").alias("observed_year_count"))
-    history_quantiles = history.approxQuantile(
-        "observed_year_count", [0.10, 0.50, 0.90], 0.01
+    history = (
+        frame.where(functions.col("tract").isNotNull() & functions.col("year").isNotNull())
+        .groupBy("tract")
+        .agg(functions.countDistinct("year").alias("observed_year_count"))
     )
+    history_quantiles = history.approxQuantile("observed_year_count", [0.10, 0.50, 0.90], 0.01)
     if len(history_quantiles) != 3:
         history_quantiles = [0.0, 0.0, 0.0]
 
@@ -342,8 +338,7 @@ def _profile_acs(
         functions.max("acs_release_year").alias("maximum_release_year"),
         _count_when(
             functions,
-            functions.col("geoid").isNull()
-            | (~functions.col("geoid").rlike("^[0-9]{11}$")),
+            functions.col("geoid").isNull() | (~functions.col("geoid").rlike("^[0-9]{11}$")),
             "invalid_geoid_count",
         ),
     ]
@@ -364,9 +359,7 @@ def _profile_acs(
                 ),
                 _count_when(
                     functions,
-                    functions.col(code).isNotNull()
-                    & (text_value != "")
-                    & numeric_value.isNull(),
+                    functions.col(code).isNotNull() & (text_value != "") & numeric_value.isNull(),
                     f"{code}__parse_failure_count",
                 ),
             ]
@@ -415,10 +408,7 @@ def _profile_acs(
     )
     summary = frame.agg(*aggregate_expressions).first().asDict()
     duplicate_key_count = (
-        frame.groupBy("geoid", "acs_release_year")
-        .count()
-        .where(functions.col("count") > 1)
-        .count()
+        frame.groupBy("geoid", "acs_release_year").count().where(functions.col("count") > 1).count()
     )
 
     metrics = [
@@ -664,23 +654,43 @@ def _profile_geography_match(
         .agg(functions.max("has_usable_hpi").alias("has_usable_hpi"))
         .withColumn("has_same_year_fhfa", functions.lit(1))
     )
-    acs_keys = acs.select("geoid", "state", "acs_release_year").distinct()
+    older_vintage_count = acs.where(functions.col("acs_release_year") < 2020).count()
+    acs_keys = (
+        acs.where(functions.col("acs_release_year") >= 2020)
+        .select("geoid", "state", "acs_release_year")
+        .distinct()
+    )
     matched = acs_keys.join(fhfa_keys, ["geoid", "acs_release_year"], "left")
     by_state = matched.groupBy("state").agg(
         functions.count(functions.lit(1)).alias("acs_tract_count"),
         functions.sum(
             functions.coalesce(functions.col("has_same_year_fhfa"), functions.lit(0))
         ).alias("matched_tract_count"),
-        functions.sum(
-            functions.coalesce(functions.col("has_usable_hpi"), functions.lit(0))
-        ).alias("usable_hpi_count"),
+        functions.sum(functions.coalesce(functions.col("has_usable_hpi"), functions.lit(0))).alias(
+            "usable_hpi_count"
+        ),
     )
     state_rows = by_state.collect()
     total_acs = sum(int(row["acs_tract_count"]) for row in state_rows)
     total_matched = sum(int(row["matched_tract_count"]) for row in state_rows)
     total_usable_hpi = sum(int(row["usable_hpi_count"]) for row in state_rows)
 
-    metrics: list[QualityMetric] = []
+    metrics: list[QualityMetric] = [
+        _metric(
+            run_id=run_id,
+            profiled_at_utc=profiled_at_utc,
+            table_name=table_name,
+            metric_group="geography_match",
+            metric_name="older_vintage_acs_row_count_excluded",
+            value=older_vintage_count,
+            status="info",
+            expectation="reported pending explicit geography harmonization",
+            notes=(
+                "ACS releases before 2020 use 2010-vintage tracts and are excluded "
+                "from direct comparison with the 2020-vintage FHFA geography."
+            ),
+        )
+    ]
     for state, acs_count, matched_count, usable_hpi_count in [
         ("all", total_acs, total_matched, total_usable_hpi),
         *[

@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot. The results support continuing tract-level feasibility work, but usable FHFA coverage is selective rather than universal. The next milestone is historical ACS acquisition and canonical geography alignment. Features described below are planned unless explicitly marked complete.
+> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot, including 2014, 2019, and 2024 ACS releases. The national Census tract relationship and simplified display-geometry products are also live and validated. Usable FHFA coverage remains selective, the relationship file does not provide population or housing weights, and display geometry is not suitable for scientific adjacency. The next milestone is the canonical 2020 tract dimension and a separate analysis-geometry decision before broader historical expansion. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -86,7 +86,7 @@ Forecast evaluation will use time-based splits and a separate geographic holdout
 |---|---|
 | [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Canonical scope, research questions, non-goals, and definition of success |
 | [ROADMAP.md](ROADMAP.md) | Twelve-week delivery plan, decision gates, and team ownership options |
-| [docs/](docs/) | System architecture and the sequenced technical implementation guide |
+| [docs/](docs/) | Architecture, implementation guide, and one reference document per data table |
 | [data/](data/) | Local-only raw, interim, processed, and demonstration data zones |
 | [notebooks/](notebooks/) | Numbered exploration and communication notebooks; reusable logic belongs in `src/` |
 | [src/](src/) | Reusable acquisition, validation, geography, feature, modeling, simulation, and export code |
@@ -103,14 +103,21 @@ Start with:
 1. [Project charter](PROJECT_CHARTER.md)
 2. [Twelve-week roadmap](ROADMAP.md)
 3. [Documentation index](docs/README.md)
-4. [Implementation sequence](docs/implementation/README.md)
-5. [System architecture](docs/ARCHITECTURE.md)
+4. [Data guide and per-table documentation](docs/data/README.md)
+5. [Implementation sequence](docs/implementation/README.md)
+6. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
 ## Run the current code
 
-The repository now contains tested source definitions, content-addressed acquisition, source manifests, bronze quality profiling, and separate Databricks jobs for acquisition and silver transformation. The silver tables provide typed FHFA fields, readable ACS estimates and margins of error, missing-value reasons, housing-composition ratios, lineage, and persisted quality metrics. Models and the application have not been implemented yet.
+The repository now contains tested source acquisition, bronze and silver validation, national
+geography products, a canonical tract dimension, nationwide current ACS coverage, a three-state
+annual ACS panel, and current gold profiles for modeling and application prototypes. The primary
+ACS silver product uses one tract-release-measure row with a companion data dictionary, while a
+generated wide table supports compact feature construction. The gold layer keeps all canonical
+tracts and exposes transparent similarity, forecasting, and application-development cohorts.
+Models and the interactive application have not been implemented yet.
 
 PowerShell:
 
@@ -144,10 +151,25 @@ The first cloud entry point is [01_ingest_core_sources.py](notebooks/01_feasibil
 databricks bundle validate --profile neighborhood-twin
 databricks bundle deploy --profile neighborhood-twin
 databricks bundle run core_source_ingestion --profile neighborhood-twin
+databricks bundle run historical_acs_ingestion --profile neighborhood-twin
+databricks bundle run pilot_annual_acs_ingestion --profile neighborhood-twin
+databricks bundle run national_current_acs_ingestion --profile neighborhood-twin
 databricks bundle run silver_source_transforms --profile neighborhood-twin
+databricks bundle run geography_relationship_pipeline --profile neighborhood-twin
+databricks bundle run display_geometry_pipeline --profile neighborhood-twin
+databricks bundle run connecticut_geography_pipeline --profile neighborhood-twin
+databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
+databricks bundle run gold_current_products --profile neighborhood-twin
+databricks bundle run table_metadata_pipeline --profile neighborhood-twin
 ```
 
-The deployment creates or updates two independent jobs. The bronze job manages source acquisition, immutable snapshots, source manifests, bronze tables, and bronze quality metrics. The silver job reads accepted bronze data and publishes the current FHFA and ACS source tables without downloading anything. Raw source files and secrets remain outside Git. Complete setup, contracts, findings, and verification details are in [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md).
+The jobs remain separate so acquisition, transformation, geography, current products, and metadata
+can be rerun and reviewed independently. Run expansion jobs only after checking their configured
+scope, rebuild silver after new ACS snapshots arrive, and apply table metadata after any job that
+overwrites a schema. Raw source files and secrets remain outside Git. Complete table grains and
+limitations are in the [data guide](docs/data/README.md); setup and pipeline details are in
+[Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md), and geography decisions are in
+[Stage 03](docs/implementation/03_geography_and_time_alignment.md).
 
 ## Development workflow
 
@@ -158,7 +180,10 @@ The deployment creates or updates two independent jobs. The bronze job manages s
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
-The repository now provides validated bronze and silver pipeline slices, but it is not yet a functioning analytical product. Historical data, geography alignment, exploratory analysis, modeling, evaluation, serving tables, and the application still remain.
+The repository now provides validated bronze, silver, canonical, and current gold products,
+including the Connecticut current-geography bridge, but it is not yet a functioning model or
+application. Point-in-time historical feature/target tables, exploratory analysis, modeling,
+evaluation, and the interactive application still remain.
 
 ## Planned deployment
 
