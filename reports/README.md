@@ -17,3 +17,6 @@ The shared visual-EDA pipeline writes its canonical PNGs to the managed Unity Ca
 `neighborhood_twin_gold.eda_figures` volume and records the current matched set in
 `gold_eda_figure_manifest`. Copy only reviewed figures into `reports/generated/` when assembling a
 specific report draft; do not treat a local export as the source of truth.
+
+See [EDA_FIGURES.md](EDA_FIGURES.md) for the current build, figure inventory, reproduction command,
+and export instructions.
