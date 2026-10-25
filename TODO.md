@@ -6,9 +6,9 @@ This is the short operational handoff for the next development session. It does 
 ## Where the project sits
 
 The core Databricks data pipeline is working through bronze, silver, canonical geography, current
-gold products, and the first formal EDA summaries. Tables are now separated into bronze, silver,
-gold, and quality schemas. Structural validation is strong, but visual exploration and
-model-specific historical preparation are the next major stages.
+gold products, governed EDA summaries, and a reviewed visual-EDA figure build. Tables are separated
+into bronze, silver, gold, and quality schemas. Structural validation and current-state exploration
+are strong; model-specific historical preparation is now the next major stage.
 
 Current analytical outputs include:
 
@@ -20,15 +20,16 @@ Current analytical outputs include:
 - annual 2010-2024 ACS coverage for Arizona, Michigan, and Pennsylvania;
 - national FHFA tract history through 2025;
 - a validated canonical 2020 tract backbone, display geometry, and Connecticut geography bridge.
+- seven versioned report-ready EDA figures with a governed manifest in the gold schema.
 
 Every implemented Databricks table has an individual document in the
 [data guide](docs/data/README.md) and a small example in [`data/samples`](data/samples/).
 
 ## Important limitations to resolve
 
-- The first reusable EDA job now covers state attrition, ACS uncertainty, FHFA history depth, and
-  one-, three-, and five-year target feasibility. Maps, housing-composition coverage comparisons,
-  retained-versus-excluded analysis, and presentation-quality figures remain to be built.
+- Visual EDA confirms that FHFA forecasting coverage is strongly tilted toward single-family,
+  owner-occupied tracts. Forecasting claims must stay within that target population, while the
+  broader current-state similarity experience can remain national.
 - The current gold profile is useful for descriptive analysis, similarity prototyping, and early
   application work, but it is not a historical modeling panel.
 - ACS releases before 2020 use 2010-vintage tract geography and have not yet been transformed into
@@ -45,37 +46,28 @@ Every implemented Databricks table has an individual document in the
 
 ## Next milestone
 
-Create a **data-readiness and EDA checkpoint** before adding more sources or fitting models.
+Create the **historical modeling contract and tables** before fitting models or adding sources.
 
-1. Extend the organized exploration from the existing governed tables:
-   - pipeline attrition and source coverage;
-   - ACS missingness and relative margins of error;
-   - FHFA history length, recency, and target availability;
-   - FHFA coverage by geography and housing composition;
-   - retained-versus-excluded community comparisons;
-   - HPI level, annual-change, volatility, and temporal behavior;
-   - one-, three-, and five-year target feasibility;
-   - initial maps and other presentation-quality figures.
-2. Use those findings to confirm two explicit initial scopes:
-   - a national current-state similarity and application scope;
-   - a three-state historical forecasting scope using Arizona, Michigan, and Pennsylvania.
-3. Finalize the point-in-time data contract before building historical gold tables:
+1. Finalize the point-in-time data contract:
    - forecast origin and source-availability rules;
    - primary one-year target and feasibility rules for three- and five-year targets;
    - historical geography policy by field family;
    - train, validation, calibration, temporal-test, and geographic-holdout assignments;
    - missingness, scaling, and feature-registry policies.
-4. After review, build the historical neighborhood-state, feature, and target tables and run their
+2. Build the historical neighborhood-state, feature, and target tables and run their
    leakage, uniqueness, reconciliation, and attrition checks.
+3. Fit simple persistence and regional forecasting baselines before more complex models.
+4. Build a transparent current-state similarity baseline and test whether its neighbors make
+   sense across geography and housing composition.
+5. Add another source only if these baselines expose a specific weakness it can address.
 
 ## Expected checkpoint outputs
 
-- A small, clearly sequenced set of EDA notebooks backed by reusable package functions.
-- Coverage, uncertainty, missingness, housing-composition, and temporal figures.
-- A concise written data-readiness finding with any resulting scope changes.
 - A reviewed historical state/feature/target contract.
+- Leakage-safe historical gold tables and chronological split assignments.
+- Forecast and similarity baselines with interpretable evaluation outputs.
 - A documented decision about whether any new source or spatial feature is necessary before the
-  first forecasting and similarity baselines.
+  next modeling iteration.
 
 Do not expand the source catalog merely because another public dataset is available. The next
 source should address a weakness found in exploration or produce measurable value over a simpler

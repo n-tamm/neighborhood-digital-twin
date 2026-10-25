@@ -14,6 +14,6 @@ large; those samples include the geometry's byte length instead.
 
 The extracts were refreshed from the `workspace.neighborhood_twin_bronze`,
 `neighborhood_twin_silver`, `neighborhood_twin_gold`, and `neighborhood_twin_quality` schemas
-after the October 24, 2026 expansion and validation runs. Table counts, quality histories, and
-source snapshots will continue to change as the pipeline is rerun, so Databricks remains the
-authoritative source.
+after the October 24, 2026 expansion, validation, and visual-EDA runs. Table counts, quality
+histories, and source snapshots will continue to change as the pipeline is rerun, so Databricks
+remains the authoritative source.

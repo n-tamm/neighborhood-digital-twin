@@ -29,4 +29,9 @@ reusable state coverage, ACS uncertainty, FHFA history-depth, and forecast-horiz
 instead of recomputing national joins in presentation cells. Its publication checks are stored in
 the quality schema, including failed attempts that explain why a run was corrected.
 
+`04_exploration/02_build_visual_eda.py` adds governed housing-composition, cohort-comparison, and
+temporal summaries. `04_exploration/03_render_eda_figures.py` consumes those contracts plus the
+approved display geometry and writes a versioned seven-figure set to the Unity Catalog
+`eda_figures` volume. The gold figure manifest is the authoritative pointer to the current set.
+
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.

@@ -67,6 +67,10 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 26. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
 27. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
 28. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
+29. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
+30. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
+31. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
+32. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
 
 ## Working conventions
 

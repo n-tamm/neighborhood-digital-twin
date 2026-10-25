@@ -31,9 +31,41 @@ For example, two-unit buildings exceed 50% relative MOE in about 58% of tracts. 
 should therefore favor stable totals and broader housing shares, retain uncertainty indicators,
 and test whether fine categories improve held-out performance enough to justify their noise.
 
-This checkpoint does not complete EDA. The next pass must add housing-composition coverage slices,
-retained-versus-excluded comparisons, temporal plots, maps, and report-ready figures. It should use
-the persisted summaries rather than recomputing national joins inside plotting cells.
+## Implemented visual checkpoint
+
+The `visual_eda` job completes the next descriptive pass with three additional governed tables and
+a versioned figure manifest. It produces seven reviewed PNGs covering pipeline attrition, housing
+composition, included-versus-excluded tracts, ACS uncertainty, FHFA behavior over time, forecast
+eligibility maps, and recent HPI-change maps. The figures live in the managed
+`neighborhood_twin_gold.eda_figures` volume; `gold_eda_figure_manifest` identifies the matched
+current set and explains what each figure is intended to show.
+
+The October 24, 2026 run found a strong housing-composition limitation in the forecasting target.
+Among current-ACS tracts with less than 25% single-family housing, 21.2% have any FHFA history and
+only 7.5% pass the current forecast screen. Those shares rise to 90.1% and 75.9% for tracts with at
+least 90% single-family housing. Similarity coverage stays near complete across the nonmissing
+housing bands, so this issue constrains the FHFA forecasting task rather than the national analogue
+pool.
+
+Forecast candidates are also observably different from excluded current-ACS tracts. The largest
+standardized differences include single-family share (0.83), owner-occupancy rate (0.75),
+multifamily share (-0.65), population (0.56), and occupancy rate (0.50). The forecasting results
+must therefore be described as applying to the FHFA-covered, primarily single-family tract
+population. They should not be presented as representative of every community or of all housing
+types.
+
+The temporal summaries confirm that a single random split would hide important market regimes.
+For example, Arizona's tract median annual change ranges from -19.4% in 2009 to 32.3% in 2005. In
+2025 the national distribution still spans -5.5% at the 10th percentile to 12.8% at the 90th,
+with a 3.2% median. Forecast evaluation therefore needs chronological holdouts, regional
+breakdowns, simple persistence and regional baselines, and uncertainty intervals. The full-history
+chart is a source diagnostic only; final-test outcomes must not be used to select features,
+transformations, or model settings.
+
+This checkpoint supports retaining the national current-state similarity and application scope
+alongside the three-state historical forecasting pilot. It also identifies a required product
+boundary: the application can describe all supported communities, while FHFA-based forecasts must
+show their narrower eligibility and target interpretation clearly.
 
 ## Exploration layers
 
