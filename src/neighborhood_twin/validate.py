@@ -14,7 +14,13 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from neighborhood_twin.data.acs import acs_variable_codes
+from neighborhood_twin.data.acs import (
+    NATIONAL_ACS_RELEASE_YEARS,
+    NATIONAL_SUPPORTED_STATE_FIPS,
+    acs_variable_codes,
+    national_acs_expected_pairs,
+    national_acs_expected_source_ids,
+)
 from neighborhood_twin.data.databricks import qualified_name
 
 QUALITY_STATUSES = frozenset({"pass", "warn", "fail", "info"})
@@ -408,7 +414,10 @@ def _profile_acs(
     )
     summary = frame.agg(*aggregate_expressions).first().asDict()
     duplicate_key_count = (
-        frame.groupBy("geoid", "acs_release_year").count().where(functions.col("count") > 1).count()
+        frame.groupBy("source_snapshot_id", "geoid", "acs_release_year")
+        .count()
+        .where(functions.col("count") > 1)
+        .count()
     )
 
     metrics = [
@@ -440,7 +449,7 @@ def _profile_acs(
             metric_name="state_count",
             value=summary["state_count"],
             status="info",
-            expectation="equals the requested pilot-state count",
+            expectation="monitored; the national coverage contract is checked separately",
         ),
         _metric(
             run_id=run_id,
@@ -487,10 +496,14 @@ def _profile_acs(
             profiled_at_utc=profiled_at_utc,
             table_name=table_name,
             metric_group="integrity",
-            metric_name="duplicate_tract_release_key_count",
+            metric_name="duplicate_snapshot_tract_release_key_count",
             value=duplicate_key_count,
             status=_zero_status(duplicate_key_count),
-            expectation="= 0",
+            expectation="= 0 within each immutable source snapshot",
+            notes=(
+                "The same tract and release may appear in multiple historical snapshots; "
+                "silver selects one accepted snapshot per state and release."
+            ),
         ),
     ]
 
@@ -629,6 +642,144 @@ def _profile_manifest(
             expectation=f"status in {accepted_statuses}",
         ),
     ]
+
+
+def _profile_national_acs_coverage(
+    frame: Any,
+    manifest: Any,
+    *,
+    run_id: str,
+    profiled_at_utc: str,
+    table_name: str,
+) -> list[QualityMetric]:
+    """Require the complete approved ACS release-by-jurisdiction coverage grid."""
+
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    spark = frame.sparkSession
+    expected_pairs = spark.createDataFrame(
+        national_acs_expected_pairs(),
+        "acs_release_year INT, state STRING",
+    )
+    actual_pairs = frame.select("acs_release_year", "state").distinct()
+    missing_pair_count = expected_pairs.join(
+        actual_pairs,
+        ["acs_release_year", "state"],
+        "left_anti",
+    ).count()
+    unexpected_pair_count = actual_pairs.join(
+        expected_pairs,
+        ["acs_release_year", "state"],
+        "left_anti",
+    ).count()
+    actual_summary = actual_pairs.agg(
+        functions.count(functions.lit(1)).alias("pair_count"),
+        functions.countDistinct("state").alias("state_count"),
+        functions.countDistinct("acs_release_year").alias("release_count"),
+    ).first()
+    multiple_snapshot_pair_count = (
+        frame.groupBy("acs_release_year", "state")
+        .agg(functions.countDistinct("source_snapshot_id").alias("snapshot_count"))
+        .where(functions.col("snapshot_count") > 1)
+        .count()
+    )
+
+    expected_sources = spark.createDataFrame(
+        [(source_id,) for source_id in national_acs_expected_source_ids()],
+        "source_id STRING",
+    )
+    validated_acs_sources = (
+        manifest.where(
+            (functions.col("validation_status") == "bronze_validated")
+            & functions.col("source_id").startswith("acs5_tract_")
+        )
+        .select("source_id")
+        .distinct()
+    )
+    missing_validated_source_count = expected_sources.join(
+        validated_acs_sources,
+        "source_id",
+        "left_anti",
+    ).count()
+    unexpected_validated_source_count = validated_acs_sources.join(
+        expected_sources,
+        "source_id",
+        "left_anti",
+    ).count()
+
+    expected_pair_count = len(NATIONAL_ACS_RELEASE_YEARS) * len(
+        NATIONAL_SUPPORTED_STATE_FIPS
+    )
+    checks = (
+        (
+            "state_release_pair_count",
+            int(actual_summary["pair_count"]),
+            int(actual_summary["pair_count"]) == expected_pair_count,
+            f"= {expected_pair_count} (15 releases x 50 states plus DC)",
+        ),
+        (
+            "state_count",
+            int(actual_summary["state_count"]),
+            int(actual_summary["state_count"]) == len(NATIONAL_SUPPORTED_STATE_FIPS),
+            f"= {len(NATIONAL_SUPPORTED_STATE_FIPS)}",
+        ),
+        (
+            "release_count",
+            int(actual_summary["release_count"]),
+            int(actual_summary["release_count"]) == len(NATIONAL_ACS_RELEASE_YEARS),
+            f"= {len(NATIONAL_ACS_RELEASE_YEARS)} annual releases (2010-2024)",
+        ),
+        (
+            "missing_state_release_pair_count",
+            missing_pair_count,
+            missing_pair_count == 0,
+            "= 0",
+        ),
+        (
+            "unexpected_state_release_pair_count",
+            unexpected_pair_count,
+            unexpected_pair_count == 0,
+            "= 0 outside the approved 50-state-plus-DC history",
+        ),
+        (
+            "missing_validated_source_count",
+            missing_validated_source_count,
+            missing_validated_source_count == 0,
+            "= 0; every required source has a bronze_validated manifest record",
+        ),
+        (
+            "unexpected_validated_source_count",
+            unexpected_validated_source_count,
+            unexpected_validated_source_count == 0,
+            "= 0 outside the approved national history",
+        ),
+    )
+    metrics = [
+        _metric(
+            run_id=run_id,
+            profiled_at_utc=profiled_at_utc,
+            table_name=table_name,
+            metric_group="national_coverage",
+            metric_name=metric_name,
+            value=value,
+            status="pass" if passed else "fail",
+            expectation=expectation,
+        )
+        for metric_name, value, passed, expectation in checks
+    ]
+    metrics.append(
+        _metric(
+            run_id=run_id,
+            profiled_at_utc=profiled_at_utc,
+            table_name=table_name,
+            metric_group="national_coverage",
+            metric_name="state_release_pair_with_multiple_snapshots_count",
+            value=multiple_snapshot_pair_count,
+            status="info",
+            expectation="reported; bronze retains history and silver selects one snapshot",
+        )
+    )
+    return metrics
 
 
 def _profile_geography_match(
@@ -807,6 +958,13 @@ def profile_bronze_tables(
             run_id=run_id,
             profiled_at_utc=profiled_at_utc,
             table_name=manifest_name,
+        ),
+        *_profile_national_acs_coverage(
+            acs,
+            manifest,
+            run_id=run_id,
+            profiled_at_utc=profiled_at_utc,
+            table_name=acs_name,
         ),
         *_profile_geography_match(
             fhfa,

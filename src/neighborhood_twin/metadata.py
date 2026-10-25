@@ -98,9 +98,37 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Complete relationship-defined 2020 tract dimension with optional display geometry.",
         "One row per 2020 Census tract GEOID.",
     ),
+    "silver_geography_country": TableMetadata(
+        "Top level of the supported Census hierarchy for the United States.",
+        "One row per supported country code.",
+    ),
+    "silver_geography_region": TableMetadata(
+        "Four Census regions with their valid country parent.",
+        "One row per Census region code.",
+    ),
+    "silver_geography_division": TableMetadata(
+        "Nine Census divisions with their valid region and country parents.",
+        "One row per Census division code.",
+    ),
+    "silver_geography_state": TableMetadata(
+        "Fifty states and District of Columbia with valid division, region, and country parents.",
+        "One row per supported state FIPS code.",
+    ),
+    "silver_geography_county": TableMetadata(
+        "Canonical 2020 counties and county equivalents with their valid hierarchy parents.",
+        "One row per supported 2020 county GEOID.",
+    ),
+    "silver_geography_tract_2020": TableMetadata(
+        "Canonical supported tracts with the complete country-to-tract hierarchy.",
+        "One row per supported canonical 2020 tract GEOID.",
+    ),
     "canonical_geography_quality_metrics": TableMetadata(
         "Append-only reconciliation and coverage metrics for canonical tract builds.",
         "One row per canonical geography quality run and metric.",
+    ),
+    "geography_hierarchy_quality_metrics": TableMetadata(
+        "Append-only integrity and reconciliation checks for the supported geography hierarchy.",
+        "One row per hierarchy build, table, and quality metric.",
     ),
     "gold_tract_profile_current": TableMetadata(
         "Current national tract profile joining canonical geography, ACS context, "
@@ -186,6 +214,15 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "geography_vintage": "Year of the tract geography represented by the source row.",
     "state_fips": "Two-character state FIPS code.",
+    "country_code": "Two-character ISO alpha-2 country code for the supported hierarchy.",
+    "country_name": "Human-readable country name.",
+    "region_code": "One-character Census region code.",
+    "region_name": "Human-readable Census region name.",
+    "division_code": "One-character Census division code.",
+    "division_name": "Human-readable Census division name.",
+    "state_abbreviation": "Two-character United States Postal Service state abbreviation.",
+    "state_name": "Human-readable state or state-equivalent name.",
+    "county_name": "Human-readable county or county-equivalent name.",
     "county_fips": "Three-character county FIPS code within a state.",
     "county_geoid": "Five-character state and county FIPS identifier.",
     "tract_code": "Six-character Census tract code within a county.",

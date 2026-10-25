@@ -16,6 +16,61 @@ from urllib.parse import urlencode
 from neighborhood_twin.data.acquisition import SourceRequest
 from neighborhood_twin.data.catalog import SourceDefinition
 
+NATIONAL_ACS_RELEASE_YEARS: tuple[int, ...] = tuple(range(2010, 2025))
+NATIONAL_SUPPORTED_STATE_FIPS: tuple[str, ...] = (
+    "01",
+    "02",
+    "04",
+    "05",
+    "06",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12",
+    "13",
+    "15",
+    "16",
+    "17",
+    "18",
+    "19",
+    "20",
+    "21",
+    "22",
+    "23",
+    "24",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31",
+    "32",
+    "33",
+    "34",
+    "35",
+    "36",
+    "37",
+    "38",
+    "39",
+    "40",
+    "41",
+    "42",
+    "44",
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51",
+    "53",
+    "54",
+    "55",
+    "56",
+)
+
 
 @dataclass(frozen=True)
 class AcsMeasure:
@@ -116,6 +171,25 @@ ACS_GROUP_METADATA: dict[str, AcsGroupMetadata] = {
         "B25064",
     ),
 }
+
+
+def national_acs_expected_pairs() -> tuple[tuple[int, str], ...]:
+    """Return the required 2010-2024 release-by-state/DC coverage grid."""
+
+    return tuple(
+        (release_year, state_fips)
+        for release_year in NATIONAL_ACS_RELEASE_YEARS
+        for state_fips in NATIONAL_SUPPORTED_STATE_FIPS
+    )
+
+
+def national_acs_expected_source_ids() -> tuple[str, ...]:
+    """Return the stable source IDs required for complete national ACS history."""
+
+    return tuple(
+        f"acs5_tract_{release_year}_state_{state_fips}"
+        for release_year, state_fips in national_acs_expected_pairs()
+    )
 
 
 def acs_measure_dictionary_records(*, release_year: int) -> tuple[dict[str, str | int], ...]:

@@ -14,5 +14,10 @@
 - **Caution:** the long measure table remains the source of truth when definitions or uncertainty
   need to be handled programmatically.
 
+As of October 25, 2026, the table contains 1,152,605 selected tract-release rows across all 765
+required combinations of the 2010-2024 releases and the 50 states plus Washington, D.C. The latest
+silver build reconciled every selected source group, found no duplicate keys or parse failures,
+and completed with zero warnings or hard failures.
+
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.

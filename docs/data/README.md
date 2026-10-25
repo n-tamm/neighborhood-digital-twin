@@ -52,25 +52,35 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 17. [`silver_canonical_tract_2020`](15_silver_canonical_tract_2020.md)
 18. [`canonical_geography_quality_metrics`](16_canonical_geography_quality_metrics.md)
 
+### Silver geography dimensions
+
+19. [`silver_geography_country`](33_silver_geography_country.md)
+20. [`silver_geography_region`](34_silver_geography_region.md)
+21. [`silver_geography_division`](35_silver_geography_division.md)
+22. [`silver_geography_state`](36_silver_geography_state.md)
+23. [`silver_geography_county`](37_silver_geography_county.md)
+24. [`silver_geography_tract_2020`](38_silver_geography_tract_2020.md)
+25. [`geography_hierarchy_quality_metrics`](39_geography_hierarchy_quality_metrics.md)
+
 ### Gold current products
 
-19. [`gold_tract_profile_current`](17_gold_tract_profile_current.md)
-20. [`gold_similarity_candidate_current`](18_gold_similarity_candidate_current.md)
-21. [`gold_forecast_candidate_current`](19_gold_forecast_candidate_current.md)
-22. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
-23. [`gold_quality_metrics`](21_gold_quality_metrics.md)
+26. [`gold_tract_profile_current`](17_gold_tract_profile_current.md)
+27. [`gold_similarity_candidate_current`](18_gold_similarity_candidate_current.md)
+28. [`gold_forecast_candidate_current`](19_gold_forecast_candidate_current.md)
+29. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
+30. [`gold_quality_metrics`](21_gold_quality_metrics.md)
 
 ### Gold exploration and readiness
 
-24. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
-25. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
-26. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
-27. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
-28. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
-29. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
-30. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
-31. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
-32. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
+31. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
+32. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
+33. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
+34. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
+35. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
+36. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
+37. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
+38. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
+39. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
 
 ## Working conventions
 
@@ -90,11 +100,24 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 24, 2026, the organized schemas contain nationwide 2024 ACS coverage for the 50
-states and District of Columbia, annual 2010-2024 ACS coverage for Arizona, Michigan, and
-Pennsylvania, national FHFA tract HPI history through 2025, and national Census geography support.
-Puerto Rico and the other island areas are present in parts of the geography source but were not
-included in the current ACS acquisition.
+As of October 25, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
+the 50 states and District of Columbia, national FHFA tract HPI history through 2025, and national
+Census geography support. The validated ACS contract contains all 765 required state-release
+pairs, 1,152,605 selected silver tract-release rows, and 24,204,705 normalized measure rows.
+Puerto Rico and the other island areas are present in parts of the geography source but are not
+part of the supported ACS or country-to-tract hierarchy.
+
+Bronze retains 1,160,833 rows across 768 immutable snapshots. The difference from silver is one
+earlier 2024 snapshot for each pilot state, totaling 8,228 historical snapshot rows; silver
+selects one validated snapshot per state and release. The latest national validation reports zero
+missing or unexpected state-release pairs, zero missing validated sources, and no hard bronze,
+silver, or gold failures. Documented warnings are limited to unavailable ACS median-dollar values
+and five current Connecticut water-only tracts.
+
+The governed hierarchy now contains one country, four Census regions, nine Census divisions, 51
+states or state equivalents, 3,143 counties or county equivalents, and 84,414 canonical 2020
+tracts. It intentionally covers the 50 states and District of Columbia. It does not force
+territories, metro areas, or ZIP/ZCTA relationships into the country-to-tract hierarchy.
 
 Connecticut requires a geography bridge because the 2022 ACS replaced its former counties with
 [planning regions](https://www.census.gov/programs-surveys/acs/technical-documentation/user-notes/2023-01.html).

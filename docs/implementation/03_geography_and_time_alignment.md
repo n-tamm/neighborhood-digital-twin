@@ -95,7 +95,19 @@ Run a sensitivity check on at least one alternative treatment, such as restricti
 
 ## Regional context
 
-Create versioned mappings for county, state, Census region, and CBSA or another metro definition. Regional features remain labeled by their original grain. A county permit total attached to a tract is `county_permits`, not `tract_permits`.
+The implemented supported hierarchy is:
+
+`United States > Census region > Census division > state/DC > county/equivalent > Census tract`
+
+Separate silver dimensions contain one country, four regions, nine divisions, 51 states or state
+equivalents, 3,143 counties or equivalents, and 84,414 canonical 2020 tracts. The hierarchy is
+limited to the 50 states and District of Columbia because Census regions and divisions do not
+provide the same valid chain for the retained territory records. Metro and ZIP/ZCTA relationships
+are not forced into this hierarchy. Add either later as a separate versioned relationship table
+only when a reporting, feature, or evaluation requirement justifies it.
+
+Regional features remain labeled by their original grain. A county permit total attached to a
+tract is `county_permits`, not `tract_permits`.
 
 Metro definitions can change over time. Decide whether membership is fixed to a current vintage for comparability or time-varying for historical accuracy, then document the tradeoff.
 
@@ -127,7 +139,8 @@ For each tract and forecast origin, select the most recent source value whose av
 
 - canonical tract table and geometry metadata;
 - source-to-canonical crosswalk tables;
-- county, state, region, and metro membership;
+- country, region, division, state, county, and tract dimensions for the valid supported hierarchy;
+- optional metro membership as a separate versioned relationship when justified;
 - tract adjacency table;
 - point-in-time calendar and join rules;
 - geography and timing quality report;

@@ -64,7 +64,7 @@ Every acquired source version should record:
 
 Raw national data is not committed to Git. The repository may include a small fixture or compact demonstration output only after its source terms permit redistribution and its attribution is recorded.
 
-## Implemented feasibility extract
+## Implemented core extract
 
 The implemented pipeline uses the current FHFA tract CSV, the 2020 national tract cartographic
 boundary ZIP, the national 2010-to-2020 tract relationship file, state-by-state ACS five-year API
@@ -81,6 +81,11 @@ The initial ACS request is deliberately focused. It retrieves estimates and marg
 - median household income, median owner-occupied value, and median gross rent.
 
 This request uses 43 API variables including `NAME`, below the Census limit of 50 per request. Housing-cost burden, education, and commuting are still relevant, but they belong in separate, reviewed extracts after the feasibility run shows that the core time and geography joins work. Adding every plausible variable to the first request would make failures harder to interpret.
+
+The focused extract is now complete for every annual ACS five-year release from 2010 through 2024
+across the 50 states and Washington, D.C. The national contract contains 765 state-release pairs.
+Puerto Rico and other island areas are not included in this supported modeling scope. Older
+releases retain their source geography vintage and are not silently treated as current tracts.
 
 The Census API currently requires a key for these requests. The key must be saved in a Databricks secret named by the notebook widgets and must never appear in Git, a manifest, or notebook output. The acquisition code redacts the `key` query parameter before recording the endpoint.
 

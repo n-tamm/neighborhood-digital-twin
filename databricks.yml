@@ -59,6 +59,12 @@ variables:
   national_state_fips:
     description: Fifty states and District of Columbia for national current ACS coverage
     default: "01,02,04,05,06,08,09,10,11,12,13,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,44,45,46,47,48,49,50,51,53,54,55,56"
+  national_historical_acs_release_years:
+    description: ACS releases needed to complete national annual history
+    default: '["2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023"]'
+  national_historical_acs_state_fips:
+    description: States and DC outside the completed three-state historical pilot
+    default: "01,02,05,06,08,09,10,11,12,13,15,16,17,18,19,20,21,22,23,24,25,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,44,45,46,47,48,49,50,51,53,54,55,56"
   secret_scope:
     description: Databricks secret scope containing the Census API key
     default: neighborhood-twin
@@ -101,6 +107,9 @@ variables:
   canonical_quality_table:
     description: Persisted canonical geography validation metrics
     default: canonical_geography_quality_metrics
+  geography_hierarchy_quality_table:
+    description: Persisted hierarchy dimension validation metrics
+    default: geography_hierarchy_quality_metrics
   gold_quality_table:
     description: Persisted current-product validation metrics
     default: gold_quality_metrics
@@ -241,6 +250,79 @@ resources:
               maximum_requests: "55"
               secret_scope: ${var.secret_scope}
               census_secret_key: ${var.census_secret_key}
+    national_historical_acs_backfill:
+      name: Neighborhood Digital Twin - National Historical ACS Backfill
+      description: Completes 2010-2024 ACS coverage, validates bronze, and refreshes analytical tables.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: ingest_national_history
+          for_each_task:
+            inputs: ${var.national_historical_acs_release_years}
+            concurrency: 1
+            task:
+              task_key: ingest_one_release
+              notebook_task:
+                notebook_path: ./notebooks/01_feasibility/02_ingest_historical_acs.py
+                base_parameters:
+                  catalog: ${var.catalog}
+                  bronze_schema: ${var.bronze_schema}
+                  volume: ${var.volume}
+                  acs_release_years: "{{input}}"
+                  state_fips_codes: ${var.national_historical_acs_state_fips}
+                  maximum_requests: "50"
+                  refresh_existing_snapshots: "false"
+                  secret_scope: ${var.secret_scope}
+                  census_secret_key: ${var.census_secret_key}
+        - task_key: profile_complete_bronze
+          depends_on:
+            - task_key: ingest_national_history
+          notebook_task:
+            notebook_path: ./notebooks/02_data_quality/01_profile_bronze_sources.py
+            base_parameters:
+              catalog: ${var.catalog}
+              bronze_schema: ${var.bronze_schema}
+              quality_schema: ${var.quality_schema}
+              quality_table: ${var.quality_table}
+        - task_key: rebuild_complete_silver
+          depends_on:
+            - task_key: profile_complete_bronze
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/01_build_silver_source_tables.py
+            base_parameters:
+              catalog: ${var.catalog}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
+              fhfa_table: ${var.silver_fhfa_table}
+              acs_table: ${var.silver_acs_table}
+              acs_measure_table: ${var.silver_acs_measure_table}
+              acs_dictionary_table: ${var.silver_acs_dictionary_table}
+              quality_table: ${var.silver_quality_table}
+        - task_key: rebuild_current_products
+          depends_on:
+            - task_key: rebuild_complete_silver
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/06_build_current_products.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
+              demo_state_fips: ${var.application_demo_state_fips}
+              quality_table: ${var.gold_quality_table}
+        - task_key: apply_complete_metadata
+          depends_on:
+            - task_key: rebuild_current_products
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/05_apply_table_metadata.py
+            base_parameters:
+              catalog: ${var.catalog}
+              bronze_schema: ${var.bronze_schema}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
     geography_relationship_pipeline:
       name: Neighborhood Digital Twin - Tract Relationship Pipeline
       description: Validates and transforms the official 2010-to-2020 tract relationship file.
@@ -333,6 +415,21 @@ resources:
               quality_schema: ${var.quality_schema}
               table: ${var.canonical_tract_table}
               quality_table: ${var.canonical_quality_table}
+    geography_hierarchy_pipeline:
+      name: Neighborhood Digital Twin - Geography Hierarchy
+      description: Builds valid country-to-tract dimensions for the fifty states and District of Columbia.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_geography_hierarchy
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/08_build_geography_hierarchy.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
+              quality_table: ${var.geography_hierarchy_quality_table}
     gold_current_products:
       name: Neighborhood Digital Twin - Current Analytical Products
       description: Builds the national current tract profile and explicit modeling and app cohorts.

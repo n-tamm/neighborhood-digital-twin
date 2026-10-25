@@ -260,12 +260,24 @@ This does not block the tract-level project. It does require the project to:
 
 ## October 2026 expansion checkpoint
 
-The reviewed expansion is now complete. The bronze ACS table contains 201,111 source rows across
-15 releases from 2010 through 2024. The silver build selects the latest accepted snapshot for each
-state and release and publishes 192,883 tract-release rows plus 4,050,543 normalized measure rows.
-Arizona, Michigan, and Pennsylvania now have every annual ACS five-year release from 2010 through
-2024. The 2024 release covers 84,401 distinct tracts across all 50 states and the District of
-Columbia. Puerto Rico and the island areas were deliberately left outside this acquisition batch.
+The reviewed national expansion is now complete. The ACS contract covers every annual five-year
+release from 2010 through 2024 for the 50 states and District of Columbia: 15 releases, 51
+jurisdictions, and 765 required state-release pairs. Puerto Rico and the island areas remain
+outside the supported modeling scope rather than being forced into the national hierarchy.
+
+Bronze contains 1,160,833 rows across 768 immutable snapshots and 765 validated source IDs. Three
+2024 pilot-state sources have an earlier byte-identical snapshot, which is valid acquisition
+history rather than a duplicate within a source snapshot. Silver selects one validated snapshot
+per state and release, producing 1,152,605 tract-release rows and 24,204,705 normalized measure
+rows. The latest bronze and silver runs both report zero hard failures; silver also reports zero
+warnings.
+
+The national backfill is a separate, resumable Databricks job. Its first run completed all 672
+missing source acquisitions, then exposed an overly broad bronze uniqueness check that treated
+records from two immutable snapshots as duplicate analytical keys. The corrected rule enforces
+uniqueness within `source_snapshot_id + geoid + release`, while silver continues to enforce one
+selected snapshot per state and release. A Databricks repair run restarted at validation and did
+not rerun the successful 90-minute ingestion.
 
 Four current gold products are also live. The complete current profile retains all 85,528
 canonical tracts, while separate tables expose 83,359 initial similarity candidates, 50,601
@@ -386,8 +398,9 @@ API keys come from environment variables or Databricks secrets, not configuratio
 
 ## Immediate next work
 
-Bronze, silver, national current ACS, the three-state annual panel, canonical geography, and the
-first current gold products are complete. The next data work should remain ordered:
+Bronze, silver, complete national 2010-2024 ACS history, canonical geography, the supported Census
+hierarchy, and the first current gold products are complete. The next data work should remain
+ordered:
 
 1. profile the expanded ACS uncertainty, missingness, and cohort attrition by state and housing
    composition rather than relying on pooled national summaries;
@@ -396,8 +409,8 @@ first current gold products are complete. The next data work should remain order
    model or can follow the nonspatial baselines;
 4. add a small, justified set of regional economic or housing-supply sources only where they
    improve a stated research question;
-5. monitor Delta storage, job runtime, and free-workspace limits before considering national ACS
-   history beyond the current three-state panel.
+5. monitor Delta storage, job runtime, and free-workspace limits before adding another source or
+   materially expanding the feature contract.
 
 ## Handoff
 
