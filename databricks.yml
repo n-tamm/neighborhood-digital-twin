@@ -385,6 +385,7 @@ resources:
             notebook_path: ./notebooks/04_exploration/03_render_eda_figures.py
             base_parameters:
               catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
               gold_schema: ${var.gold_schema}
               figure_volume: ${var.eda_figure_volume}
               figure_manifest_table: ${var.eda_figure_manifest_table}

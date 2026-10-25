@@ -51,12 +51,14 @@ from shapely.geometry import MultiPolygon, Polygon
 from neighborhood_twin.data.databricks import qualified_name
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
 dbutils.widgets.text("gold_schema", "neighborhood_twin_gold", "Gold schema")
 dbutils.widgets.text("figure_volume", "eda_figures", "EDA figure volume")
 dbutils.widgets.text("figure_manifest_table", "gold_eda_figure_manifest", "Figure manifest")
 dbutils.widgets.text("pilot_state_fips", "04,26,42", "Pilot state FIPS codes")
 
 catalog = dbutils.widgets.get("catalog").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
 gold_schema = dbutils.widgets.get("gold_schema").strip()
 figure_volume = dbutils.widgets.get("figure_volume").strip()
 figure_manifest_table = dbutils.widgets.get("figure_manifest_table").strip()
@@ -382,10 +384,23 @@ def polygon_patches(geometry: object) -> list[MatplotlibPolygon]:
     ]
 
 
+profile_for_maps = spark.table(
+    f"{catalog}.{gold_schema}.gold_tract_profile_current"
+).select(
+    "geoid_2020",
+    "state_fips",
+    "state_abbreviation",
+    "forecast_candidate",
+    "latest_hpi_annual_change_pct",
+)
+display_geometry = spark.table(
+    f"{catalog}.{silver_schema}.silver_canonical_tract_2020"
+).select("geoid_2020", "display_geometry_wkb")
+
 geometry_rows = (
-    spark.table(f"{catalog}.{gold_schema}.gold_tract_profile_current")
+    profile_for_maps.join(display_geometry, "geoid_2020", "inner")
     .where(f"state_fips IN ({','.join(repr(code) for code in pilot_states)})")
-    .where("has_display_geometry")
+    .where("display_geometry_wkb IS NOT NULL")
     .select(
         "state_fips",
         "state_abbreviation",
