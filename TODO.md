@@ -1,74 +1,133 @@
-# Next Work: Data Readiness and Exploration
+# Next Work: Historical Modeling and Parallel Development
 
 This is the short operational handoff for the next development session. It does not replace the
-[project roadmap](ROADMAP.md) or the detailed [implementation guides](docs/implementation/README.md).
+[project roadmap](ROADMAP.md) or the detailed
+[implementation guides](docs/implementation/README.md).
 
-## Where the project sits
+## Current position
 
-The core Databricks data pipeline is working through bronze, silver, canonical geography, current
-gold products, governed EDA summaries, and a reviewed visual-EDA figure build. Tables are separated
-into bronze, silver, gold, and quality schemas. Structural validation and current-state exploration
-are strong; model-specific historical preparation is now the next major stage.
+The source-to-EDA portion of the Databricks pipeline is complete for the current project scope.
+The repository and shared workspace now contain:
 
-Current analytical outputs include:
-
-- 85,528 rows in the complete current tract profile;
-- 83,359 current similarity candidates;
-- 51,263 current forecast candidates, which are only an availability screen and not training rows;
-- 8,182 Arizona, Michigan, and Pennsylvania application-demo tracts;
+- governed source snapshots, manifests, bronze tables, and bronze validation;
+- typed and validated FHFA, ACS, relationship, geometry, and Connecticut bridge products in
+  silver;
+- a complete 85,528-row canonical 2020 tract dimension;
+- a complete current tract profile plus 83,359 similarity candidates, 51,263 forecast candidates,
+  and 8,182 application-demo tracts in gold;
 - nationwide 2024 ACS coverage for the 50 states and Washington, D.C.;
 - annual 2010-2024 ACS coverage for Arizona, Michigan, and Pennsylvania;
 - national FHFA tract history through 2025;
-- a validated canonical 2020 tract backbone, display geometry, and Connecticut geography bridge.
-- seven versioned report-ready EDA figures with a governed manifest in the gold schema.
+- governed readiness summaries and seven reviewed, versioned EDA figures;
+- table descriptions, column comments, individual table documents, and small real samples.
 
-Every implemented Databricks table has an individual document in the
-[data guide](docs/data/README.md) and a small example in [`data/samples`](data/samples/).
+The pipeline is not yet complete from an end-product perspective. It does not have the historical
+point-in-time modeling panel, targets, evaluation splits, model outputs, uncertainty intervals,
+historical analogues, scenarios, or application-serving tables.
 
-## Important limitations to resolve
+## Scope decisions already supported by the data
 
-- Visual EDA confirms that FHFA forecasting coverage is strongly tilted toward single-family,
-  owner-occupied tracts. Forecasting claims must stay within that target population, while the
-  broader current-state similarity experience can remain national.
-- The current gold profile is useful for descriptive analysis, similarity prototyping, and early
-  application work, but it is not a historical modeling panel.
-- ACS releases before 2020 use 2010-vintage tract geography and have not yet been transformed into
-  the canonical 2020 geography. Nonadditive measures must not be redistributed casually.
-- Forecast origins, horizon-specific targets, censoring rules, and data splits do not exist yet.
-- Preprocessing such as imputation, scaling, and dimensionality reduction must eventually be fit
-  inside training folds rather than calculated on the full dataset.
-- Connecticut is resolved: all 728 FHFA tract identifiers use the planning-region geography and
-  map through the reviewed bridge, producing 662 current forecast candidates. Keep the explicit
-  bridge-coverage checks in every gold rebuild.
-- County/CBSA context, detailed analysis geometry, adjacency, and additional economic or supply
-  sources are not implemented. Add them only when exploration or a baseline comparison gives them
-  a clear role.
+- Keep current-state similarity and descriptive application coverage national.
+- Treat FHFA forecasting as a narrower product for the covered, predominantly single-family tract
+  population. Do not generalize its results to all communities or housing types.
+- Keep one-year forecasting as the primary target. Three- and five-year horizons remain secondary
+  until their final eligible samples and evaluation windows are confirmed.
+- Use the existing simplified geometry only for display. Adjacency, distance, or other analytical
+  spatial features require a separate approved geography product.
+- Do not add another source merely because it is available. Add one only when a baseline or
+  required evaluation exposes a weakness it can address.
 
-## Next milestone
+## Immediate shared decision gate
 
-Create the **historical modeling contract and tables** before fitting models or adding sources.
+Before either workstream creates final historical products, the team must approve one
+point-in-time modeling contract covering:
 
-1. Finalize the point-in-time data contract:
-   - forecast origin and source-availability rules;
-   - primary one-year target and feasibility rules for three- and five-year targets;
-   - historical geography policy by field family;
-   - train, validation, calibration, temporal-test, and geographic-holdout assignments;
-   - missingness, scaling, and feature-registry policies.
-2. Build the historical neighborhood-state, feature, and target tables and run their
-   leakage, uniqueness, reconciliation, and attrition checks.
-3. Fit simple persistence and regional forecasting baselines before more complex models.
-4. Build a transparent current-state similarity baseline and test whether its neighbors make
-   sense across geography and housing composition.
-5. Add another source only if these baselines expose a specific weakness it can address.
+1. the forecast origin and source-availability cutoff;
+2. the historical ACS geography policy, especially for pre-2020 releases on 2010-vintage tracts;
+3. one-, three-, and five-year target definitions, eligibility, and right-censoring rules;
+4. training, validation, calibration, locked temporal-test, and geographic-holdout assignments;
+5. the initial feature registry, missingness rules, and training-fitted preprocessing policy;
+6. whether the first geographic evaluation uses county, CBSA, state, or another explicit unit.
 
-## Expected checkpoint outputs
+One teammate should draft the contract and proposed schemas. The other should review timing,
+geography, leakage, target meaning, and feasibility before it is merged. Merge this small contract
+first so the parallel branches share the same definitions.
 
-- A reviewed historical state/feature/target contract.
-- Leakage-safe historical gold tables and chronological split assignments.
-- Forecast and similarity baselines with interpretable evaluation outputs.
-- A documented decision about whether any new source or spatial feature is necessary before the
-  next modeling iteration.
+## Parallel workstream A: historical data and forecasting readiness
 
-Do not expand the source catalog merely because another public dataset is available. The next
-source should address a weakness found in exploration or produce measurable value over a simpler
-baseline.
+Suggested branch: `data/historical-modeling-tables`
+
+Responsibilities:
+
+- build the historical neighborhood-state table at one tract and forecast origin per row;
+- build leakage-safe feature rows with source vintage, availability, age, and quality fields;
+- build horizon-specific FHFA targets, eligibility flags, and censoring reasons;
+- publish chronological and geographic split assignments rather than creating them inside model
+  notebooks;
+- add leakage, uniqueness, range, reconciliation, and attrition checks;
+- document each new table and add a small real sample;
+- fit zero-change, historical-average, persistence, regional, and regularized-linear forecasting
+  baselines after the tables pass.
+
+This workstream should own shared Databricks job wiring and table-metadata changes during this
+sprint so both people do not edit `databricks.yml` and `metadata.py` at the same time.
+
+## Parallel workstream B: similarity and application foundation
+
+Suggested first branch: `model/similarity-baseline`
+
+This work can begin immediately with `gold_similarity_candidate_current` and
+`gold_application_demo_tract`; it does not need to wait for the historical panel.
+
+Responsibilities:
+
+- build a standardized-feature Euclidean nearest-neighbor baseline;
+- compare original feature-space retrieval with a PCA representation;
+- retain distances, rank, feature versions, and understandable similarities and differences;
+- test neighbor stability across scaling, feature families, geography, and housing composition;
+- review representative matches for obvious failures that a distance metric misses;
+- define the future `gold_analogues` and application-serving contracts;
+- if capacity allows, build a thin Streamlit prototype for tract selection, maps, housing mix,
+  current state, source dates, coverage warnings, and methods.
+
+The final time-safe analogue evaluation still waits for workstream A because it needs historical
+query and candidate years plus later outcomes. The current-state retrieval implementation and app
+shell do not.
+
+## Coordination rules that avoid blockers
+
+- Create both branches from the same reviewed contract commit.
+- Give one person temporary ownership of shared configuration and metadata files.
+- Do not let both people publish the same canonical Databricks table or run competing refreshes.
+- Keep experimental outputs separate from existing gold contracts until validation passes.
+- Put reusable logic in `src/neighborhood_twin/`, tests in `tests/`, and keep notebooks as thin
+  orchestration or investigation layers.
+- Commit small, coherent units and exchange contract changes early rather than after a large
+  branch has diverged.
+- Merge the historical-table branch first because its outputs become shared dependencies. Rebase
+  the similarity branch onto that result before adding retrospective analogue evaluation.
+
+## Integration sequence
+
+1. Approve and merge the historical modeling contract.
+2. Build historical tables and the current-state similarity baseline in parallel.
+3. Validate and merge historical state, feature, target, and split tables.
+4. Fit forecasting baselines and add retrospective, time-safe analogue evaluation.
+5. Decide whether CBSA membership, analytical adjacency, macroeconomic context, or another source
+   earns its place through a measured baseline comparison.
+6. Select one nonlinear forecasting model and one uncertainty method.
+7. Publish predictions, intervals, analogues, explanations, and scenario outputs.
+8. Build compact serving tables and complete the interactive application.
+
+## Definition of the next completed checkpoint
+
+The next checkpoint is complete when the team has:
+
+- a reviewed point-in-time state, feature, target, and split contract;
+- reproducible historical gold tables with zero unresolved hard validation failures;
+- a leakage review and clear row attrition report;
+- forecast baselines evaluated on identical chronological and geographic splits;
+- an interpretable current-state similarity baseline with stability and case review;
+- a written decision about any additional source or analytical spatial product;
+- enough stable outputs for the application prototype to consume explicit contracts rather than
+  research notebooks.
