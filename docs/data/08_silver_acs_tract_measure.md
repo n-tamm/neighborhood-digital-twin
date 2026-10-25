@@ -14,5 +14,10 @@
 - **Use:** prefer this table for focused analysis, profiling, and any workflow that benefits from
   selecting measures rather than carrying a very wide row.
 
+As of October 25, 2026, the table contains 24,204,705 rows: 1,152,605 selected tract-release rows
+multiplied by 21 governed measures. It covers every 2010-2024 release for the 50 states and
+Washington, D.C.; pre-2020 releases retain their 2010 geography vintage pending explicit
+cross-vintage harmonization.
+
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.

@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include nationwide current ACS profiles, national FHFA history, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, governed EDA summaries, and seven versioned report-ready figures. Visual EDA confirms that FHFA forecasting coverage is selective, especially in multifamily-heavy tracts. Older ACS releases are not yet harmonized to 2020 tracts, and display geometry is not suitable for scientific adjacency. The next milestone is the point-in-time historical modeling contract and leakage-safe modeling tables. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, governed EDA summaries, and seven versioned report-ready figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Older ACS releases are not yet harmonized to 2020 tracts, and display geometry is not suitable for scientific adjacency. The next milestone is the point-in-time historical modeling contract and leakage-safe modeling tables. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -113,8 +113,8 @@ The implementation guide is numbered in dependency order. It is a living technic
 ## Run the current code
 
 The repository now contains tested source acquisition, bronze and silver validation, national
-geography products, a canonical tract dimension, nationwide current ACS coverage, a three-state
-annual ACS panel, and current gold profiles for modeling and application prototypes. The primary
+geography products, a canonical tract dimension, nationwide annual 2010-2024 ACS coverage, and
+current gold profiles for modeling and application prototypes. The primary
 ACS silver product uses one tract-release-measure row with a companion data dictionary, while a
 generated wide table supports compact feature construction. The gold layer keeps all canonical
 tracts and exposes transparent similarity, forecasting, and application-development cohorts.
@@ -155,11 +155,13 @@ databricks bundle run core_source_ingestion --profile neighborhood-twin
 databricks bundle run historical_acs_ingestion --profile neighborhood-twin
 databricks bundle run pilot_annual_acs_ingestion --profile neighborhood-twin
 databricks bundle run national_current_acs_ingestion --profile neighborhood-twin
+databricks bundle run national_historical_acs_backfill --profile neighborhood-twin
 databricks bundle run silver_source_transforms --profile neighborhood-twin
 databricks bundle run geography_relationship_pipeline --profile neighborhood-twin
 databricks bundle run display_geometry_pipeline --profile neighborhood-twin
 databricks bundle run connecticut_geography_pipeline --profile neighborhood-twin
 databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
+databricks bundle run geography_hierarchy_pipeline --profile neighborhood-twin
 databricks bundle run gold_current_products --profile neighborhood-twin
 databricks bundle run data_readiness_eda --profile neighborhood-twin
 databricks bundle run visual_eda --profile neighborhood-twin
@@ -167,8 +169,10 @@ databricks bundle run table_metadata_pipeline --profile neighborhood-twin
 ```
 
 The jobs remain separate so acquisition, transformation, geography, current products, and metadata
-can be rerun and reviewed independently. Run expansion jobs only after checking their configured
-scope, rebuild silver after new ACS snapshots arrive, and apply table metadata after any job that
+can be rerun and reviewed independently. The national historical backfill is a one-time, resumable
+job whose downstream tasks validate and refresh the completed load; it is not part of routine
+refreshes. Run expansion jobs only after checking their configured scope, rebuild silver after new
+ACS snapshots arrive, and apply table metadata after any job that
 overwrites a schema. Raw source files and secrets remain outside Git. Complete table grains and
 limitations are in the [data guide](docs/data/README.md); setup and pipeline details are in
 [Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md), and geography decisions are in

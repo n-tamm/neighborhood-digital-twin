@@ -15,15 +15,19 @@ The repository and shared workspace now contain:
 - a complete 85,528-row canonical 2020 tract dimension;
 - a complete current tract profile plus 83,359 similarity candidates, 51,263 forecast candidates,
   and 8,182 application-demo tracts in gold;
-- nationwide 2024 ACS coverage for the 50 states and Washington, D.C.;
-- annual 2010-2024 ACS coverage for Arizona, Michigan, and Pennsylvania;
+- complete annual 2010-2024 ACS coverage for the 50 states and Washington, D.C.: 765 required
+  state-release pairs, 1,152,605 selected silver tract-release rows, and zero hard failures in the
+  latest bronze, silver, and gold validation runs;
+- a supported Census hierarchy containing one country, four regions, nine divisions, 51 states or
+  state equivalents, 3,143 counties or equivalents, and 84,414 canonical tracts;
 - national FHFA tract history through 2025;
 - governed readiness summaries and seven reviewed, versioned EDA figures;
 - table descriptions, column comments, individual table documents, and small real samples.
 
-The pipeline is not yet complete from an end-product perspective. It does not have the historical
-point-in-time modeling panel, targets, evaluation splits, model outputs, uncertainty intervals,
-historical analogues, scenarios, or application-serving tables.
+Source acquisition and source-specific cleaning are complete for the approved ACS, FHFA, and
+geography scope. The pipeline is not yet complete from an end-product perspective. It does not
+have the cross-vintage historical modeling panel, targets, evaluation splits, model outputs,
+uncertainty intervals, historical analogues, scenarios, or application-serving tables.
 
 ## Scope decisions already supported by the data
 

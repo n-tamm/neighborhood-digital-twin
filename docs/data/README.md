@@ -100,11 +100,19 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 25, 2026, the organized schemas contain nationwide 2024 ACS coverage for the 50
-states and District of Columbia, annual 2010-2024 ACS coverage for Arizona, Michigan, and
-Pennsylvania, national FHFA tract HPI history through 2025, and national Census geography support.
-Puerto Rico and the other island areas are present in parts of the geography source but were not
-included in the current ACS acquisition.
+As of October 25, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
+the 50 states and District of Columbia, national FHFA tract HPI history through 2025, and national
+Census geography support. The validated ACS contract contains all 765 required state-release
+pairs, 1,152,605 selected silver tract-release rows, and 24,204,705 normalized measure rows.
+Puerto Rico and the other island areas are present in parts of the geography source but are not
+part of the supported ACS or country-to-tract hierarchy.
+
+Bronze retains 1,160,833 rows across 768 immutable snapshots. The difference from silver is one
+earlier 2024 snapshot for each pilot state, totaling 8,228 historical snapshot rows; silver
+selects one validated snapshot per state and release. The latest national validation reports zero
+missing or unexpected state-release pairs, zero missing validated sources, and no hard bronze,
+silver, or gold failures. Documented warnings are limited to unavailable ACS median-dollar values
+and five current Connecticut water-only tracts.
 
 The governed hierarchy now contains one country, four Census regions, nine Census divisions, 51
 states or state equivalents, 3,143 counties or county equivalents, and 84,414 canonical 2020

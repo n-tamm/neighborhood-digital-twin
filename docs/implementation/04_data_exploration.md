@@ -62,10 +62,12 @@ breakdowns, simple persistence and regional baselines, and uncertainty intervals
 chart is a source diagnostic only; final-test outcomes must not be used to select features,
 transformations, or model settings.
 
-This checkpoint supports retaining the national current-state similarity and application scope
-alongside the three-state historical forecasting pilot. It also identifies a required product
-boundary: the application can describe all supported communities, while FHFA-based forecasts must
-show their narrower eligibility and target interpretation clearly.
+This checkpoint supports retaining the national current-state similarity and application scope.
+The source pipeline now also provides full national 2010-2024 ACS history, although the historical
+modeling cohort still depends on the approved cross-vintage and point-in-time contracts. The EDA
+also identifies a required product boundary: the application can describe all supported
+communities, while FHFA-based forecasts must show their narrower eligibility and target
+interpretation clearly.
 
 ## Exploration layers
 
