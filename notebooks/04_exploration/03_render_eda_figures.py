@@ -222,6 +222,7 @@ axis.set_ylim(0, 100)
 axis.set_title("FHFA and forecast coverage rise with single-family housing share")
 axis.legend(frameon=False, ncol=2, loc="upper left")
 clean_axis(axis)
+figure.subplots_adjust(bottom=0.28)
 add_source_note(
     figure,
     "Housing bands use the ACS share of attached and detached single-family units. "
@@ -307,13 +308,20 @@ for axis in axes[:, 0]:
 for axis in axes[-1, :]:
     axis.set_xlabel("Observation year")
 handles, legend_labels = axes[0, 0].get_legend_handles_labels()
-figure.legend(handles, legend_labels, frameon=False, ncol=2, loc="upper center")
+figure.legend(
+    handles,
+    legend_labels,
+    frameon=False,
+    ncol=2,
+    loc="upper center",
+    bbox_to_anchor=(0.5, 0.945),
+)
 figure.suptitle(
     "Housing-price changes vary substantially across time and states",
-    y=1.01,
+    y=0.985,
     fontsize=15,
 )
-figure.tight_layout()
+figure.tight_layout(rect=(0, 0.04, 1, 0.91))
 add_source_note(
     figure,
     "Source: FHFA annual tract HPI. Shaded ranges summarize available tracts and "
@@ -470,8 +478,10 @@ figure.legend(
     frameon=False,
     ncol=2,
     loc="upper center",
+    bbox_to_anchor=(0.5, 0.91),
 )
-figure.suptitle("Forecast eligibility varies within each pilot state", y=1.0, fontsize=15)
+figure.suptitle("Forecast eligibility varies within each pilot state", y=0.97, fontsize=15)
+figure.subplots_adjust(top=0.84, bottom=0.1, wspace=0.12)
 add_source_note(
     figure,
     "Display-only Census geometry. Eligibility requires current ACS and sufficient "
