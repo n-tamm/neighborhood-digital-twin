@@ -37,12 +37,18 @@ _add_repository_source()
 from neighborhood_twin.metadata import apply_table_metadata
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("gold_schema", "neighborhood_twin_gold", "Gold schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 
 updated = apply_table_metadata(
     spark,
     catalog=dbutils.widgets.get("catalog").strip(),
-    schema=dbutils.widgets.get("schema").strip(),
+    bronze_schema=dbutils.widgets.get("bronze_schema").strip(),
+    silver_schema=dbutils.widgets.get("silver_schema").strip(),
+    gold_schema=dbutils.widgets.get("gold_schema").strip(),
+    quality_schema=dbutils.widgets.get("quality_schema").strip(),
 )
 print(f"Applied table and column metadata to {len(updated)} tables.")
 for table in updated:

@@ -54,7 +54,7 @@ This prompt identifies a concrete artifact—the initial repository scaffold—w
 
 ### Data documentation and metadata prompt
 
-> I would like to have a data folder in docs that provides an outline/summary of each table along the pipeline so it's clear what it is for (granularity, structure, etc.). I would like you to put sample data for each table into the data folder (1,000 rows or less depending on the source should do). Finally, it would be good to have solid metadata on the Databricks tables. So a table description and column comments for now I think would be a good start.
+> Add a data folder in docs that provides an outline/summary of each table along the pipeline so it's clear what it is for (granularity, structure, etc.). Put sample data for each table into the data folder (1,000 rows or less depending on the source should do). Finally, it would be good to have solid metadata on the Databricks tables. So a table description and column comments should be added to each source to improve metadata quality.
 
 This request materially changed both the repository documentation and the governed Databricks
 objects. It produced one reference document per table, small real samples for every implemented
@@ -149,6 +149,23 @@ land tracts. Local linting, type checks, all 45 unit tests, bundle validation, a
 Databricks jobs passed. The refreshed gold metrics report 879 bridge matches, five documented
 water-only exceptions, and zero unexpected current ACS mismatches. Finally, real samples and
 individual table documents were checked for all 23 implemented tables.
+
+The schema reorganization and first EDA-readiness implementation were evaluated with Ruff, Python
+compilation, 52 local unit tests, Databricks bundle validation, and live serverless jobs. The
+organizer's first run exposed that Spark Connect did not support the proposed `errorifexists`
+write mode; it stopped before copying a table, and the implementation was changed to an explicit
+create-table-as-select operation that preserves the same create-only behavior. The completed run
+copied and reconciled the existing tables into separate bronze, silver, gold, and quality schemas
+without changing or deleting the legacy schema.
+
+The EDA job was also revised in response to two live-data failures rather than accepted after its
+first successful-looking output. A uniqueness check caught state rows split by null display labels,
+so state FIPS became the key and readable labels became nullable attributes. Review of the
+published FHFA summary then found that two year fields contained the literal column name; the code
+was corrected and hard checks for numeric year types and valid chronological ranges were added.
+The final run passed all publication checks. Separate SQL review confirmed 51,263 forecast
+candidates after correctly bridging 728 Connecticut FHFA identifiers, viable one-, three-, and
+five-year target pairs, and substantial ACS uncertainty in several small housing categories.
 
 ## Maintenance requirements
 

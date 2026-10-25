@@ -29,12 +29,17 @@ stages.
 
 ## Databricks storage contract
 
-Databricks is the canonical team environment for source data and ETL. Use an existing Unity Catalog catalog, a shared project schema, and a managed volume:
+Databricks is the canonical team environment for source data and ETL. Use an existing Unity Catalog
+catalog with schemas separated by pipeline responsibility:
 
 | Object | Initial name | Purpose |
 |---|---|---|
 | Catalog | chosen from the shared workspace | Existing governance boundary; the notebook does not create a catalog |
-| Development schema | `neighborhood_twin_dev` | Shared tables created during the feasibility phase |
+| Bronze schema | `neighborhood_twin_bronze` | Source-shaped tables, manifest, and raw-snapshot volume |
+| Silver schema | `neighborhood_twin_silver` | Cleaned, typed, and geographically conformed tables |
+| Gold schema | `neighborhood_twin_gold` | Analysis, modeling, and application-ready products |
+| Quality schema | `neighborhood_twin_quality` | Append-only checks and pipeline-observability results |
+| Test schema | `neighborhood_twin_test` | Reserved; create only when integration tests need persisted fixtures or results |
 | Managed volume | `source_snapshots` | Immutable raw source payloads and sidecar manifests |
 | Manifest table | `source_snapshot_manifest` | Searchable source version, checksum, request, license, and validation history |
 | FHFA bronze table | `bronze_fhfa_tract_hpi` | Source-shaped tract-year HPI records plus snapshot lineage |
@@ -49,11 +54,16 @@ Databricks is the canonical team environment for source data and ETL. Use an exi
 Raw file paths follow:
 
 ```text
-/Volumes/<catalog>/neighborhood_twin_dev/source_snapshots/
+/Volumes/<catalog>/neighborhood_twin_bronze/source_snapshots/
   bronze/<source_id>/retrieval_date=<YYYY-MM-DD>/<sha-prefix>/<source-file>
 ```
 
 Managed volumes are for raw files. Delta tables are for queryable records. Do not duplicate this design with legacy DBFS mounts, local OneDrive folders, or raw files committed to Git.
+
+The idempotent `organize_project_schemas` job creates the four active schemas and copies a legacy
+table only when its new destination does not exist. It does not overwrite organized tables, move
+recorded source paths, or delete `neighborhood_twin_dev`. Run it once before using the refactored
+jobs; then run `table_metadata_pipeline` so copied tables receive their table and column comments.
 
 ## Team setup before the first run
 
@@ -68,6 +78,14 @@ Managed volumes are for raw files. Delta tables are for queryable records. Do no
    ```powershell
    databricks bundle validate --profile neighborhood-twin
    databricks bundle deploy --profile neighborhood-twin
+   ```
+
+   For a workspace that already contains the earlier shared schema, run the one-time organizer and
+   metadata jobs before normal refreshes:
+
+   ```powershell
+   databricks bundle run organize_project_schemas --profile neighborhood-twin
+   databricks bundle run table_metadata_pipeline --profile neighborhood-twin
    ```
 
 8. Run the deployed ingestion job:
@@ -251,7 +269,9 @@ Columbia. Puerto Rico and the island areas were deliberately left outside this a
 
 Four current gold products are also live. The complete current profile retains all 85,528
 canonical tracts, while separate tables expose 83,359 initial similarity candidates, 50,601
-initial forecasting candidates, and an 8,182-row Arizona/Michigan/Pennsylvania application cohort.
+initial forecasting candidates before FHFA geography reconciliation, and an 8,182-row
+Arizona/Michigan/Pennsylvania application cohort. Applying the reviewed Connecticut bridge to
+FHFA as well as ACS raises the current forecast screen to 51,263 tracts.
 These are transparent availability filters, not final model populations. Their implementation is
 described in Stage 05 and their table contracts are maintained in the
 [data guide](../data/README.md).
@@ -262,6 +282,9 @@ canonical identifiers. The implemented pipeline now ingests official 2020 and 20
 references and publishes 879 safe one-to-one land-tract mappings. The five current water-only
 tracts remain explicit exceptions. The refreshed gold build reports 879 Connecticut bridge
 matches and zero unexpected ACS-to-canonical mismatches.
+FHFA uses the same current planning-region identifiers for 728 Connecticut tracts. All 728 map
+through the bridge, leaving zero unmapped Connecticut FHFA identifiers and restoring 662 current
+forecast candidates in the state.
 
 If Databricks blocks a publisher domain, download the official file outside the workspace, upload it to one directory in the managed volume, set the notebook's `uploaded_source_directory` widget, and rerun. Filenames must match the source definitions. The registration path hashes and copies the upload into the same immutable layout and records `acquisition_method=manual_upload`; it does not silently treat a manually uploaded file as a successful HTTP response.
 

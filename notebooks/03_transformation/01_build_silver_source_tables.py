@@ -51,7 +51,9 @@ from neighborhood_twin.validate import hard_failures, write_quality_metrics
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Shared project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text(
     "fhfa_table", "silver_fhfa_tract_year", "Current FHFA silver table"
 )
@@ -73,7 +75,9 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+bronze_schema = dbutils.widgets.get("bronze_schema").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 fhfa_table = dbutils.widgets.get("fhfa_table").strip()
 acs_table = dbutils.widgets.get("acs_table").strip()
 acs_measure_table = dbutils.widgets.get("acs_measure_table").strip()
@@ -85,7 +89,8 @@ quality_table = dbutils.widgets.get("quality_table").strip()
 build = prepare_silver_build(
     spark,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
+    bronze_schema=bronze_schema,
     fhfa_table=fhfa_table,
     acs_table=acs_table,
     acs_measure_table=acs_measure_table,
@@ -95,7 +100,7 @@ quality_table_name = write_quality_metrics(
     spark,
     build.metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 
@@ -115,7 +120,7 @@ if failure_metrics:
 ) = publish_silver_build(
     build,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
     fhfa_table=fhfa_table,
     acs_table=acs_table,
     acs_measure_table=acs_measure_table,
@@ -124,7 +129,7 @@ if failure_metrics:
 
 # COMMAND ----------
 
-latest_metrics = spark.table(f"{catalog}.{schema}.{quality_table}").where(
+latest_metrics = spark.table(f"{catalog}.{quality_schema}.{quality_table}").where(
     functions.col("quality_run_id") == build.build_id
 )
 display(latest_metrics.orderBy("metric_group", "table_name", "metric_name", "dimension"))

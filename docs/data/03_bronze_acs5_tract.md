@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Governance and bronze
-- **Databricks table:** `workspace.neighborhood_twin_dev.bronze_acs5_tract`
+- **Databricks table:** `workspace.neighborhood_twin_bronze.bronze_acs5_tract`
 - **Sample:** [bronze_acs5_tract.jsonl](../../data/samples/bronze_acs5_tract.jsonl)
 
 - **Grain and key:** one row per snapshot, tract GEOID, and ACS release year.

@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Silver analytical source tables
-- **Databricks table:** `workspace.neighborhood_twin_dev.silver_fhfa_tract_year`
+- **Databricks table:** `workspace.neighborhood_twin_silver.silver_fhfa_tract_year`
 - **Sample:** [silver_fhfa_tract_year.jsonl](../../data/samples/silver_fhfa_tract_year.jsonl)
 
 - **Grain and key:** one row per 2020 tract GEOID and observation year.

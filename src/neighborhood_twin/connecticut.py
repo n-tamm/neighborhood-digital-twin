@@ -233,12 +233,14 @@ def prepare_connecticut_bridge_build(
     *,
     catalog: str,
     schema: str,
+    bronze_schema: str | None = None,
     bridge_table: str = CONNECTICUT_BRIDGE_TABLE,
     built_at: datetime | None = None,
 ) -> ConnecticutBridgeBuild:
     """Build a checked land-tract bridge from the two accepted source snapshots."""
 
-    bronze_name = f"{catalog}.{schema}.{CONNECTICUT_BRONZE_TABLE}"
+    bronze_schema = bronze_schema or schema
+    bronze_name = f"{catalog}.{bronze_schema}.{CONNECTICUT_BRONZE_TABLE}"
     if not spark.catalog.tableExists(bronze_name):
         raise ValueError(f"Required Connecticut reference table does not exist: {bronze_name}")
     source = spark.table(bronze_name)

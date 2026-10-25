@@ -58,7 +58,7 @@ from neighborhood_twin.data.databricks import (
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
 dbutils.widgets.text("volume", "source_snapshots", "Managed raw-data volume")
 dbutils.widgets.text("acs_release_year", "2024", "ACS five-year release")
 dbutils.widgets.text("pilot_state_fips", "04,26,42", "Pilot state FIPS codes")
@@ -71,7 +71,7 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+schema = dbutils.widgets.get("bronze_schema").strip()
 volume = dbutils.widgets.get("volume").strip()
 acs_release_year = int(dbutils.widgets.get("acs_release_year"))
 pilot_state_fips = tuple(

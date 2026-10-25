@@ -5,8 +5,9 @@ GitHub is the source of truth for code while Databricks is the shared data and e
 ```mermaid
 flowchart LR
     A[Public data sources] --> B[Managed volume: immutable raw snapshots]
-    B --> C[Delta bronze and silver tables]
-    C --> D[Tract-year neighborhood state]
+    B --> C[Bronze schema]
+    C --> D1[Silver schema]
+    D1 --> D[Gold neighborhood state]
     D --> E[Forecasts and uncertainty]
     D --> F[Historical analogues]
     E --> G[Scenario sensitivity]
@@ -31,30 +32,28 @@ New folders should be added only when a working implementation creates a distinc
 
 ## Databricks data boundary
 
-The shared workspace uses an existing Unity Catalog catalog. The pipeline creates a project schema and a managed volume within that catalog:
+The shared workspace uses an existing Unity Catalog catalog. Pipeline responsibility is separated
+at the schema level so raw data, conformed data, analytical products, and operational evidence do
+not compete in one long table list:
 
 ```text
-<catalog>.neighborhood_twin_dev
-├── volume: source_snapshots
-│   ├── bronze/<source>/<retrieval-date>/<hash>/<raw file>
-│   └── bronze/<source>/<retrieval-date>/<hash>/<manifest JSON>
-├── table: source_snapshot_manifest
-├── table: bronze_fhfa_tract_hpi
-├── table: bronze_acs5_tract
-├── table: bronze_census_tract_relationship_2010_2020
-├── table: bronze_census_tract_display_geometry_2020
-├── table: bronze_quality_metrics
-├── table: silver_fhfa_tract_year
-├── table: silver_acs_tract_measure
-├── table: silver_acs_measure_dictionary
-├── table: silver_acs_tract_year (generated wide convenience table)
-├── table: silver_quality_metrics
-├── table: silver_tract_relationship_2010_2020
-├── table: silver_tract_display_geometry_2020
-├── table: geography_quality_metrics
-├── future canonical geography and gold tables
-└── future application serving tables
+<catalog>
+├── neighborhood_twin_bronze
+│   ├── volume: source_snapshots
+│   ├── table: source_snapshot_manifest
+│   └── tables: bronze_*
+├── neighborhood_twin_silver
+│   └── tables: silver_*
+├── neighborhood_twin_gold
+│   └── tables: gold_* and future model/application products
+└── neighborhood_twin_quality
+    └── tables: *_quality_metrics
 ```
+
+`neighborhood_twin_test` is reserved for future integration-test fixtures or results, but is not
+created until those tests exist. The original `neighborhood_twin_dev` schema is retained unchanged
+as a migration source and rollback reference; active jobs no longer write to it. Historical source
+paths recorded there remain valid lineage. New snapshots are written to the bronze volume.
 
 Unity Catalog volumes hold files; Unity Catalog managed Delta tables hold tabular data. No workflow uses legacy DBFS mounts. Snapshot hashes and manifests make a source version traceable even when a publisher replaces a file at the same URL. One team member should own a canonical refresh run so two simultaneous notebook runs do not compete to publish the same snapshot.
 

@@ -125,6 +125,55 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Append-only integrity, reconciliation, and volume metrics for current gold products.",
         "One row per gold quality run, table, and metric.",
     ),
+    "gold_eda_state_coverage": TableMetadata(
+        "EDA checkpoint summarizing source and product eligibility across states.",
+        "One row per state or state-equivalent FIPS code.",
+    ),
+    "gold_eda_acs_measure_quality": TableMetadata(
+        "Current ACS missingness and relative-margin-of-error summary by governed measure.",
+        "One row per governed ACS measure in the latest ingested release.",
+    ),
+    "gold_eda_fhfa_history": TableMetadata(
+        "FHFA tract-history depth and usable-year coverage summarized by state.",
+        "One row per state FIPS code represented in the FHFA source.",
+    ),
+    "gold_eda_horizon_feasibility": TableMetadata(
+        "Availability and observed target distribution for tested FHFA forecast horizons.",
+        "One row per state FIPS code and forecast horizon.",
+    ),
+    "eda_readiness_quality_metrics": TableMetadata(
+        "Append-only publication checks for formal data-readiness and EDA summaries.",
+        "One row per EDA readiness run, table, and metric.",
+    ),
+    "gold_eda_housing_coverage": TableMetadata(
+        "FHFA and candidate coverage summarized across single-family housing-share bands.",
+        "One row per governed housing-composition band.",
+    ),
+    "gold_eda_cohort_comparison": TableMetadata(
+        "Current feature differences between forecast candidates and excluded current-ACS tracts.",
+        "One row per governed comparison feature.",
+    ),
+    "gold_eda_hpi_temporal": TableMetadata(
+        "Yearly FHFA annual-change distributions for the nation and configured pilot states.",
+        "One row per geography scope and observation year.",
+    ),
+    "gold_eda_figure_manifest": TableMetadata(
+        "Versioned inventory of report-ready EDA figures stored in the managed figure volume.",
+        "One row per figure in the current visual EDA build.",
+    ),
+}
+
+TABLE_LAYERS = {
+    table: (
+        "quality"
+        if table.endswith("quality_metrics")
+        else "bronze"
+        if table == "source_snapshot_manifest" or table.startswith("bronze_")
+        else "silver"
+        if table.startswith("silver_")
+        else "gold"
+    )
+    for table in TABLE_METADATA
 }
 
 COMMON_COLUMN_COMMENTS = {
@@ -208,6 +257,11 @@ COMMON_COLUMN_COMMENTS = {
         "True when current ACS and at least ten recent usable FHFA HPI observations "
         "are available."
     ),
+    "standardized_mean_difference": (
+        "Difference between included and excluded means divided by their pooled standard deviation."
+    ),
+    "figure_purpose": "Decision or analytical question the figure is intended to support.",
+    "byte_size": "Size of the rendered figure file in bytes.",
 }
 
 
@@ -239,15 +293,36 @@ def column_comment(column: str) -> str:
     return f"{column.replace('_', ' ').capitalize()} as defined by this table's source contract."
 
 
-def apply_table_metadata(spark: Any, *, catalog: str, schema: str) -> list[str]:
+def apply_table_metadata(
+    spark: Any,
+    *,
+    catalog: str,
+    schema: str | None = None,
+    bronze_schema: str | None = None,
+    silver_schema: str | None = None,
+    gold_schema: str | None = None,
+    quality_schema: str | None = None,
+) -> list[str]:
     """Apply idempotent table descriptions and column comments to existing managed tables."""
+
+    if schema is not None:
+        bronze_schema = silver_schema = gold_schema = quality_schema = schema
+    layer_schemas = {
+        "bronze": bronze_schema,
+        "silver": silver_schema,
+        "gold": gold_schema,
+        "quality": quality_schema,
+    }
+    if any(value is None for value in layer_schemas.values()):
+        raise ValueError("Provide schema or all four layer-specific schemas")
 
     updated: list[str] = []
     for table, metadata in TABLE_METADATA.items():
-        raw_name = f"{catalog}.{schema}.{table}"
+        table_schema = layer_schemas[TABLE_LAYERS[table]]
+        raw_name = f"{catalog}.{table_schema}.{table}"
         if not spark.catalog.tableExists(raw_name):
             continue
-        name = qualified_name(catalog, schema, table)
+        name = qualified_name(catalog, str(table_schema), table)
         description = f"{metadata.description} Grain: {metadata.grain}".replace("'", "''")
         spark.sql(f"COMMENT ON TABLE {name} IS '{description}'")
         for field in spark.table(raw_name).schema.fields:

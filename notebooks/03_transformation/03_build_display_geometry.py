@@ -51,7 +51,9 @@ from neighborhood_twin.validate import hard_failures, write_quality_metrics
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text(
     "display_table",
     "silver_tract_display_geometry_2020",
@@ -64,13 +66,15 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+bronze_schema = dbutils.widgets.get("bronze_schema").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 display_table = dbutils.widgets.get("display_table").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
 # COMMAND ----------
 
-manifest_table = f"{catalog}.{schema}.source_snapshot_manifest"
+manifest_table = f"{catalog}.{bronze_schema}.source_snapshot_manifest"
 manifest_row = (
     spark.table(manifest_table)
     .where(functions.col("source_id") == "census_tract_boundaries_2020")
@@ -90,23 +94,24 @@ manifest = ingest_tract_display_geometry_bronze(
     spark,
     manifest,
     catalog=catalog,
-    schema=schema,
+    schema=bronze_schema,
 )
-append_manifest(spark, manifest, catalog=catalog, schema=schema)
+append_manifest(spark, manifest, catalog=catalog, schema=bronze_schema)
 
 # COMMAND ----------
 
 build = prepare_display_geometry_build(
     spark,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
+    bronze_schema=bronze_schema,
     display_table=display_table,
 )
 quality_table_name = write_quality_metrics(
     spark,
     build.metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 failure_metrics = hard_failures(build.metrics)
@@ -117,7 +122,7 @@ if failure_metrics:
 display_table_name = publish_display_geometry_build(
     build,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
     display_table=display_table,
 )
 display(

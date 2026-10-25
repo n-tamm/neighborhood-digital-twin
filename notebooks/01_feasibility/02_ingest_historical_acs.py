@@ -56,7 +56,7 @@ from neighborhood_twin.data.databricks import (
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
 dbutils.widgets.text("volume", "source_snapshots", "Managed raw-data volume")
 dbutils.widgets.text("acs_release_years", "2014,2019", "Comma-separated ACS releases")
 dbutils.widgets.text("state_fips_codes", "04,26,42", "Comma-separated state FIPS codes")
@@ -65,7 +65,7 @@ dbutils.widgets.text("secret_scope", "neighborhood-twin", "Databricks secret sco
 dbutils.widgets.text("census_secret_key", "census-api-key", "Census key secret name")
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+schema = dbutils.widgets.get("bronze_schema").strip()
 volume = dbutils.widgets.get("volume").strip()
 secret_scope = dbutils.widgets.get("secret_scope").strip()
 census_secret_key = dbutils.widgets.get("census_secret_key").strip()

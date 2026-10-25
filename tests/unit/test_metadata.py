@@ -8,7 +8,12 @@ Model used: GPT-5
 
 from types import SimpleNamespace
 
-from neighborhood_twin.metadata import TABLE_METADATA, apply_table_metadata, column_comment
+from neighborhood_twin.metadata import (
+    TABLE_LAYERS,
+    TABLE_METADATA,
+    apply_table_metadata,
+    column_comment,
+)
 
 
 def test_every_table_metadata_entry_declares_description_and_grain() -> None:
@@ -22,6 +27,13 @@ def test_generated_acs_columns_receive_specific_comments() -> None:
     assert "ACS estimate" in column_comment("population_total_estimate")
     assert "margin of error" in column_comment("population_total_margin_of_error")
     assert "Reason" in column_comment("median_gross_rent_estimate_missing_reason")
+
+
+def test_table_layers_separate_pipeline_products_from_quality_results() -> None:
+    assert TABLE_LAYERS["source_snapshot_manifest"] == "bronze"
+    assert TABLE_LAYERS["silver_acs_tract_measure"] == "silver"
+    assert TABLE_LAYERS["gold_tract_profile_current"] == "gold"
+    assert TABLE_LAYERS["gold_quality_metrics"] == "quality"
 
 
 def test_metadata_application_skips_matching_column_comments() -> None:
@@ -54,3 +66,42 @@ def test_metadata_application_skips_matching_column_comments() -> None:
     assert len(spark.statements) == 2
     assert spark.statements[0].startswith("COMMENT ON TABLE")
     assert "ALTER COLUMN `status`" in spark.statements[1]
+
+
+def test_metadata_application_uses_layer_specific_schemas() -> None:
+    fields = [SimpleNamespace(name="geoid", metadata={})]
+
+    class Catalog:
+        @staticmethod
+        def tableExists(name: str) -> bool:  # noqa: N802
+            return name in {
+                "workspace.bronze.source_snapshot_manifest",
+                "workspace.gold.gold_tract_profile_current",
+            }
+
+    class Spark:
+        catalog = Catalog()
+
+        def __init__(self) -> None:
+            self.statements: list[str] = []
+
+        def table(self, name: str) -> SimpleNamespace:
+            return SimpleNamespace(schema=SimpleNamespace(fields=fields))
+
+        def sql(self, statement: str) -> None:
+            self.statements.append(statement)
+
+    spark = Spark()
+    updated = apply_table_metadata(
+        spark,
+        catalog="workspace",
+        bronze_schema="bronze",
+        silver_schema="silver",
+        gold_schema="gold",
+        quality_schema="quality",
+    )
+
+    assert updated == [
+        "workspace.bronze.source_snapshot_manifest",
+        "workspace.gold.gold_tract_profile_current",
+    ]

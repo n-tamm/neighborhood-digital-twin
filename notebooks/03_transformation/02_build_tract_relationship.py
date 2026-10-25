@@ -58,7 +58,9 @@ from neighborhood_twin.validate import hard_failures, write_quality_metrics
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text(
     "relationship_table",
     "silver_tract_relationship_2010_2020",
@@ -71,13 +73,15 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+bronze_schema = dbutils.widgets.get("bronze_schema").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 relationship_table = dbutils.widgets.get("relationship_table").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
 # COMMAND ----------
 
-manifest_table = f"{catalog}.{schema}.source_snapshot_manifest"
+manifest_table = f"{catalog}.{bronze_schema}.source_snapshot_manifest"
 if not spark.catalog.tableExists(manifest_table):
     raise ValueError(f"Required manifest table does not exist: {manifest_table}")
 
@@ -101,9 +105,9 @@ manifest = ingest_tract_relationship_bronze(
     spark,
     manifest,
     catalog=catalog,
-    schema=schema,
+    schema=bronze_schema,
 )
-append_manifest(spark, manifest, catalog=catalog, schema=schema)
+append_manifest(spark, manifest, catalog=catalog, schema=bronze_schema)
 print(f"Validated {manifest.snapshot_id}")
 
 # COMMAND ----------
@@ -111,14 +115,15 @@ print(f"Validated {manifest.snapshot_id}")
 build = prepare_geography_build(
     spark,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
+    bronze_schema=bronze_schema,
     relationship_table=relationship_table,
 )
 quality_table_name = write_quality_metrics(
     spark,
     build.metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 failure_metrics = hard_failures(build.metrics)
@@ -131,13 +136,13 @@ if failure_metrics:
 relationship_table_name = publish_geography_build(
     build,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
     relationship_table=relationship_table,
 )
 
 # COMMAND ----------
 
-latest_metrics = spark.table(f"{catalog}.{schema}.{quality_table}").where(
+latest_metrics = spark.table(f"{catalog}.{quality_schema}.{quality_table}").where(
     functions.col("quality_run_id") == build.build_id
 )
 display(latest_metrics.orderBy("metric_group", "metric_name", "dimension"))

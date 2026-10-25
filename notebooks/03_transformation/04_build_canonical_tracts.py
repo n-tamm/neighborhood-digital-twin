@@ -41,7 +41,8 @@ from neighborhood_twin.validate import hard_failures, write_quality_metrics
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text("table", "silver_canonical_tract_2020", "Canonical tract table")
 dbutils.widgets.text(
     "quality_table",
@@ -50,18 +51,19 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 table = dbutils.widgets.get("table").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
 # COMMAND ----------
 
-build = prepare_canonical_build(spark, catalog=catalog, schema=schema, table=table)
+build = prepare_canonical_build(spark, catalog=catalog, schema=silver_schema, table=table)
 quality_table_name = write_quality_metrics(
     spark,
     build.metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 failures = hard_failures(build.metrics)
@@ -72,7 +74,7 @@ if failures:
 table_name = publish_canonical_build(
     build,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
     table=table,
 )
 display(

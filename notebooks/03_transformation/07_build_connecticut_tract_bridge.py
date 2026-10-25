@@ -45,7 +45,9 @@ from neighborhood_twin.connecticut import (
 from neighborhood_twin.validate import hard_failures, write_quality_metrics
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
-dbutils.widgets.text("schema", "neighborhood_twin_dev", "Project schema")
+dbutils.widgets.text("bronze_schema", "neighborhood_twin_bronze", "Bronze schema")
+dbutils.widgets.text("silver_schema", "neighborhood_twin_silver", "Silver schema")
+dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text(
     "bridge_table",
     "silver_connecticut_tract_bridge_2020_2024",
@@ -56,7 +58,9 @@ dbutils.widgets.text(
 )
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+bronze_schema = dbutils.widgets.get("bronze_schema").strip()
+silver_schema = dbutils.widgets.get("silver_schema").strip()
+quality_schema = dbutils.widgets.get("quality_schema").strip()
 bridge_table = dbutils.widgets.get("bridge_table").strip()
 quality_table = dbutils.widgets.get("quality_table").strip()
 
@@ -65,14 +69,15 @@ quality_table = dbutils.widgets.get("quality_table").strip()
 build = prepare_connecticut_bridge_build(
     spark,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
+    bronze_schema=bronze_schema,
     bridge_table=bridge_table,
 )
 quality_table_name = write_quality_metrics(
     spark,
     build.metrics,
     catalog=catalog,
-    schema=schema,
+    schema=quality_schema,
     table=quality_table,
 )
 failures = hard_failures(build.metrics)
@@ -83,7 +88,7 @@ if failures:
 published = publish_connecticut_bridge_build(
     build,
     catalog=catalog,
-    schema=schema,
+    schema=silver_schema,
     bridge_table=bridge_table,
 )
 display(

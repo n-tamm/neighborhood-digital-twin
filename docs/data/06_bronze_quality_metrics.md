@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Governance and bronze
-- **Databricks table:** `workspace.neighborhood_twin_dev.bronze_quality_metrics`
+- **Databricks table:** `workspace.neighborhood_twin_quality.bronze_quality_metrics`
 - **Sample:** [bronze_quality_metrics.jsonl](../../data/samples/bronze_quality_metrics.jsonl)
 
 - **Grain and key:** one row per quality run, table, metric, and dimension.

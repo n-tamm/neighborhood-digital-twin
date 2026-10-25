@@ -145,10 +145,20 @@ def _require_tables(spark: Any, names: tuple[str, ...]) -> None:
         raise ValueError(f"Required analytical tables do not exist: {', '.join(missing)}")
 
 
-def _build_fhfa_summary(fhfa: Any) -> tuple[Any, int]:
+def _build_fhfa_summary(fhfa: Any, connecticut_bridge: Any) -> tuple[Any, int]:
     from pyspark.sql import Window, functions  # type: ignore[import-not-found]
 
-    usable = fhfa.where(functions.col("hpi_available"))
+    usable = (
+        fhfa.where(functions.col("hpi_available"))
+        .withColumnRenamed("geoid", "fhfa_source_geoid")
+        .join(
+            connecticut_bridge.select("geoid_current", "geoid_2020"),
+            functions.col("fhfa_source_geoid") == functions.col("geoid_current"),
+            "left",
+        )
+        .withColumn("geoid", functions.coalesce("geoid_2020", "fhfa_source_geoid"))
+        .drop("geoid_current", "geoid_2020")
+    )
     latest_source_year = int(usable.agg(functions.max("observation_year")).first()[0])
     history = usable.groupBy("geoid").agg(
         functions.count("hpi").alias("hpi_observation_count"),
@@ -196,7 +206,7 @@ def _build_current_profile(
         )
         .drop("geoid_current", "geoid_2020")
     )
-    hpi_summary, latest_source_year = _build_fhfa_summary(fhfa)
+    hpi_summary, latest_source_year = _build_fhfa_summary(fhfa, connecticut_bridge)
     hpi_summary = hpi_summary.withColumnRenamed("geoid", "fhfa_geoid")
 
     joined = (
@@ -332,6 +342,7 @@ def prepare_product_build(
     *,
     catalog: str,
     schema: str,
+    silver_schema: str | None = None,
     demo_state_fips: str,
     built_at: datetime | None = None,
 ) -> ProductBuild:
@@ -339,10 +350,11 @@ def prepare_product_build(
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
-    canonical_name = f"{catalog}.{schema}.silver_canonical_tract_2020"
-    acs_name = f"{catalog}.{schema}.silver_acs_tract_year"
-    fhfa_name = f"{catalog}.{schema}.silver_fhfa_tract_year"
-    bridge_name = f"{catalog}.{schema}.{CONNECTICUT_BRIDGE_TABLE}"
+    silver_schema = silver_schema or schema
+    canonical_name = f"{catalog}.{silver_schema}.silver_canonical_tract_2020"
+    acs_name = f"{catalog}.{silver_schema}.silver_acs_tract_year"
+    fhfa_name = f"{catalog}.{silver_schema}.silver_fhfa_tract_year"
+    bridge_name = f"{catalog}.{silver_schema}.{CONNECTICUT_BRIDGE_TABLE}"
     _require_tables(spark, (canonical_name, acs_name, fhfa_name, bridge_name))
     states = parse_state_fips_codes(demo_state_fips)
     build_id, built_at_utc = new_quality_run_id(built_at)
@@ -389,6 +401,22 @@ def prepare_product_build(
     )
     canonical_geoids = canonical.select("geoid_2020").distinct()
     bridge_geoids = spark.table(bridge_name).select("geoid_current", "geoid_2020").distinct()
+    connecticut_fhfa_geoids = (
+        spark.table(fhfa_name)
+        .where(functions.col("state_fips") == "09")
+        .select("geoid")
+        .distinct()
+    )
+    fhfa_bridge_match_count = connecticut_fhfa_geoids.join(
+        bridge_geoids,
+        connecticut_fhfa_geoids.geoid == bridge_geoids.geoid_current,
+        "inner",
+    ).count()
+    fhfa_unmapped_count = connecticut_fhfa_geoids.join(
+        bridge_geoids,
+        connecticut_fhfa_geoids.geoid == bridge_geoids.geoid_current,
+        "left_anti",
+    ).count()
     mapped_current = (
         current_acs_geoids.join(
             bridge_geoids,
@@ -446,6 +474,20 @@ def prepare_product_build(
             "pass" if bridge_match_count > 0 else "fail",
             "> 0",
             "Current Connecticut land tracts mapped to their canonical 2020 GEOIDs.",
+        ),
+        (
+            "fhfa_connecticut_bridge_match_count",
+            fhfa_bridge_match_count,
+            "pass" if fhfa_bridge_match_count > 0 else "fail",
+            "> 0",
+            "FHFA Connecticut tract identifiers mapped from planning regions to 2020 GEOIDs.",
+        ),
+        (
+            "fhfa_connecticut_unmapped_count",
+            fhfa_unmapped_count,
+            "pass" if fhfa_unmapped_count == 0 else "fail",
+            "= 0",
+            "Distinct Connecticut FHFA GEOIDs not covered by the reviewed identity bridge.",
         ),
         (
             "current_acs_unmatched_count",

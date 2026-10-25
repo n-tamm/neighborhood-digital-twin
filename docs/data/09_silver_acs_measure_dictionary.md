@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Silver analytical source tables
-- **Databricks table:** `workspace.neighborhood_twin_dev.silver_acs_measure_dictionary`
+- **Databricks table:** `workspace.neighborhood_twin_silver.silver_acs_measure_dictionary`
 - **Sample:** [silver_acs_measure_dictionary.jsonl](../../data/samples/silver_acs_measure_dictionary.jsonl)
 
 - **Grain and key:** one row per governed ACS measure; keyed by `measure_name`.

@@ -3,7 +3,7 @@
 [Back to the data documentation index](README.md)
 
 - **Layer:** Gold current products
-- **Databricks table:** `workspace.neighborhood_twin_dev.gold_application_demo_tract`
+- **Databricks table:** `workspace.neighborhood_twin_gold.gold_application_demo_tract`
 - **Sample:** [gold_application_demo_tract.jsonl](../../data/samples/gold_application_demo_tract.jsonl)
 
 - **Grain and key:** one row per displayable, current-profile tract in the configured demo states.

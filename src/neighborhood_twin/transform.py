@@ -1311,6 +1311,7 @@ def prepare_silver_build(
     *,
     catalog: str,
     schema: str,
+    bronze_schema: str | None = None,
     fhfa_table: str = FHFA_SILVER_TABLE,
     acs_table: str = ACS_SILVER_TABLE,
     acs_measure_table: str = ACS_MEASURE_SILVER_TABLE,
@@ -1319,9 +1320,10 @@ def prepare_silver_build(
 ) -> SilverBuild:
     """Select accepted bronze snapshots, transform them, and validate the result."""
 
-    bronze_fhfa_name = f"{catalog}.{schema}.bronze_fhfa_tract_hpi"
-    bronze_acs_name = f"{catalog}.{schema}.bronze_acs5_tract"
-    manifest_name = f"{catalog}.{schema}.source_snapshot_manifest"
+    bronze_schema = bronze_schema or schema
+    bronze_fhfa_name = f"{catalog}.{bronze_schema}.bronze_fhfa_tract_hpi"
+    bronze_acs_name = f"{catalog}.{bronze_schema}.bronze_acs5_tract"
+    manifest_name = f"{catalog}.{bronze_schema}.source_snapshot_manifest"
     for table_name in (bronze_fhfa_name, bronze_acs_name, manifest_name):
         if not spark.catalog.tableExists(table_name):
             raise ValueError(f"Required bronze table does not exist: {table_name}")

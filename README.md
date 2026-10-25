@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** The shared Databricks bronze and silver pipelines are implemented and validated for the three-state feasibility pilot, including 2014, 2019, and 2024 ACS releases. The national Census tract relationship and simplified display-geometry products are also live and validated. Usable FHFA coverage remains selective, the relationship file does not provide population or housing weights, and display geometry is not suitable for scientific adjacency. The next milestone is the canonical 2020 tract dimension and a separate analysis-geometry decision before broader historical expansion. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include nationwide current ACS profiles, national FHFA history, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, governed EDA summaries, and seven versioned report-ready figures. Visual EDA confirms that FHFA forecasting coverage is selective, especially in multifamily-heavy tracts. Older ACS releases are not yet harmonized to 2020 tracts, and display geometry is not suitable for scientific adjacency. The next milestone is the point-in-time historical modeling contract and leakage-safe modeling tables. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -41,8 +41,9 @@ The name does not imply a perfect replica of a neighborhood, live sensor coverag
 ```mermaid
 flowchart LR
     S[Public sources] --> B[Unity Catalog raw snapshots]
-    B --> C[Delta bronze and silver tables]
-    C --> G[Tract-year neighborhood state]
+    B --> C[Bronze schema]
+    C --> D[Silver schema]
+    D --> G[Gold neighborhood state]
     G --> F[Forecasts and uncertainty]
     G --> R[Representations and analogues]
     F --> X[Scenario engine]
@@ -160,6 +161,8 @@ databricks bundle run display_geometry_pipeline --profile neighborhood-twin
 databricks bundle run connecticut_geography_pipeline --profile neighborhood-twin
 databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
 databricks bundle run gold_current_products --profile neighborhood-twin
+databricks bundle run data_readiness_eda --profile neighborhood-twin
+databricks bundle run visual_eda --profile neighborhood-twin
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin
 ```
 
@@ -181,9 +184,11 @@ limitations are in the [data guide](docs/data/README.md); setup and pipeline det
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
 The repository now provides validated bronze, silver, canonical, and current gold products,
-including the Connecticut current-geography bridge, but it is not yet a functioning model or
-application. Point-in-time historical feature/target tables, exploratory analysis, modeling,
-evaluation, and the interactive application still remain.
+including the Connecticut current-geography bridge and the first reviewed visual-EDA figure set,
+but it is not yet a functioning model or application. Point-in-time historical feature and target
+tables, model-focused exploration, modeling, evaluation, and the interactive application still
+remain. The current figure location and reproduction steps are documented in
+[reports/EDA_FIGURES.md](reports/EDA_FIGURES.md).
 
 ## Planned deployment
 
