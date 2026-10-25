@@ -414,7 +414,10 @@ def _profile_acs(
     )
     summary = frame.agg(*aggregate_expressions).first().asDict()
     duplicate_key_count = (
-        frame.groupBy("geoid", "acs_release_year").count().where(functions.col("count") > 1).count()
+        frame.groupBy("source_snapshot_id", "geoid", "acs_release_year")
+        .count()
+        .where(functions.col("count") > 1)
+        .count()
     )
 
     metrics = [
@@ -446,7 +449,7 @@ def _profile_acs(
             metric_name="state_count",
             value=summary["state_count"],
             status="info",
-            expectation="equals the requested pilot-state count",
+            expectation="monitored; the national coverage contract is checked separately",
         ),
         _metric(
             run_id=run_id,
@@ -493,10 +496,14 @@ def _profile_acs(
             profiled_at_utc=profiled_at_utc,
             table_name=table_name,
             metric_group="integrity",
-            metric_name="duplicate_tract_release_key_count",
+            metric_name="duplicate_snapshot_tract_release_key_count",
             value=duplicate_key_count,
             status=_zero_status(duplicate_key_count),
-            expectation="= 0",
+            expectation="= 0 within each immutable source snapshot",
+            notes=(
+                "The same tract and release may appear in multiple historical snapshots; "
+                "silver selects one accepted snapshot per state and release."
+            ),
         ),
     ]
 
@@ -670,10 +677,10 @@ def _profile_national_acs_coverage(
         functions.countDistinct("state").alias("state_count"),
         functions.countDistinct("acs_release_year").alias("release_count"),
     ).first()
-    invalid_snapshot_pair_count = (
+    multiple_snapshot_pair_count = (
         frame.groupBy("acs_release_year", "state")
         .agg(functions.countDistinct("source_snapshot_id").alias("snapshot_count"))
-        .where(functions.col("snapshot_count") != 1)
+        .where(functions.col("snapshot_count") > 1)
         .count()
     )
 
@@ -735,12 +742,6 @@ def _profile_national_acs_coverage(
             "= 0 outside the approved 50-state-plus-DC history",
         ),
         (
-            "state_release_snapshot_count_failure",
-            invalid_snapshot_pair_count,
-            invalid_snapshot_pair_count == 0,
-            "= 0; each state-release pair comes from exactly one selected snapshot",
-        ),
-        (
             "missing_validated_source_count",
             missing_validated_source_count,
             missing_validated_source_count == 0,
@@ -753,7 +754,7 @@ def _profile_national_acs_coverage(
             "= 0 outside the approved national history",
         ),
     )
-    return [
+    metrics = [
         _metric(
             run_id=run_id,
             profiled_at_utc=profiled_at_utc,
@@ -766,6 +767,19 @@ def _profile_national_acs_coverage(
         )
         for metric_name, value, passed, expectation in checks
     ]
+    metrics.append(
+        _metric(
+            run_id=run_id,
+            profiled_at_utc=profiled_at_utc,
+            table_name=table_name,
+            metric_group="national_coverage",
+            metric_name="state_release_pair_with_multiple_snapshots_count",
+            value=multiple_snapshot_pair_count,
+            status="info",
+            expectation="reported; bronze retains history and silver selects one snapshot",
+        )
+    )
+    return metrics
 
 
 def _profile_geography_match(
