@@ -101,6 +101,9 @@ variables:
   canonical_quality_table:
     description: Persisted canonical geography validation metrics
     default: canonical_geography_quality_metrics
+  geography_hierarchy_quality_table:
+    description: Persisted hierarchy dimension validation metrics
+    default: geography_hierarchy_quality_metrics
   gold_quality_table:
     description: Persisted current-product validation metrics
     default: gold_quality_metrics
@@ -333,6 +336,21 @@ resources:
               quality_schema: ${var.quality_schema}
               table: ${var.canonical_tract_table}
               quality_table: ${var.canonical_quality_table}
+    geography_hierarchy_pipeline:
+      name: Neighborhood Digital Twin - Geography Hierarchy
+      description: Builds valid country-to-tract dimensions for the fifty states and District of Columbia.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_geography_hierarchy
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/08_build_geography_hierarchy.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              quality_schema: ${var.quality_schema}
+              quality_table: ${var.geography_hierarchy_quality_table}
     gold_current_products:
       name: Neighborhood Digital Twin - Current Analytical Products
       description: Builds the national current tract profile and explicit modeling and app cohorts.
