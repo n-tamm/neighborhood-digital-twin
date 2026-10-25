@@ -8,6 +8,11 @@ bundle:
   name: neighborhood-digital-twin
   databricks_cli_version: ">= 0.218.0"
 
+sync:
+  exclude:
+    - personal_scratch/**
+    - mini-deliverables/**
+
 variables:
   catalog:
     description: Existing Unity Catalog catalog used by the project
