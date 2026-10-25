@@ -54,7 +54,7 @@ This prompt identifies a concrete artifact—the initial repository scaffold—w
 
 ### Data documentation and metadata prompt
 
-> I would like to have a data folder in docs that provides an outline/summary of each table along the pipeline so it's clear what it is for (granularity, structure, etc.). I would like you to put sample data for each table into the data folder (1,000 rows or less depending on the source should do). Finally, it would be good to have solid metadata on the Databricks tables. So a table description and column comments for now I think would be a good start.
+> Add a data folder in docs that provides an outline/summary of each table along the pipeline so it's clear what it is for (granularity, structure, etc.). Put sample data for each table into the data folder (1,000 rows or less depending on the source should do). Finally, it would be good to have solid metadata on the Databricks tables. So a table description and column comments should be added to each source to improve metadata quality.
 
 This request materially changed both the repository documentation and the governed Databricks
 objects. It produced one reference document per table, small real samples for every implemented
