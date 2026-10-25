@@ -14,12 +14,31 @@ import pytest
 from neighborhood_twin.data.acquisition import redact_url
 from neighborhood_twin.data.acs import (
     ACS_CORE_MEASURES,
+    NATIONAL_ACS_RELEASE_YEARS,
+    NATIONAL_SUPPORTED_STATE_FIPS,
     acs_measure_dictionary_records,
     acs_variable_codes,
     build_acs_tract_request,
+    national_acs_expected_pairs,
+    national_acs_expected_source_ids,
     parse_acs_api_payload,
     parse_acs_ingestion_scope,
 )
+
+
+def test_national_acs_contract_covers_2010_through_2024_for_states_and_dc() -> None:
+    pairs = national_acs_expected_pairs()
+    source_ids = national_acs_expected_source_ids()
+
+    assert NATIONAL_ACS_RELEASE_YEARS == tuple(range(2010, 2025))
+    assert len(NATIONAL_SUPPORTED_STATE_FIPS) == 51
+    assert "11" in NATIONAL_SUPPORTED_STATE_FIPS
+    assert "72" not in NATIONAL_SUPPORTED_STATE_FIPS
+    assert len(pairs) == 765
+    assert len(set(pairs)) == len(pairs)
+    assert len(source_ids) == len(pairs)
+    assert source_ids[0] == "acs5_tract_2010_state_01"
+    assert source_ids[-1] == "acs5_tract_2024_state_56"
 
 
 def test_acs_request_stays_within_limit_and_redacts_key() -> None:
