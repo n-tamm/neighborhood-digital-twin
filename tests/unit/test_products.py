@@ -15,6 +15,7 @@ from neighborhood_twin.products import (
     SIMILARITY_FEATURE_COLUMNS,
     parse_state_fips_codes,
 )
+from neighborhood_twin.visual_exploration import housing_composition_band
 
 
 def test_similarity_features_are_available_in_current_profile() -> None:
@@ -44,3 +45,28 @@ def test_validate_horizons_orders_supported_values() -> None:
 def test_validate_horizons_rejects_invalid_values(horizons: tuple[int, ...]) -> None:
     with pytest.raises(ValueError):
         validate_horizons(horizons)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, "Missing housing composition"),
+        (0.0, "Less than 25% single-family"),
+        (0.2499, "Less than 25% single-family"),
+        (0.25, "25% to less than 50%"),
+        (0.5, "50% to less than 75%"),
+        (0.75, "75% to less than 90%"),
+        (0.9, "90% to 100%"),
+        (1.0, "90% to 100%"),
+    ],
+)
+def test_housing_composition_bands_have_explicit_boundaries(
+    value: float | None, expected: str
+) -> None:
+    assert housing_composition_band(value) == expected
+
+
+@pytest.mark.parametrize("value", [-0.01, 1.02])
+def test_housing_composition_bands_reject_invalid_shares(value: float) -> None:
+    with pytest.raises(ValueError):
+        housing_composition_band(value)

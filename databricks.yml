@@ -102,6 +102,12 @@ variables:
   eda_readiness_quality_table:
     description: Persisted checks for the formal EDA readiness summaries
     default: eda_readiness_quality_metrics
+  eda_figure_volume:
+    description: Managed volume containing versioned report-ready EDA figures
+    default: eda_figures
+  eda_figure_manifest_table:
+    description: Current manifest of rendered EDA figures
+    default: gold_eda_figure_manifest
   application_demo_state_fips:
     description: Small state scope used only for interactive application testing
     default: "04,26,42"
@@ -355,6 +361,42 @@ resources:
               gold_schema: ${var.gold_schema}
               quality_schema: ${var.quality_schema}
               quality_table: ${var.eda_readiness_quality_table}
+    visual_eda:
+      name: Neighborhood Digital Twin - Visual EDA
+      description: Builds visual summaries and renders versioned report-ready EDA figures.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_visual_eda_summaries
+          notebook_task:
+            notebook_path: ./notebooks/04_exploration/02_build_visual_eda.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
+              quality_table: ${var.eda_readiness_quality_table}
+              pilot_state_fips: ${var.application_demo_state_fips}
+        - task_key: render_eda_figures
+          depends_on:
+            - task_key: build_visual_eda_summaries
+          notebook_task:
+            notebook_path: ./notebooks/04_exploration/03_render_eda_figures.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              figure_volume: ${var.eda_figure_volume}
+              figure_manifest_table: ${var.eda_figure_manifest_table}
+              pilot_state_fips: ${var.application_demo_state_fips}
+          environment_key: visuals
+      environments:
+        - environment_key: visuals
+          spec:
+            environment_version: "2"
+            dependencies:
+              - matplotlib==3.9.2
+              - shapely==2.0.6
     table_metadata_pipeline:
       name: Neighborhood Digital Twin - Table Metadata
       description: Applies table descriptions, declared grains, and column comments.

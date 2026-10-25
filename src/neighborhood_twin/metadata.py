@@ -145,6 +145,22 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Append-only publication checks for formal data-readiness and EDA summaries.",
         "One row per EDA readiness run, table, and metric.",
     ),
+    "gold_eda_housing_coverage": TableMetadata(
+        "FHFA and candidate coverage summarized across single-family housing-share bands.",
+        "One row per governed housing-composition band.",
+    ),
+    "gold_eda_cohort_comparison": TableMetadata(
+        "Current feature differences between forecast candidates and excluded current-ACS tracts.",
+        "One row per governed comparison feature.",
+    ),
+    "gold_eda_hpi_temporal": TableMetadata(
+        "Yearly FHFA annual-change distributions for the nation and configured pilot states.",
+        "One row per geography scope and observation year.",
+    ),
+    "gold_eda_figure_manifest": TableMetadata(
+        "Versioned inventory of report-ready EDA figures stored in the managed figure volume.",
+        "One row per figure in the current visual EDA build.",
+    ),
 }
 
 TABLE_LAYERS = {
@@ -241,6 +257,11 @@ COMMON_COLUMN_COMMENTS = {
         "True when current ACS and at least ten recent usable FHFA HPI observations "
         "are available."
     ),
+    "standardized_mean_difference": (
+        "Difference between included and excluded means divided by their pooled standard deviation."
+    ),
+    "figure_purpose": "Decision or analytical question the figure is intended to support.",
+    "byte_size": "Size of the rendered figure file in bytes.",
 }
 
 
