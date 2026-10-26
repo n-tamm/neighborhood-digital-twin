@@ -189,6 +189,7 @@ def _align_acs_geography(
         acs.withColumnRenamed("geoid", "acs_source_geoid")
         .withColumnRenamed("state_fips", "acs_source_state_fips")
         .withColumnRenamed("county_geoid", "acs_source_county_geoid")
+        .withColumnRenamed("tract_code", "acs_source_tract_code")
         .withColumnRenamed("tract_name", "acs_source_tract_name")
         .join(
             stable,
@@ -321,7 +322,7 @@ def _build_historical_state(aligned: Any, *, build_id: str, built_at_utc: str) -
             "state_name",
             functions.col("canonical.county_geoid").alias("county_geoid"),
             "county_name",
-            "tract_code",
+            functions.col("canonical.tract_code").alias("tract_code"),
             functions.col("canonical.tract_name").alias("tract_name"),
             "division_code",
             "division_name",
