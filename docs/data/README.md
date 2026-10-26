@@ -70,17 +70,23 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 29. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
 30. [`gold_quality_metrics`](21_gold_quality_metrics.md)
 
+### Gold historical products
+
+31. [`gold_historical_tract_coverage`](40_gold_historical_tract_coverage.md)
+32. [`gold_neighborhood_state_historical`](41_gold_neighborhood_state_historical.md)
+33. [`gold_forecast_target_historical`](42_gold_forecast_target_historical.md)
+
 ### Gold exploration and readiness
 
-31. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
-32. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
-33. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
-34. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
-35. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
-36. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
-37. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
-38. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
-39. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
+34. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
+35. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
+36. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
+37. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
+38. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
+39. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
+40. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
+41. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
+42. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
 
 ## Working conventions
 

@@ -149,6 +149,21 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "define final scope.",
         "One row per displayable current-profile tract in the configured demo states.",
     ),
+    "gold_historical_tract_coverage": TableMetadata(
+        "Release-level accounting of eligible and excluded ACS tracts under the governed "
+        "2010-to-2020 alignment policy.",
+        "One row per ACS release and geography-alignment outcome.",
+    ),
+    "gold_neighborhood_state_historical": TableMetadata(
+        "Longitudinal ACS neighborhood states aligned to supported canonical 2020 tracts; "
+        "pre-2020 releases retain only the conservative stable-tract subset.",
+        "One row per canonical 2020 tract GEOID and ACS release year.",
+    ),
+    "gold_forecast_target_historical": TableMetadata(
+        "Direct observed and explicitly censored FHFA single-family HPI outcomes for the "
+        "configured forecast horizons.",
+        "One row per canonical 2020 tract GEOID, forecast origin year, and horizon.",
+    ),
     "gold_quality_metrics": TableMetadata(
         "Append-only integrity, reconciliation, and volume metrics for current gold products.",
         "One row per gold quality run, table, and metric.",
@@ -233,6 +248,26 @@ COMMON_COLUMN_COMMENTS = {
         "Three-character Connecticut planning-region county-equivalent FIPS code."
     ),
     "mapping_method": "Governed rule used to connect the two tract identities.",
+    "geography_alignment_method": (
+        "Governed direct, stable cross-vintage, bridge, or exclusion outcome used for the row."
+    ),
+    "geography_alignment_eligible": (
+        "True when the source tract is permitted in the canonical historical state product."
+    ),
+    "acs_available_year": (
+        "Conservative calendar year when the ACS release can enter annual retrospective models."
+    ),
+    "forecast_origin_year": "FHFA observation year at the start of the direct forecast target.",
+    "horizon_years": "Number of calendar years between target origin and endpoint.",
+    "target_end_year": "FHFA observation year used as the target endpoint.",
+    "target_cumulative_log_change": (
+        "Natural log of endpoint HPI divided by origin HPI when both are observed."
+    ),
+    "target_annualized_change_pct": (
+        "Annualized percentage change implied by the cumulative FHFA HPI target."
+    ),
+    "target_is_observed": "True when both FHFA target endpoints are available and positive.",
+    "target_censor_reason": "Explicit reason a horizon-specific target is unavailable.",
     "is_statistical_profile_safe": (
         "True only when the bridge permits a current tract profile to join to the 2020 identity."
     ),

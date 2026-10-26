@@ -163,6 +163,7 @@ databricks bundle run connecticut_geography_pipeline --profile neighborhood-twin
 databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
 databricks bundle run geography_hierarchy_pipeline --profile neighborhood-twin
 databricks bundle run gold_current_products --profile neighborhood-twin
+databricks bundle run gold_historical_products --profile neighborhood-twin
 databricks bundle run data_readiness_eda --profile neighborhood-twin
 databricks bundle run visual_eda --profile neighborhood-twin
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin
