@@ -39,6 +39,13 @@ belongs in a final model. The full contracts and small real samples are in the
 
 ## Neighborhood-state contract
 
+Historical state rows do not have uniform geographic coverage. Under the
+[tract vintage coverage contract](../TRACT_VINTAGE_COVERAGE.md), 2010-2019 ACS releases contribute
+only the conservative stable 2010-to-2020 tract subset. Releases on 2020 geography retain broader
+coverage, with the audited Connecticut bridge applied where necessary. State tables must retain
+the alignment method and release-level coverage summaries so this change is visible in modeling,
+evaluation, and the application.
+
 The state table should have one row per canonical tract and state year. Required identity and lineage fields include:
 
 - tract GEOID and geography version;

@@ -80,6 +80,10 @@ Do not use heavily simplified display polygons to construct scientific neighbors
 
 ## Cross-vintage harmonization
 
+The concise project-wide interpretation and coverage rules are maintained in
+[Tract Vintage Coverage](../TRACT_VINTAGE_COVERAGE.md). This stage remains the implementation
+detail and extension plan for those rules.
+
 ### What changed between 2010 and 2020
 
 The tract geography did change, and matching the text of a GEOID is not enough to prove that a

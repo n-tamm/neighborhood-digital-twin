@@ -93,6 +93,10 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
   project's geographic scope.
 - ACS estimates remain paired with their published 90 percent margins of error. A missing value is
   not treated as zero.
+- Complete source coverage does not imply complete longitudinal tract coverage. Historical work
+  spanning the 2010 and 2020 tract vintages follows the documented
+  [tract vintage coverage contract](../TRACT_VINTAGE_COVERAGE.md): pre-2020 ACS observations use
+  the stable subset, while current-state products retain broad 2020-geography coverage.
 - Simplified cartographic geometry is for display. It is not approved for adjacency, distance,
   intersection, or other analytical spatial operations.
 - Table descriptions and column comments are managed in code and applied after any table rebuild
