@@ -80,6 +80,34 @@ Do not use heavily simplified display polygons to construct scientific neighbors
 
 ## Cross-vintage harmonization
 
+### What changed between 2010 and 2020
+
+The tract geography did change, and matching the text of a GEOID is not enough to prove that a
+tract is unchanged. A project-scope audit of the official Census relationship file found 73,057
+2010 tracts and 84,414 2020 tracts across the 50 states and Washington, D.C., a net increase of
+11,357 tracts. The relationship structure is also not uniformly one-to-one:
+
+- 31,865 2010 tracts overlap more than one 2020 tract;
+- 27,841 2020 tracts receive land from more than one 2010 tract;
+- 61,619 source tracts have a relationship edge to the same GEOID in both vintages, but an
+  unchanged identifier does not guarantee an unchanged boundary; and
+- 59,607 2010 tracts, or 81.6%, meet the project's conservative stability rule: the GEOID is the
+  same and at least 95% of both the 2010 and 2020 tract land areas overlap. The other 13,450 need
+  an explicit harmonization or exclusion decision.
+
+These counts are calculated at the tract grain, not by counting relationship edges. The
+geography pipeline now records them under the `tract_change_2010_2020` metric group for the
+`scope=50_states_dc` dimension. This distinction matters because one changed tract can create
+several relationship rows.
+
+The 95% rule is a conservative comparability screen, not a weighting method and not proof that
+the resident population stayed constant. For the first historical model, the safest defensible
+option is to use the stable-tract cohort for pre-2020-to-2020 comparisons and report the excluded
+population. That produces a usable baseline without manufacturing values. Broader coverage can
+follow only after a field-family policy is approved: additive counts need defensible population
+or housing weights and conservation checks, while medians, rates, ratios, and indexes generally
+cannot be redistributed with land area.
+
 Older source values may refer to earlier tract boundaries. Use official relationship files where possible and retain:
 
 - source and target geography vintage;

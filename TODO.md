@@ -23,6 +23,8 @@ The repository and shared workspace now contain:
 - national FHFA tract history through 2025;
 - governed readiness summaries and seven reviewed, versioned EDA figures;
 - table descriptions, column comments, individual table documents, and small real samples.
+- a measured 2010-to-2020 tract-change audit: 59,607 of 73,057 project-scope 2010 tracts meet the
+  conservative stable same-GEOID rule, while 13,450 require harmonization or exclusion.
 
 Source acquisition and source-specific cleaning are complete for the approved ACS, FHFA, and
 geography scope. The pipeline is not yet complete from an end-product perspective. It does not
@@ -56,6 +58,11 @@ point-in-time modeling contract covering:
 One teammate should draft the contract and proposed schemas. The other should review timing,
 geography, leakage, target meaning, and feasibility before it is merged. Merge this small contract
 first so the parallel branches share the same definitions.
+
+The tract audit narrows decision 2: use the 59,607-tract stable cohort as the first historical
+baseline unless the team approves a defensible field-family crosswalk. Do not use Census land
+overlap as a population or housing weight. The contract still needs to state whether that baseline
+is the final MVP cohort or a comparison against a later, more complete harmonized panel.
 
 ## Parallel workstream A: historical data and forecasting readiness
 
