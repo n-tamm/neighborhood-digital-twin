@@ -276,6 +276,8 @@ def _metric(
     dimension: str = "all",
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped silver quality metric."""
+
     return QualityMetric(
         quality_run_id=build_id,
         profiled_at_utc=built_at_utc,
@@ -291,6 +293,8 @@ def _metric(
 
 
 def _count_when(functions: Any, condition: Any, alias: str) -> Any:
+    """Return a null-safe Spark expression that counts rows meeting a condition."""
+
     return (
         functions.coalesce(
             functions.sum(functions.when(condition, 1).otherwise(0)),
@@ -302,6 +306,8 @@ def _count_when(functions: Any, condition: Any, alias: str) -> Any:
 
 
 def _latest_fhfa_snapshot(frame: Any) -> Any:
+    """Select every row from the most recently retrieved FHFA snapshot."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     latest = (
@@ -319,6 +325,8 @@ def _latest_fhfa_snapshot(frame: Any) -> Any:
 
 
 def _latest_acs_snapshots(frame: Any) -> Any:
+    """Select the latest ACS snapshot independently for each state and release."""
+
     from pyspark.sql import (  # type: ignore[import-not-found]
         Window,
         functions,
@@ -349,6 +357,8 @@ def _latest_acs_snapshots(frame: Any) -> Any:
 
 
 def _acs_numeric_expressions(functions: Any, column_name: str) -> tuple[Any, Any]:
+    """Build Spark expressions for a cleaned ACS value and its missing reason."""
+
     text_value = functions.trim(functions.col(column_name))
     numeric_value = text_value.cast("double")
     is_blank = functions.col(column_name).isNull() | (text_value == "")
@@ -371,6 +381,8 @@ def _acs_numeric_expressions(functions: Any, column_name: str) -> tuple[Any, Any
 
 
 def _safe_ratio(functions: Any, numerator: Any, denominator: Any) -> Any:
+    """Divide valid Spark columns with a positive denominator and null otherwise."""
+
     return functions.when(
         numerator.isNotNull() & denominator.isNotNull() & (denominator > 0),
         numerator / denominator,
@@ -390,6 +402,8 @@ def _acs_geography_vintage(functions: Any) -> Any:
 
 
 def _transform_fhfa(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Standardize accepted FHFA bronze rows and attach silver lineage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     return frame.select(
@@ -416,6 +430,8 @@ def _transform_fhfa(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
 
 
 def _transform_acs(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Clean accepted ACS bronze rows into the governed wide silver contract."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     transformed = frame.select(
@@ -650,6 +666,8 @@ def _profile_silver_frames(
     acs_dictionary_table_name: str,
     manifest_table_name: str,
 ) -> list[QualityMetric]:
+    """Validate all silver products, their balances, schemas, and source coverage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     fhfa_summary = (

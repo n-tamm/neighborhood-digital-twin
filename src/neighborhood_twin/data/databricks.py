@@ -41,6 +41,8 @@ TRACT_RELATIONSHIP_COLUMNS = (
 
 
 def _quoted_identifier(value: str) -> str:
+    """Validate and quote one Databricks SQL identifier."""
+
     if not value or "`" in value:
         raise ValueError("Databricks identifiers must be non-empty and cannot contain backticks")
     return f"`{value}`"
@@ -71,6 +73,8 @@ def ensure_data_objects(spark: Any, *, catalog: str, schema: str, volume: str) -
 
 
 def _snapshot_exists(spark: Any, table_name: str, snapshot_id: str) -> bool:
+    """Return whether a Delta table already contains the source snapshot."""
+
     if not spark.catalog.tableExists(table_name):
         return False
     from pyspark.sql import functions as functions  # type: ignore[import-not-found]

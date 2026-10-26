@@ -92,6 +92,8 @@ print(f"Raw snapshots will be stored under {raw_root}")
 
 
 def _acquire_or_register(request):
+    """Acquire one source directly or register its approved uploaded copy."""
+
     if uploaded_source_directory:
         uploaded_path = Path(uploaded_source_directory) / request.file_name
         if uploaded_path.is_file():

@@ -45,6 +45,8 @@ def _metric(
     expectation: str,
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped Connecticut bridge quality metric."""
+
     return QualityMetric(
         quality_run_id=build_id,
         profiled_at_utc=built_at_utc,

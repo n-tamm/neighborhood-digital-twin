@@ -82,14 +82,20 @@ class AcsMeasure:
 
     @property
     def group_code(self) -> str:
+        """Return the Census table group encoded in the variable root."""
+
         return self.variable_root.split("_", maxsplit=1)[0]
 
     @property
     def estimate_code(self) -> str:
+        """Return the Census API code for the measure estimate."""
+
         return f"{self.variable_root}E"
 
     @property
     def margin_of_error_code(self) -> str:
+        """Return the Census API code for the published margin of error."""
+
         return f"{self.variable_root}M"
 
 
@@ -102,6 +108,8 @@ class AcsIngestionScope:
 
     @property
     def request_count(self) -> int:
+        """Return the state-by-release request count represented by this scope."""
+
         return len(self.release_years) * len(self.state_fips_codes)
 
 
@@ -140,6 +148,8 @@ class AcsGroupMetadata:
     group_code: str
 
     def metadata_url(self, release_year: int) -> str:
+        """Return the Census metadata page for this group and release."""
+
         return (
             f"https://api.census.gov/data/{release_year}/acs/acs5/groups/"
             f"{self.group_code}.html"
