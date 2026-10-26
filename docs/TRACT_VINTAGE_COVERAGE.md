@@ -42,6 +42,11 @@ This rule retains 59,607 of the 73,057 source tracts, or 81.6%. It is deliberate
 It says the tract boundary is sufficiently comparable for an initial baseline; it does not say
 the residents, housing stock, or economic conditions were unchanged.
 
+The 59,607 tracts are the usable pre-2020 subset, not a claim of complete historical tract
+coverage. They are also not a random sample. Places with more boundary change may differ from the
+retained places, so results from a long historical model must be accompanied by an
+included-versus-excluded comparison before they are generalized to all current tracts.
+
 ## Coverage by time span
 
 | ACS releases | Analytical geography treatment | Resulting coverage |
@@ -54,6 +59,29 @@ the residents, housing stock, or economic conditions were unchanged.
 As a result, historical charts, modeling tables, evaluation samples, and analogue searches that
 cross the 2019-to-2020 boundary must report which geography policy they use. A row count from the
 later period must not be presented as if the same full tract universe existed in earlier years.
+
+## Implemented gold coverage
+
+The October 26, 2026 historical gold build makes the change in coverage explicit rather than
+silently dropping rows:
+
+| Period | Eligible canonical tracts per ACS release | Interpretation |
+|---|---:|---|
+| 2010-2019 | 59,607 | Stable 2010-to-2020 subset only |
+| 2020-2021 | 84,414 | Complete supported 2020 Census tract universe |
+| 2022 | 84,410 | 83,531 direct matches plus 879 reviewed Connecticut bridge matches |
+| 2023 | 84,395 | 83,516 direct matches plus 879 reviewed Connecticut bridge matches |
+| 2024 | 84,396 | 83,517 direct matches plus 879 reviewed Connecticut bridge matches |
+
+The five excluded rows in each 2022-2024 release are documented Connecticut water-only
+exceptions. The small additional differences between releases reflect the source records
+published for that year; they are not filled by carrying values forward.
+
+Use `gold_historical_tract_coverage` to report these denominators and exclusion reasons. Use
+`gold_neighborhood_state_historical` for longitudinal ACS state. For a balanced comparison that
+crosses the vintage boundary, restrict every year to the stable cohort. For a current-state view
+or a model that starts in 2020, use the broader supported 2020-geography cohort. Do not mix those
+two populations without labeling the change in coverage.
 
 ## Why the first model uses the stable subset
 
@@ -87,11 +115,11 @@ field-family policy:
 - `silver_tract_relationship_2010_2020.is_stable_measure_mapping` implements the boundary screen.
 - `geography_quality_metrics` records tract-level coverage under the
   `tract_change_2010_2020` metric group.
-- Historical gold products must retain the source GEOID, canonical 2020 GEOID, source geography
-  vintage, alignment method, and eligibility reason.
+- `gold_historical_tract_coverage` records eligible and excluded outcomes for every ACS release.
+- `gold_neighborhood_state_historical` retains the source GEOID, canonical 2020 GEOID, source
+  geography vintage, and alignment method on every included row.
 - Application and report language must distinguish full current coverage from the smaller
   longitudinally comparable cohort.
 
 The official source and its limitation are documented by the
 [U.S. Census Bureau relationship files](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html).
-

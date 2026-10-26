@@ -3,7 +3,7 @@
 [Data folder overview](../README.md) | [Table documentation](../../docs/data/README.md)
 
 This folder contains small JSON Lines extracts from every implemented Databricks table. Each line
-is one real development-table row serialized as JSON, and each file contains at most five rows.
+is one real development-table row serialized as JSON, and each file contains at most ten rows.
 JSON Lines keeps data types and nulls clearer than a very wide CSV while remaining easy to inspect
 in GitHub, Python, or a text editor.
 
@@ -14,7 +14,7 @@ large; those samples include the geometry's byte length instead.
 
 The extracts were refreshed from the `workspace.neighborhood_twin_bronze`,
 `neighborhood_twin_silver`, `neighborhood_twin_gold`, and `neighborhood_twin_quality` schemas
-after the October 25, 2026 hierarchy build and the preceding expansion, validation, and visual-EDA
-runs. Table counts, quality
+after the October 26, 2026 historical gold build and the preceding expansion, validation, and
+visual-EDA runs. Table counts, quality
 histories, and source snapshots will continue to change as the pipeline is rerun, so Databricks
 remains the authoritative source.

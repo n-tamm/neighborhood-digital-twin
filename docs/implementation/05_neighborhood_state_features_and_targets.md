@@ -37,14 +37,30 @@ target construction, time-aware evaluation, and subgroup diagnostics still deter
 belongs in a final model. The full contracts and small real samples are in the
 [current-profile table document](../data/17_gold_tract_profile_current.md).
 
+The longitudinal state and target contracts are now implemented as three additional gold tables:
+
+- `gold_historical_tract_coverage` exposes retained and excluded tract counts for every ACS
+  release and alignment method;
+- `gold_neighborhood_state_historical` contains 1,018,099 tract-release rows with conservative
+  availability years and alignment lineage; and
+- `gold_forecast_target_historical` contains 6,207,795 direct FHFA outcomes or explicit censored
+  rows across one-, three-, and five-year horizons.
+
+All three were published and passed their hard validation checks on October 26, 2026. Leakage-safe
+feature construction and split assignment remain separate next-stage products rather than being
+embedded in either the descriptive state or target tables.
+
 ## Neighborhood-state contract
 
 Historical state rows do not have uniform geographic coverage. Under the
 [tract vintage coverage contract](../TRACT_VINTAGE_COVERAGE.md), 2010-2019 ACS releases contribute
-only the conservative stable 2010-to-2020 tract subset. Releases on 2020 geography retain broader
-coverage, with the audited Connecticut bridge applied where necessary. State tables must retain
-the alignment method and release-level coverage summaries so this change is visible in modeling,
-evaluation, and the application.
+only the 59,607-tract conservative stable 2010-to-2020 subset. Releases on 2020 geography retain
+roughly 84,400 supported tracts, with the audited Connecticut bridge applied where necessary.
+This difference is not missing data to impute: it is a deliberate geography policy. A balanced
+analysis spanning the vintage change must restrict later years to the same stable cohort; a
+later-period analysis may use the broader coverage but must label the changed population. The
+implemented state table retains the alignment method and the companion coverage table records
+release-level denominators and exclusions.
 
 The state table should have one row per canonical tract and state year. Required identity and lineage fields include:
 
@@ -138,8 +154,10 @@ Scaling, imputation, encoding, feature selection, and dimensionality reduction a
 ## Required outputs
 
 - current profile and explicit candidate cohorts (implemented as the four current gold tables);
-- a historical `gold_neighborhood_state` or equivalent point-in-time panel;
-- horizon-specific `gold_features` and `gold_targets` or a clearly partitioned equivalent;
+- a historical neighborhood-state panel (implemented as
+  `gold_neighborhood_state_historical`);
+- horizon-specific targets (implemented as `gold_forecast_target_historical`);
+- leakage-safe historical model features and published split assignments (next stage);
 - feature registry and data dictionary draft;
 - row-attrition and missingness report;
 - state, feature, and target contract tests;

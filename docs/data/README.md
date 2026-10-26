@@ -102,7 +102,9 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 - Complete source coverage does not imply complete longitudinal tract coverage. Historical work
   spanning the 2010 and 2020 tract vintages follows the documented
   [tract vintage coverage contract](../TRACT_VINTAGE_COVERAGE.md): pre-2020 ACS observations use
-  the stable subset, while current-state products retain broad 2020-geography coverage.
+  the 59,607-tract stable subset, while current-state products retain broad 2020-geography
+  coverage. A model or chart that crosses 2020 must either use that balanced cohort throughout or
+  disclose the changing tract population.
 - Simplified cartographic geometry is for display. It is not approved for adjacency, distance,
   intersection, or other analytical spatial operations.
 - Table descriptions and column comments are managed in code and applied after any table rebuild
@@ -110,7 +112,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 25, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
+As of October 26, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
 the 50 states and District of Columbia, national FHFA tract HPI history through 2025, and national
 Census geography support. The validated ACS contract contains all 765 required state-release
 pairs, 1,152,605 selected silver tract-release rows, and 24,204,705 normalized measure rows.
@@ -136,3 +138,11 @@ vintages. Current ACS profiles now populate those canonical tracts. Five current
 remain deliberately unmatched; this leaves zero unexpected current ACS mismatches. FHFA also
 uses the newer planning-region identifiers for 728 Connecticut tracts. Applying the same audited
 bridge restores FHFA history for all 728 and produces 662 current forecast candidates.
+
+Historical gold publication is also complete for the approved source scope. The coverage audit
+has 40 release-and-alignment rows; the neighborhood-state panel has 1,018,099 rows across all 15
+ACS releases; and the forecast-target table has 6,207,795 rows across one-, three-, and five-year
+horizons. Pre-2020 state releases contribute exactly 59,607 stable tracts each. Later releases
+retain roughly 84,400 supported tracts, so this table is longitudinal but not a balanced national
+panel unless downstream work explicitly restricts it to the stable cohort. The latest historical
+gold validation contains no hard failures.

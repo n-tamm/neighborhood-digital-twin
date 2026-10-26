@@ -25,11 +25,18 @@ The repository and shared workspace now contain:
 - table descriptions, column comments, individual table documents, and small real samples.
 - a measured 2010-to-2020 tract-change audit: 59,607 of 73,057 project-scope 2010 tracts meet the
   conservative stable same-GEOID rule, while 13,450 require harmonization or exclusion.
+- a published 1,018,099-row historical neighborhood-state panel covering ACS releases from 2010
+  through 2024, with alignment and conservative availability lineage on every row;
+- a published 6,207,795-row forecast-target table with direct one-, three-, and five-year FHFA
+  outcomes, retained censored rows, and zero unresolved hard validation failures;
+- a 40-row historical coverage table that makes the smaller pre-2020 cohort and later broad
+  coverage visible by release and alignment outcome.
 
-Source acquisition and source-specific cleaning are complete for the approved ACS, FHFA, and
-geography scope. The pipeline is not yet complete from an end-product perspective. It does not
-have the cross-vintage historical modeling panel, targets, evaluation splits, model outputs,
-uncertainty intervals, historical analogues, scenarios, or application-serving tables.
+Source acquisition, source-specific cleaning, geography alignment, historical state, and target
+construction are complete for the approved ACS, FHFA, and geography scope. The pipeline is not
+yet model-ready from end to end. It still needs point-in-time feature rows, fixed evaluation split
+assignments, and a model-ready joined panel. Model outputs, uncertainty intervals, historical
+analogues, scenarios, and application-serving tables follow those products.
 
 ## Scope decisions already supported by the data
 
@@ -45,24 +52,24 @@ uncertainty intervals, historical analogues, scenarios, or application-serving t
 
 ## Immediate shared decision gate
 
-Before either workstream creates final historical products, the team must approve one
-point-in-time modeling contract covering:
+The historical geography, state, and target decisions are now implemented. Before model-ready
+features and split tables are published, the team must approve the remaining point-in-time
+modeling contract covering:
 
 1. the forecast origin and source-availability cutoff;
-2. the historical ACS geography policy, especially for pre-2020 releases on 2010-vintage tracts;
-3. one-, three-, and five-year target definitions, eligibility, and right-censoring rules;
-4. training, validation, calibration, locked temporal-test, and geographic-holdout assignments;
-5. the initial feature registry, missingness rules, and training-fitted preprocessing policy;
-6. whether the first geographic evaluation uses county, CBSA, state, or another explicit unit.
+2. training, validation, calibration, locked temporal-test, and geographic-holdout assignments;
+3. the initial feature registry, missingness rules, and training-fitted preprocessing policy;
+4. whether the first geographic evaluation uses county, state, or another currently supported
+   geographic unit.
 
 One teammate should draft the contract and proposed schemas. The other should review timing,
 geography, leakage, target meaning, and feasibility before it is merged. Merge this small contract
 first so the parallel branches share the same definitions.
 
-The tract audit narrows decision 2: use the 59,607-tract stable cohort as the first historical
-baseline unless the team approves a defensible field-family crosswalk. Do not use Census land
-overlap as a population or housing weight. The contract still needs to state whether that baseline
-is the final MVP cohort or a comparison against a later, more complete harmonized panel.
+The published state table enforces the 59,607-tract stable cohort for every pre-2020 release. Do
+not use Census land overlap as a population or housing weight. Downstream contracts still need to
+state whether a given evaluation uses the balanced stable cohort across all years or a later-only
+window with broader 2020-geography coverage.
 
 ## Parallel workstream A: historical data and forecasting readiness
 
@@ -70,9 +77,9 @@ Suggested branch: `data/historical-modeling-tables`
 
 Responsibilities:
 
-- build the historical neighborhood-state table at one tract and forecast origin per row;
+- use the published historical neighborhood-state and horizon-specific target tables as governed
+  inputs;
 - build leakage-safe feature rows with source vintage, availability, age, and quality fields;
-- build horizon-specific FHFA targets, eligibility flags, and censoring reasons;
 - publish chronological and geographic split assignments rather than creating them inside model
   notebooks;
 - add leakage, uniqueness, range, reconciliation, and attrition checks;
@@ -120,9 +127,9 @@ shell do not.
 
 ## Integration sequence
 
-1. Approve and merge the historical modeling contract.
-2. Build historical tables and the current-state similarity baseline in parallel.
-3. Validate and merge historical state, feature, target, and split tables.
+1. Approve the remaining feature and evaluation-split contract.
+2. Build point-in-time features and the current-state similarity baseline in parallel.
+3. Validate and merge feature, split-assignment, and model-ready panel tables.
 4. Fit forecasting baselines and add retrospective, time-safe analogue evaluation.
 5. Decide whether CBSA membership, analytical adjacency, macroeconomic context, or another source
    earns its place through a measured baseline comparison.
@@ -134,8 +141,10 @@ shell do not.
 
 The next checkpoint is complete when the team has:
 
-- a reviewed point-in-time state, feature, target, and split contract;
-- reproducible historical gold tables with zero unresolved hard validation failures;
+- a reviewed point-in-time feature and split contract built on the implemented state and target
+  products;
+- reproducible feature, split-assignment, and model-ready panel tables with zero unresolved hard
+  validation failures;
 - a leakage review and clear row attrition report;
 - forecast baselines evaluated on identical chronological and geographic splits;
 - an interpretable current-state similarity baseline with stability and case review;

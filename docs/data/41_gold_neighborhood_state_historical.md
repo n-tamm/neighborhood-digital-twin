@@ -4,6 +4,7 @@
 
 - **Layer:** Gold historical products
 - **Databricks table:** `workspace.neighborhood_twin_gold.gold_neighborhood_state_historical`
+- **Sample:** [gold_neighborhood_state_historical.jsonl](../../data/samples/gold_neighborhood_state_historical.jsonl)
 - **Grain and key:** one row per canonical 2020 tract GEOID and ACS release year.
 - **Purpose:** provides the governed longitudinal neighborhood-state panel used to construct
   point-in-time features and retrospective analogue queries.
@@ -25,3 +26,8 @@ construction must select only rows whose availability year is no later than the 
 This table describes observed neighborhood state. It does not contain training-fitted scaling,
 imputation, feature selection, targets, or split assignments.
 
+The first published build contains 1,018,099 rows covering ACS releases from 2010 through 2024
+and 84,414 distinct canonical tracts overall. Exactly 59,607 rows are available in each pre-2020
+release because those years use the stable tract subset. Coverage expands after the geography
+change; that larger later-period population must not be described as a balanced 2010-2024 panel.
+All uniqueness, availability-year, alignment-method, and stable-only pre-2020 checks passed.
