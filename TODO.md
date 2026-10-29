@@ -36,6 +36,9 @@ shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
+- The 18 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, and `900`), grouping tags, and the maintained
+  [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Important interpretation limits
 
@@ -54,7 +57,62 @@ shows a specific gap.
 - The current feature and modeling tables are analytical products, not application serving
   tables. They are too wide and contain evaluation-only rows and fields.
 
+## Decisions to freeze before model fitting
+
+The data is ready, but the team should review these choices before results begin influencing the
+design:
+
+1. **Forecast horizons:** keep one year as the primary result, three years as secondary, and
+   either retain five years as explicitly exploratory or remove it from the MVP.
+2. **Target contract:** model cumulative log change in the FHFA single-family HPI, then transform
+   it into a readable percentage for presentation. Do not relabel it as the entire housing market.
+3. **Evaluation populations:** use the stable cohort for the cleanest like-for-like temporal
+   comparison and report the broader post-2020 cohort separately as a current-coverage transfer
+   test.
+4. **Geographic holdout:** review whether Maine, North Dakota, West Virginia, and New Mexico are
+   sufficient as the final geographic transfer test. They provide regional diversity but are
+   relatively small states. Additional blocked state validation can supplement them without
+   changing the locked contract.
+5. **Feature registry:** mark every field as forecasting, similarity, display, quality, scenario,
+   or evaluation-only. Freeze units and missingness rules before building preprocessing pipelines.
+6. **Model selection rule:** use validation evidence to decide whether one nonlinear model earns
+   further work. Do not search many model families or use the locked tests for selection.
+
+Changing one of the frozen target or split definitions later should create a new contract version
+rather than silently replacing the meaning of an existing result.
+
+## Data additions under consideration
+
+No new source is required before baseline forecasting and similarity work. The first results
+should determine whether added data is worth its timing, geography, and validation cost.
+
+- **Bounded ACS expansion:** the current state is strongest on housing, tenure, income, rent, and
+  value. If similarity results feel too housing-centric, consider a small expansion covering age,
+  education, poverty or employment, household composition, and commuting. This is the least
+  disruptive way to broaden the community representation because it reuses the existing ACS
+  source, geography, and release logic.
+- **Slow ACS change features:** the current model-ready table primarily contains point-in-time
+  ACS levels. After the baseline, test a few slow or non-overlapping changes rather than noisy
+  annual differences between overlapping five-year releases.
+- **Analytical tract geometry:** add only if true adjacency, distance, or neighbor features remain
+  part of the selected model. Current geometry remains display-only.
+- **CBSA or metro membership:** add only if metro comparison, metro context, or metro holdouts
+  become an explicit application or evaluation requirement.
+- **Macroeconomic, permits, development, environmental, or business data:** defer until an
+  ablation, failed application view, or scenario requirement identifies a specific gap.
+
+Until any expansion is implemented, describe the product as housing-focused neighborhood
+intelligence rather than implying that health, amenities, development, environment, and every
+dimension of lived experience are already represented.
+
 ## Immediate next sequence
+
+### 0. Review and freeze contracts
+
+- Approve the horizon, target, cohort, geographic-holdout, feature-role, and model-selection
+  decisions above.
+- Record any revision through a new schema or contract version before fitting models.
+- Leave the locked temporal tests unopened during all following development work.
 
 ### 1. Forecasting baseline pass
 
@@ -62,11 +120,19 @@ shows a specific gap.
   state, housing mix, ACS uncertainty, and stable versus broad cohort.
 - Implement zero-change, historical-average, persistence, and county/state regional baselines.
 - Fit one regularized linear pipeline with all preprocessing learned inside the training rows.
+- Use cumulative log HPI change as the modeling target and transform predictions only for
+  reporting.
 - Compare every model on identical published validation rows; do not inspect the locked tests for
   model choice.
 - Record MAE, RMSE, median absolute error, directional accuracy, coverage, and subgroup results.
 - Report stable-cohort and broader post-2020 results separately, as well as housing-mix and ACS
   uncertainty slices.
+- Record source, feature, target, split, parameters, metrics, environment, and artifacts in MLflow
+  from the first baseline run rather than retrofitting experiment tracking later.
+- After the baseline scorecard, compare at most one focused gradient-boosted-tree candidate and
+  run feature-family ablations before selecting a champion.
+- Use the reserved calibration origins for prediction intervals, then open the locked tests only
+  after point-model and uncertainty choices are final.
 
 ### 2. Similarity baseline pass
 
@@ -78,6 +144,10 @@ shows a specific gap.
   shared strengths.
 - Evaluate retrieval stability, distance separation, geographic diversity, coverage, reviewed
   cases, and later-outcome utility without making FHFA availability the definition of similarity.
+- Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even
+  when later-outcome evaluation is unavailable.
+- Publish rank, distance, representation version, shared strengths, and important differences so
+  the application can explain each match.
 
 ### 3. Descriptive application shell
 
@@ -87,6 +157,12 @@ shows a specific gap.
   be added without rewriting pages.
 - Do not read `gold_modeling_panel` directly from the UI.
 - Show unavailable forecasts as an explained state while preserving the descriptive profile.
+- Begin with tract search and map selection, community profile, housing composition, historical
+  ACS/FHFA charts, source dates, uncertainty, and explicit coverage messages.
+- Use clear unavailable-result placeholders until approved forecast and analogue serving tables
+  exist; do not demonstrate mocked analytical claims.
+- Defer the optional conversational or AI layer until the analytical application and serving
+  contracts work. It may explain stored results but should not produce the underlying analysis.
 
 ### 4. Model and product decisions
 
@@ -104,13 +180,15 @@ shows a specific gap.
 - Connect the application to the serving contract, then add forecasts, analogues, explanations,
   and guarded scenario sensitivity.
 - Add application contract tests, smoke tests, accessibility review, and deployment runbooks.
+- Use the Databricks App as the primary authenticated deployment; evaluate a public Streamlit
+  mirror only after the serving contract is stable and an anonymous portfolio URL is required.
 
 ## Parallel ownership for two people
 
 | Workstream | Primary responsibility | Shared boundary |
 |---|---|---|
-| Forecasting | Missingness/attrition review, baseline ladder, linear and selected nonlinear model, interval calibration | Owns modeling-panel filters and model-evaluation tables |
-| Similarity and app | Representation registry, current and retrospective retrieval, case review, Streamlit descriptive shell | Owns analogue outputs and serving-interface prototype |
+| Forecasting | Missingness/attrition review, baseline ladder, MLflow tracking, linear and selected nonlinear model, interval calibration | Owns modeling-panel filters, forecast artifacts, and model-evaluation tables |
+| Similarity and app | Representation registry, current and retrospective retrieval, case review, Streamlit descriptive shell | Owns analogue outputs, match explanations, and serving-interface prototype |
 
 Both workstreams use the published feature and split contracts without changing them privately.
 One person should temporarily own shared edits to `databricks.yml` and table metadata. App work can
@@ -122,11 +200,14 @@ for approved output tables rather than mock analytical claims.
 The next checkpoint is complete when:
 
 - the baseline models run from the published split and panel tables;
+- experiment runs record reproducible configurations and artifacts in MLflow;
 - all forecast candidates use identical validation rows and have a subgroup scorecard;
 - the locked temporal tests remain untouched during model selection;
 - the current-state similarity baseline has stability results and reviewed examples;
 - retrospective analogue evaluation uses only information available at each query date;
-- a descriptive application shell reads a documented serving interface; and
+- a descriptive application shell reads a documented serving interface;
+- the application clearly separates observed ACS, observed FHFA history, model forecasts,
+  historical analogues, and scenario sensitivity; and
 - the team has an evidence-based decision on nonlinear forecasting, analytical adjacency, and any
   additional source family.
 
