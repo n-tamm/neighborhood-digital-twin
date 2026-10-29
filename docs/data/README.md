@@ -76,17 +76,24 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 32. [`gold_neighborhood_state_historical`](41_gold_neighborhood_state_historical.md)
 33. [`gold_forecast_target_historical`](42_gold_forecast_target_historical.md)
 
+### Gold model-readiness products
+
+34. [`gold_model_feature_historical`](43_gold_model_feature_historical.md)
+35. [`gold_model_split_assignment`](44_gold_model_split_assignment.md)
+36. [`gold_modeling_panel`](45_gold_modeling_panel.md)
+37. [`gold_model_readiness_summary`](46_gold_model_readiness_summary.md)
+
 ### Gold exploration and readiness
 
-34. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
-35. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
-36. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
-37. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
-38. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
-39. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
-40. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
-41. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
-42. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
+38. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
+39. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
+40. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
+41. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
+42. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
+43. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
+44. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
+45. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
+46. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
 
 ## Working conventions
 
@@ -146,3 +153,11 @@ horizons. Pre-2020 state releases contribute exactly 59,607 stable tracts each. 
 retain roughly 84,400 supported tracts, so this table is longitudinal but not a balanced national
 panel unless downstream work explicitly restricts it to the stable cohort. The latest historical
 gold validation contains no hard failures.
+
+The first model-readiness build was published on October 29, 2026. Its point-in-time feature table
+contains 696,886 rows across 63,367 tracts and origins from 2011 through 2025. The split and joined
+modeling tables each contain 2,090,658 horizon-specific rows and reconcile exactly. Frozen tests
+use the latest complete origin for each horizon, while Maine, North Dakota, West Virginia, and New
+Mexico are held out for geographic transfer checks. All hard leakage, timing, key, and
+reconciliation checks passed. The only warning is substantive rather than a pipeline error: the
+five-year horizon has three independent training origins and must remain exploratory.

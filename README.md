@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, governed EDA summaries, seven versioned report-ready figures, and published historical neighborhood-state and forecast-target tables. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. The next milestone is building leakage-safe model features and fixed evaluation splits from these governed historical products. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, governed EDA summaries, seven versioned report-ready figures, and published historical neighborhood-state and forecast-target tables. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe model features, frozen temporal and geographic assignments, a joined modeling panel, and readiness summaries are now live for 63,367 tracts. The next milestone is fitting and comparing forecast and similarity baselines while a descriptive application shell is developed against existing current-state products. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -114,13 +114,14 @@ The implementation guide is numbered in dependency order. It is a living technic
 
 The repository now contains tested source acquisition, bronze and silver validation, national
 geography products, a canonical tract dimension, nationwide annual 2010-2024 ACS coverage,
-current gold profiles, a governed historical neighborhood-state panel, and direct one-, three-,
-and five-year FHFA target tables. The primary
+current gold profiles, a governed historical neighborhood-state panel, direct one-, three-, and
+five-year FHFA targets, point-in-time model features, frozen splits, and a joined modeling panel.
+The primary
 ACS silver product uses one tract-release-measure row with a companion data dictionary, while a
 generated wide table supports compact feature construction. The gold layer keeps all canonical
 tracts and exposes transparent similarity, forecasting, and application-development cohorts.
-Model-ready point-in-time features, fixed evaluation splits, models, and the interactive
-application have not been implemented yet.
+Forecast and similarity models, uncertainty calibration, model outputs, serving tables, and the
+interactive application have not been implemented yet.
 
 PowerShell:
 
@@ -166,6 +167,7 @@ databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
 databricks bundle run geography_hierarchy_pipeline --profile neighborhood-twin
 databricks bundle run gold_current_products --profile neighborhood-twin
 databricks bundle run gold_historical_products --profile neighborhood-twin
+databricks bundle run gold_model_readiness --profile neighborhood-twin
 databricks bundle run data_readiness_eda --profile neighborhood-twin
 databricks bundle run visual_eda --profile neighborhood-twin
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin
@@ -191,10 +193,11 @@ limitations are in the [data guide](docs/data/README.md); setup and pipeline det
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
-and forecast-target products, including the Connecticut current-geography bridge and the first
-reviewed visual-EDA figure set, but it is not yet a functioning model or application.
-Point-in-time feature construction, split assignment, model-focused exploration, modeling,
-evaluation, and the interactive application still remain. The current figure location and
+forecast-target, point-in-time feature, frozen split, and model-panel products, including the
+Connecticut current-geography bridge and the first reviewed visual-EDA figure set. It is ready for
+baseline forecasting and retrospective similarity work, but it is not yet a functioning model or
+application. Model-focused exploration, model fitting, evaluation, serving products, and the
+interactive application still remain. The current figure location and
 reproduction steps are documented in
 [reports/EDA_FIGURES.md](reports/EDA_FIGURES.md).
 
