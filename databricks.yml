@@ -141,12 +141,12 @@ variables:
 resources:
   jobs:
     organize_project_schemas:
-      name: Neighborhood Digital Twin | 00 Setup | Organize Project Schemas
+      name: Neighborhood Digital Twin | 000 Setup | Organize Project Schemas
       description: Creates layer schemas and safely seeds them from the prior shared schema.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: setup
-        run_order: "00"
+        run_order: "000"
         lifecycle: one_time
       max_concurrent_runs: 1
       tasks:
@@ -162,12 +162,12 @@ resources:
               quality_schema: ${var.quality_schema}
               volume: ${var.volume}
     core_source_ingestion:
-      name: Neighborhood Digital Twin | 10 Bronze | Core Source Ingestion
+      name: Neighborhood Digital Twin | 100 Bronze | Core Source Ingestion
       description: Ingests the initial FHFA, Census geography, and ACS feasibility sources.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: bronze
-        run_order: "10"
+        run_order: "100"
         lifecycle: bootstrap_or_source_refresh
       max_concurrent_runs: 1
       queue:
@@ -196,12 +196,12 @@ resources:
               quality_schema: ${var.quality_schema}
               quality_table: ${var.quality_table}
     silver_source_transforms:
-      name: Neighborhood Digital Twin | 20 Silver | Source Tables
+      name: Neighborhood Digital Twin | 200 Silver | Source Tables
       description: Builds validated source-specific silver tables from accepted bronze data.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: silver
-        run_order: "20"
+        run_order: "200"
         lifecycle: downstream_refresh
       max_concurrent_runs: 1
       queue:
@@ -221,12 +221,12 @@ resources:
               acs_dictionary_table: ${var.silver_acs_dictionary_table}
               quality_table: ${var.silver_quality_table}
     historical_acs_ingestion:
-      name: Neighborhood Digital Twin | 11 Bronze | Historical ACS Batch Ingestion
+      name: Neighborhood Digital Twin | 101 Bronze | Historical ACS Batch Ingestion
       description: Acquires a bounded state-by-release batch into the shared ACS bronze table.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: bronze
-        run_order: "11"
+        run_order: "101"
         lifecycle: optional_bounded_batch
       max_concurrent_runs: 1
       queue:
@@ -245,12 +245,12 @@ resources:
               secret_scope: ${var.secret_scope}
               census_secret_key: ${var.census_secret_key}
     pilot_annual_acs_ingestion:
-      name: Neighborhood Digital Twin | 12 Bronze | Pilot Annual ACS Expansion
+      name: Neighborhood Digital Twin | 102 Bronze | Pilot Annual ACS Expansion
       description: Completes annual ACS history for the three-state feasibility panel.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: bronze
-        run_order: "12"
+        run_order: "102"
         lifecycle: optional_pilot
       max_concurrent_runs: 1
       queue:
@@ -269,12 +269,12 @@ resources:
               secret_scope: ${var.secret_scope}
               census_secret_key: ${var.census_secret_key}
     national_current_acs_ingestion:
-      name: Neighborhood Digital Twin | 13 Bronze | National Current ACS Expansion
+      name: Neighborhood Digital Twin | 103 Bronze | National Current ACS Expansion
       description: Adds current ACS coverage for fifty states and the District of Columbia.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: bronze
-        run_order: "13"
+        run_order: "103"
         lifecycle: source_refresh
       max_concurrent_runs: 1
       queue:
@@ -293,12 +293,12 @@ resources:
               secret_scope: ${var.secret_scope}
               census_secret_key: ${var.census_secret_key}
     national_historical_acs_backfill:
-      name: Neighborhood Digital Twin | 14 Bronze | National Historical ACS Backfill (One-Time)
+      name: Neighborhood Digital Twin | 104 Bronze | National Historical ACS Backfill (One-Time)
       description: Completes 2010-2024 ACS coverage, validates bronze, and refreshes analytical tables.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: bronze
-        run_order: "14"
+        run_order: "104"
         lifecycle: one_time_backfill
       max_concurrent_runs: 1
       queue:
@@ -371,12 +371,12 @@ resources:
               gold_schema: ${var.gold_schema}
               quality_schema: ${var.quality_schema}
     geography_relationship_pipeline:
-      name: Neighborhood Digital Twin | 21 Silver | Tract Relationship
+      name: Neighborhood Digital Twin | 201 Silver | Tract Relationship
       description: Validates and transforms the official 2010-to-2020 tract relationship file.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: silver
-        run_order: "21"
+        run_order: "201"
         lifecycle: geography_refresh
       max_concurrent_runs: 1
       queue:
@@ -393,12 +393,12 @@ resources:
               relationship_table: ${var.tract_relationship_table}
               quality_table: ${var.geography_quality_table}
     display_geometry_pipeline:
-      name: Neighborhood Digital Twin | 22 Silver | Display Geometry
+      name: Neighborhood Digital Twin | 202 Silver | Display Geometry
       description: Parses and validates simplified Census tract geometry for application maps.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: silver
-        run_order: "22"
+        run_order: "202"
         lifecycle: geography_refresh
       max_concurrent_runs: 1
       queue:
@@ -423,12 +423,12 @@ resources:
               - pyshp==2.3.1
               - shapely==2.0.6
     connecticut_geography_pipeline:
-      name: Neighborhood Digital Twin | 23 Silver | Connecticut Geography Bridge
+      name: Neighborhood Digital Twin | 203 Silver | Connecticut Geography Bridge
       description: Ingests official tract vintages and maps Connecticut planning-region GEOIDs.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: silver
-        run_order: "23"
+        run_order: "203"
         lifecycle: geography_refresh
       max_concurrent_runs: 1
       queue:
@@ -462,12 +462,12 @@ resources:
             dependencies:
               - pyshp==2.3.1
     canonical_geography_pipeline:
-      name: Neighborhood Digital Twin | 24 Silver | Canonical Geography
+      name: Neighborhood Digital Twin | 204 Silver | Canonical Geography
       description: Builds the complete 2020 tract dimension with optional display geometry.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: silver
-        run_order: "24"
+        run_order: "204"
         lifecycle: downstream_refresh
       max_concurrent_runs: 1
       queue:
@@ -483,12 +483,12 @@ resources:
               table: ${var.canonical_tract_table}
               quality_table: ${var.canonical_quality_table}
     geography_hierarchy_pipeline:
-      name: Neighborhood Digital Twin | 25 Silver | Geography Hierarchy
+      name: Neighborhood Digital Twin | 205 Silver | Geography Hierarchy
       description: Builds valid country-to-tract dimensions for the fifty states and District of Columbia.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: silver
-        run_order: "25"
+        run_order: "205"
         lifecycle: downstream_refresh
       max_concurrent_runs: 1
       queue:
@@ -503,12 +503,12 @@ resources:
               quality_schema: ${var.quality_schema}
               quality_table: ${var.geography_hierarchy_quality_table}
     gold_current_products:
-      name: Neighborhood Digital Twin | 30 Gold | Current Analytical Products
+      name: Neighborhood Digital Twin | 300 Gold | Current Analytical Products
       description: Builds the national current tract profile and explicit modeling and app cohorts.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: gold
-        run_order: "30"
+        run_order: "300"
         lifecycle: downstream_refresh
       max_concurrent_runs: 1
       queue:
@@ -525,12 +525,12 @@ resources:
               demo_state_fips: ${var.application_demo_state_fips}
               quality_table: ${var.gold_quality_table}
     gold_historical_products:
-      name: Neighborhood Digital Twin | 31 Gold | Historical Products
+      name: Neighborhood Digital Twin | 301 Gold | Historical Products
       description: Builds tract-vintage coverage, aligned neighborhood states, and direct FHFA targets.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: gold
-        run_order: "31"
+        run_order: "301"
         lifecycle: downstream_refresh
       max_concurrent_runs: 1
       queue:
@@ -547,12 +547,12 @@ resources:
               quality_table: ${var.gold_quality_table}
               forecast_horizons: ${var.forecast_horizons}
     gold_model_readiness:
-      name: Neighborhood Digital Twin | 32 Gold | Model Readiness Products
+      name: Neighborhood Digital Twin | 302 Gold | Model Readiness Products
       description: Builds point-in-time features, frozen splits, a modeling panel, and readiness summaries.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: gold
-        run_order: "32"
+        run_order: "302"
         lifecycle: downstream_refresh
       max_concurrent_runs: 1
       queue:
@@ -571,12 +571,12 @@ resources:
               validation_origin_counts: ${var.validation_origin_counts}
               geographic_holdout_seed: ${var.geographic_holdout_seed}
     data_readiness_eda:
-      name: Neighborhood Digital Twin | 40 Analysis | Data Readiness EDA
+      name: Neighborhood Digital Twin | 400 Analysis | Data Readiness EDA
       description: Builds governed coverage, uncertainty, history, and horizon summaries.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: analysis
-        run_order: "40"
+        run_order: "400"
         lifecycle: diagnostic_refresh
       max_concurrent_runs: 1
       queue:
@@ -592,12 +592,12 @@ resources:
               quality_schema: ${var.quality_schema}
               quality_table: ${var.eda_readiness_quality_table}
     visual_eda:
-      name: Neighborhood Digital Twin | 41 Analysis | Visual EDA
+      name: Neighborhood Digital Twin | 401 Analysis | Visual EDA
       description: Builds visual summaries and renders versioned report-ready EDA figures.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: analysis
-        run_order: "41"
+        run_order: "401"
         lifecycle: diagnostic_refresh
       max_concurrent_runs: 1
       queue:
@@ -634,12 +634,12 @@ resources:
               - matplotlib==3.9.2
               - shapely==2.0.6
     table_metadata_pipeline:
-      name: Neighborhood Digital Twin | 90 Metadata | Table and Column Comments
+      name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: metadata
-        run_order: "90"
+        run_order: "900"
         lifecycle: post_build
       max_concurrent_runs: 1
       queue:
