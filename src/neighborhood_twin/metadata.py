@@ -164,6 +164,26 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "configured forecast horizons.",
         "One row per canonical 2020 tract GEOID, forecast origin year, and horizon.",
     ),
+    "gold_model_feature_historical": TableMetadata(
+        "Raw point-in-time ACS, FHFA history, regional context, quality, and cohort fields "
+        "available at each modeled forecast origin.",
+        "One row per canonical 2020 tract GEOID and forecast origin year.",
+    ),
+    "gold_model_split_assignment": TableMetadata(
+        "Frozen horizon-specific temporal roles and deterministic geographic holdout assignments "
+        "for leakage-safe model development and evaluation.",
+        "One row per canonical 2020 tract GEOID, forecast origin year, and horizon.",
+    ),
+    "gold_modeling_panel": TableMetadata(
+        "Joined raw point-in-time features, direct FHFA targets, and frozen evaluation assignments "
+        "without training-fitted preprocessing.",
+        "One row per canonical 2020 tract GEOID, forecast origin year, and horizon.",
+    ),
+    "gold_model_readiness_summary": TableMetadata(
+        "Compact row, tract, origin-year, target, cohort, and split-role summaries for model "
+        "readiness and attrition review.",
+        "One row per summary group, optional horizon, dimension name, and dimension value.",
+    ),
     "gold_quality_metrics": TableMetadata(
         "Append-only integrity, reconciliation, and volume metrics for current gold products.",
         "One row per gold quality run, table, and metric.",
@@ -268,6 +288,66 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "target_is_observed": "True when both FHFA target endpoints are available and positive.",
     "target_censor_reason": "Explicit reason a horizon-specific target is unavailable.",
+    "modeling_cohort": (
+        "Stable longitudinal cohort or broader post-2020-only cohort available to the row."
+    ),
+    "is_stable_longitudinal_cohort": (
+        "True when the tract has a governed stable 2010-to-2020 boundary mapping."
+    ),
+    "uses_post_2020_broad_coverage": (
+        "True when the selected ACS state comes from the broader 2020-geography period."
+    ),
+    "acs_measurement_age_years": (
+        "Forecast origin year minus the conservative ACS availability year."
+    ),
+    "locked_test_origin_year": "Frozen final temporal-test forecast origin for the horizon.",
+    "calibration_origin_year": (
+        "Latest pre-test origin reserved for interval calibration under the frozen contract."
+    ),
+    "validation_start_origin_year": "First origin assigned to validation for the horizon.",
+    "validation_end_origin_year": "Last origin assigned to validation for the horizon.",
+    "temporal_role": (
+        "Frozen training, validation, calibration, purged, test, or future-scoring assignment."
+    ),
+    "geographic_role": "Geographic development or deterministic held-out-state assignment.",
+    "geographic_holdout_seed": "Seed used to reproduce the geographic holdout assignment.",
+    "geographic_holdout_method": "Versioned method used to choose geographic holdout states.",
+    "target_known_by_locked_test_origin": (
+        "True when the target endpoint was observable by the locked test origin."
+    ),
+    "eligible_for_point_model_fit": (
+        "True only for temporal-training rows outside the geographic holdout."
+    ),
+    "eligible_for_hyperparameter_selection": (
+        "True for development-geography training or validation rows."
+    ),
+    "eligible_for_interval_calibration": (
+        "True for the reserved calibration origin outside the geographic holdout."
+    ),
+    "eligible_for_locked_temporal_evaluation": (
+        "True for rows at the horizon's frozen temporal-test origin."
+    ),
+    "eligible_for_geographic_evaluation": (
+        "True for validation or locked-test rows in a held-out state."
+    ),
+    "hpi_history_observation_count": (
+        "Usable FHFA HPI observations for the tract through and including the forecast origin."
+    ),
+    "hpi_history_gap_count": (
+        "Calendar years without a usable FHFA HPI value inside the tract's observed history span."
+    ),
+    "hpi_change_1_year_pct": "Point-in-time one-year FHFA HPI percentage change.",
+    "hpi_change_3_year_pct": "Point-in-time cumulative three-year FHFA HPI percentage change.",
+    "hpi_change_5_year_pct": "Point-in-time cumulative five-year FHFA HPI percentage change.",
+    "summary_group": "Governed category of model-readiness summary rows.",
+    "dimension_name": "Field summarized by the model-readiness row.",
+    "dimension_value": "Value of the summarized model-readiness dimension.",
+    "non_null_count": "Rows with a populated value for the summarized feature.",
+    "non_null_rate": "Share of summarized rows with a populated feature value.",
+    "observed_target_count": "Rows with an observed direct FHFA outcome in the summary group.",
+    "observed_target_rate": "Share of summarized rows with an observed direct FHFA outcome.",
+    "eligible_evaluation_count": "Rows eligible for the frozen temporal evaluation.",
+    "eligible_evaluation_rate": "Share of summarized rows eligible for temporal evaluation.",
     "is_statistical_profile_safe": (
         "True only when the bridge permits a current tract profile to join to the 2020 identity."
     ),

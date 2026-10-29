@@ -46,9 +46,22 @@ The longitudinal state and target contracts are now implemented as three additio
 - `gold_forecast_target_historical` contains 6,207,795 direct FHFA outcomes or explicit censored
   rows across one-, three-, and five-year horizons.
 
-All three were published and passed their hard validation checks on October 26, 2026. Leakage-safe
-feature construction and split assignment remain separate next-stage products rather than being
-embedded in either the descriptive state or target tables.
+All three were published and passed their hard validation checks on October 26, 2026. Four
+separate model-readiness products were then published on October 29:
+
+- `gold_model_feature_historical` selects the latest ACS state available at each FHFA origin and
+  adds point-in-time HPI history, county/state context, uncertainty, and cohort fields;
+- `gold_model_split_assignment` freezes horizon-specific temporal roles and one state holdout per
+  Census region;
+- `gold_modeling_panel` joins raw features, direct targets, and the assignments without fitting
+  preprocessing on the full dataset; and
+- `gold_model_readiness_summary` reports cohort and split coverage.
+
+The feature table contains 696,886 rows across 63,367 tracts and 2011-2025 origins. The split and
+panel tables each contain 2,090,658 tract-origin-horizon rows and reconcile exactly. All hard
+availability, timing, uniqueness, and leakage checks passed. The five-year split has only three
+independent training origins, so it remains an exploratory secondary result even though it has
+many repeated tract rows.
 
 ## Neighborhood-state contract
 
@@ -62,11 +75,13 @@ later-period analysis may use the broader coverage but must label the changed po
 implemented state table retains the alignment method and the companion coverage table records
 release-level denominators and exclusions.
 
-The state table should have one row per canonical tract and state year. Required identity and lineage fields include:
+The state table has one row per canonical tract and ACS release. Required identity and lineage
+fields include:
 
 - tract GEOID and geography version;
 - state year and forecast-origin compatibility;
-- county, state, region, and metro identifiers;
+- county, state, Census division, and Census region identifiers; metro identifiers remain a later
+  source decision rather than being inferred from the current hierarchy;
 - source vintage or release chosen for each data family;
 - measurement age and quality flags;
 - feature-set or state-contract version;
@@ -113,6 +128,11 @@ Retain the total housing-unit denominator, source fields, margins of error or de
 
 Build lagged county or CBSA trends and neighbor aggregates from training-safe values. A neighbor feature should document its relationship method, weight transform, minimum neighbor count, and missing-neighbor behavior. In geographic holdouts, target-derived regional features cannot include future outcomes from the held-out metro.
 
+The first model-ready feature contract implements county and state origin-year FHFA trend
+summaries. These provide a reproducible regional baseline but are not spatial adjacency. The
+current simplified tract geometry remains display-only, so neighbor features must wait for a
+reviewed analytical geometry or authoritative adjacency source.
+
 ### ACS and slow-moving context
 
 The table may have one row per annual forecast origin, but an ACS tract value is an annually released five-year estimate, not a one-year measurement. Retain the release year and survey-window start and end. Prefer interpretable levels and slow changes over differences between heavily overlapping releases. Carry estimates and margins of error together long enough to support quality filters, weights, or flags. Derived ratios must document their numerator, denominator, universe, and behavior when the denominator is small.
@@ -157,9 +177,11 @@ Scaling, imputation, encoding, feature selection, and dimensionality reduction a
 - a historical neighborhood-state panel (implemented as
   `gold_neighborhood_state_historical`);
 - horizon-specific targets (implemented as `gold_forecast_target_historical`);
-- leakage-safe historical model features and published split assignments (next stage);
+- leakage-safe historical model features and published split assignments (implemented);
+- a joined model-ready panel and compact readiness summary (implemented);
 - feature registry and data dictionary draft;
-- row-attrition and missingness report;
+- row-attrition and missingness report (initial cohort, target, split, and timing coverage is
+  implemented; feature-level missingness review continues during baseline modeling);
 - state, feature, and target contract tests;
 - one documented example row showing its source vintages and target construction.
 

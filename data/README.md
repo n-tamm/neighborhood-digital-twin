@@ -22,7 +22,8 @@ manifests that need to be shared.
 Databricks Delta tables may live outside this local folder, but they should use the same
 bronze/silver/gold definitions and retain equivalent lineage fields.
 
-The files in [`samples/`](samples/) contain five representative rows per table. They are intended
+The files in [`samples/`](samples/) contain a small representative extract of no more than ten
+rows per table. They are intended
 only for inspecting names, types, nulls, and general shape. Databricks remains authoritative for
 analysis, row counts, lineage, and quality history. See the corresponding
 [table documentation](../docs/data/README.md) for grain, structure, intended use, and limitations.

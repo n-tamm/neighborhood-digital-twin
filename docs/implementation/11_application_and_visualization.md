@@ -66,6 +66,19 @@ The Databricks app should read versioned serving tables instead of rebuilding fe
 
 Document the detailed serving schema beside the table, export, and loading code when it is implemented. The app must reject incompatible data rather than silently guessing at changed columns.
 
+The pipeline is now ready to support a descriptive application shell, but the new
+`gold_modeling_panel` is not a serving table. It is wide, contains evaluation-only fields, and
+includes censored and future-scoring rows. The app should continue to use current profiles and
+display geometry until approved forecast and analogue outputs are available; later, a compact
+serving job should join only the selected tract's profile, history, forecasts, intervals,
+analogues, explanations, warnings, and version metadata.
+
+Coverage will differ by feature. A user may be able to open a current profile for a tract that is
+not eligible for an FHFA forecast or outcome-based analogue evaluation. The interface should keep
+the profile available and explain why the forecast is absent. It should also distinguish the
+84,000-plus supported current tract universe from the 63,367 tracts with at least one model-ready
+historical feature row and from the smaller eligible population for a selected horizon.
+
 ## Application boundaries
 
 - `app/` owns pages, components, session state, formatting, and calls to the serving layer.
@@ -101,6 +114,12 @@ Each adjustable variable needs a definition, valid range, observed local range, 
 ## Failure and empty states
 
 Design explicit states for missing sources, unsupported tracts, stale bundles, unavailable horizons, failed inference, and low-confidence output. A blank chart or silent fallback is not acceptable. Where possible, retain the historical profile even if a forecast is withheld. A heavily multifamily tract may still show a clearly labeled single-family forecast, but it must also show that the target represents only part of its housing market.
+
+The application must also keep four concepts visually distinct: observed ACS rolling estimates,
+observed FHFA single-family history, model forecasts with uncertainty, and scenario sensitivity.
+Historical analogues are supporting evidence, not predictions that the selected tract will follow
+the same path. The current map geometry is safe for display and selection only; nearby-area or
+distance claims require a later analytical spatial product.
 
 ## Testing
 

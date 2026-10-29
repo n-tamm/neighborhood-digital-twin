@@ -18,6 +18,12 @@ from neighborhood_twin.metadata import (
 
 def test_every_table_metadata_entry_declares_description_and_grain() -> None:
     assert "silver_canonical_tract_2020" in TABLE_METADATA
+    assert {
+        "gold_model_feature_historical",
+        "gold_model_split_assignment",
+        "gold_modeling_panel",
+        "gold_model_readiness_summary",
+    }.issubset(TABLE_METADATA)
     for metadata in TABLE_METADATA.values():
         assert metadata.description.endswith(".")
         assert metadata.grain.startswith("One row per")

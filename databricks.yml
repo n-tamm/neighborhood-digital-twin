@@ -128,6 +128,15 @@ variables:
   forecast_horizons:
     description: Comma-separated direct FHFA target horizons in years
     default: "1,3,5"
+  locked_test_origins:
+    description: Horizon-to-origin mapping for the frozen temporal tests
+    default: "1:2024,3:2022,5:2020"
+  validation_origin_counts:
+    description: Number of validation origins immediately before each calibration origin
+    default: "1:2,3:2,5:1"
+  geographic_holdout_seed:
+    description: Seed for deterministic selection of one holdout state per Census region
+    default: "699"
 
 resources:
   jobs:
@@ -467,6 +476,25 @@ resources:
               quality_schema: ${var.quality_schema}
               quality_table: ${var.gold_quality_table}
               forecast_horizons: ${var.forecast_horizons}
+    gold_model_readiness:
+      name: Neighborhood Digital Twin - Model Readiness Products
+      description: Builds point-in-time features, frozen splits, a modeling panel, and readiness summaries.
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: build_model_readiness
+          notebook_task:
+            notebook_path: ./notebooks/03_transformation/10_build_model_readiness.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              quality_schema: ${var.quality_schema}
+              quality_table: ${var.gold_quality_table}
+              forecast_horizons: ${var.forecast_horizons}
+              locked_test_origins: ${var.locked_test_origins}
+              validation_origin_counts: ${var.validation_origin_counts}
+              geographic_holdout_seed: ${var.geographic_holdout_seed}
     data_readiness_eda:
       name: Neighborhood Digital Twin - Data Readiness EDA
       description: Builds governed coverage, uncertainty, history, and horizon summaries.
