@@ -104,9 +104,10 @@ Start with:
 1. [Project charter](PROJECT_CHARTER.md)
 2. [Twelve-week roadmap](ROADMAP.md)
 3. [Documentation index](docs/README.md)
-4. [Data guide and per-table documentation](docs/data/README.md)
-5. [Implementation sequence](docs/implementation/README.md)
-6. [System architecture](docs/ARCHITECTURE.md)
+4. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
+5. [Data guide and per-table documentation](docs/data/README.md)
+6. [Implementation sequence](docs/implementation/README.md)
+7. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
@@ -147,40 +148,29 @@ python -m mypy src
 python -m pytest
 ```
 
-As executable pipeline stages are added, this section will list the exact commands needed to acquire permitted data, reproduce analysis, generate every reported figure and table, and launch the application. A required command is not considered complete until it works from a clean checkout using relative paths.
+The pipeline run-order guide lists the exact operational paths for source acquisition, downstream
+rebuilds, validation, analysis, and metadata. A required command is not considered complete until
+it works from a clean checkout using relative paths.
 
-The first cloud entry point is [01_ingest_core_sources.py](notebooks/01_feasibility/01_ingest_core_sources.py). It is deployed as a serverless Databricks job through the root [databricks.yml](databricks.yml), so a second Git clone inside the Databricks workspace is not required. After authenticating the Databricks CLI with a local profile named `neighborhood-twin`, run:
+The Databricks jobs are deployed through the root [databricks.yml](databricks.yml), so a second Git
+clone inside the Databricks workspace is not required. Their display names and tags group them as
+setup, bronze, silver, gold, analysis, and metadata jobs. The canonical commands, dependencies,
+source-refresh paths, and recovery instructions are maintained in the
+[Databricks pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
+
+After authenticating the Databricks CLI with a local profile named `neighborhood-twin`, validate
+and deploy the current branch before running an affected stage:
 
 ```powershell
-databricks bundle validate --profile neighborhood-twin
-databricks bundle deploy --profile neighborhood-twin
-databricks bundle run core_source_ingestion --profile neighborhood-twin
-databricks bundle run historical_acs_ingestion --profile neighborhood-twin
-databricks bundle run pilot_annual_acs_ingestion --profile neighborhood-twin
-databricks bundle run national_current_acs_ingestion --profile neighborhood-twin
-databricks bundle run national_historical_acs_backfill --profile neighborhood-twin
-databricks bundle run silver_source_transforms --profile neighborhood-twin
-databricks bundle run geography_relationship_pipeline --profile neighborhood-twin
-databricks bundle run display_geometry_pipeline --profile neighborhood-twin
-databricks bundle run connecticut_geography_pipeline --profile neighborhood-twin
-databricks bundle run canonical_geography_pipeline --profile neighborhood-twin
-databricks bundle run geography_hierarchy_pipeline --profile neighborhood-twin
-databricks bundle run gold_current_products --profile neighborhood-twin
-databricks bundle run gold_historical_products --profile neighborhood-twin
-databricks bundle run gold_model_readiness --profile neighborhood-twin
-databricks bundle run data_readiness_eda --profile neighborhood-twin
-databricks bundle run visual_eda --profile neighborhood-twin
-databricks bundle run table_metadata_pipeline --profile neighborhood-twin
+databricks bundle validate --profile neighborhood-twin -t team
+databricks bundle deploy --profile neighborhood-twin -t team
 ```
 
-The jobs remain separate so acquisition, transformation, geography, current products, and metadata
-can be rerun and reviewed independently. The national historical backfill is a one-time, resumable
-job whose downstream tasks validate and refresh the completed load; it is not part of routine
-refreshes. Run expansion jobs only after checking their configured scope, rebuild silver after new
-ACS snapshots arrive, and apply table metadata after any job that
-overwrites a schema. Raw source files and secrets remain outside Git. Complete table grains and
-limitations are in the [data guide](docs/data/README.md); setup and pipeline details are in
-[Stage 02](docs/implementation/02_data_acquisition_and_pipeline.md), and geography decisions are in
+The jobs remain separate so only affected stages and their downstream consumers need to run. The
+national historical backfill is explicitly one-time and must not be included in an ordinary
+refresh. Raw source files and secrets remain outside Git. Complete table grains and limitations
+are in the [data guide](docs/data/README.md); implementation details are in [Stage
+02](docs/implementation/02_data_acquisition_and_pipeline.md), and geography decisions are in
 [Stage 03](docs/implementation/03_geography_and_time_alignment.md).
 
 ## Development workflow

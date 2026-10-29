@@ -1,8 +1,10 @@
 # Documentation
 
-The project keeps three focused technical documentation areas:
+The project keeps several focused technical documentation areas:
 
 - [System architecture](ARCHITECTURE.md) explains the analytical and application boundaries.
+- [Databricks pipeline run order](PIPELINE_RUN_ORDER.md) is the canonical operational sequence for
+  setup, source refreshes, downstream rebuilds, recovery, and metadata publication.
 - [Implementation guide](implementation/README.md) provides the ordered build plan from data feasibility through final delivery.
 - [Data guide](data/README.md) documents implemented table grains, intended use, limitations, and small development-table samples.
 - [Tract vintage coverage](TRACT_VINTAGE_COVERAGE.md) explains why pre-2020 history uses a

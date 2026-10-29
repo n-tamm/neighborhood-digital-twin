@@ -4,6 +4,12 @@
 
 This stage turns approved public sources into repeatable, versioned data assets. The main requirement is not a large download script; it is a traceable path from an external file or API response to a validated table that another contributor can rebuild.
 
+The canonical operational sequence is maintained in the
+[Databricks pipeline run-order guide](../PIPELINE_RUN_ORDER.md). Use that guide to decide which
+jobs belong in a first-time build, routine source refresh, targeted downstream rebuild, or repair.
+This implementation document explains the data contracts and should not become a competing list
+of current run commands.
+
 ## Current implementation
 
 The first working slice is now in place:
