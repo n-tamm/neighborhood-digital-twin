@@ -71,6 +71,8 @@ def _metric(
     metric_group: str = "integrity",
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped canonical-geography quality metric."""
+
     return QualityMetric(
         quality_run_id=build_id,
         profiled_at_utc=built_at_utc,
@@ -92,6 +94,8 @@ def _build_tract_frame(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
+    """Build one canonical 2020 tract row per relationship-defined target GEOID."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     target = relationship.groupBy("geoid_2020").agg(
@@ -139,6 +143,8 @@ def _profile(
     built_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Validate canonical tract uniqueness, completeness, attributes, and geometry coverage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     target_count = relationship.select("geoid_2020").distinct().count()

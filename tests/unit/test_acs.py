@@ -80,7 +80,9 @@ def test_acs_measure_dictionary_has_one_complete_row_per_measure() -> None:
     )
     assert median_rent["universe"] == "Renter-occupied housing units paying cash rent"
     assert median_rent["unit"] == "dollars"
-    assert median_rent["metadata_url"].endswith("/B25064.html")
+    metadata_url = median_rent["metadata_url"]
+    assert isinstance(metadata_url, str)
+    assert metadata_url.endswith("/B25064.html")
 
 
 def test_historical_scope_parses_a_bounded_state_year_grid() -> None:

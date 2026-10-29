@@ -56,6 +56,8 @@ class QualityMetric:
     notes: str
 
     def __post_init__(self) -> None:
+        """Reject unsupported statuses and blank identifying fields."""
+
         if self.status not in QUALITY_STATUSES:
             raise ValueError(f"Unsupported quality status: {self.status}")
         for field_name in (
@@ -107,6 +109,8 @@ def _metric(
     dimension: str = "all",
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped bronze quality metric."""
+
     return QualityMetric(
         quality_run_id=run_id,
         profiled_at_utc=profiled_at_utc,
@@ -122,14 +126,20 @@ def _metric(
 
 
 def _zero_status(value: int | float, *, failure_status: str = "fail") -> str:
+    """Return pass for zero and the requested failure status otherwise."""
+
     return "pass" if value == 0 else failure_status
 
 
 def _positive_status(value: int | float) -> str:
+    """Return pass only when a metric is strictly positive."""
+
     return "pass" if value > 0 else "fail"
 
 
 def _count_when(functions: Any, condition: Any, alias: str) -> Any:
+    """Return a null-safe Spark expression that counts rows meeting a condition."""
+
     return (
         functions.coalesce(
             functions.sum(functions.when(condition, 1).otherwise(0)),
@@ -153,6 +163,8 @@ def _profile_fhfa(
     profiled_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Profile FHFA bronze volume, keys, values, and immutable snapshots."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summary = (
@@ -319,6 +331,8 @@ def _profile_fhfa(
 
 
 def _usable_acs_value(functions: Any, column_name: str) -> Any:
+    """Convert an ACS string column to numeric while excluding sentinel values."""
+
     value = functions.trim(functions.col(column_name)).cast("double")
     return functions.when(value.isin([float(item) for item in ACS_SPECIAL_VALUES]), None).otherwise(
         value
@@ -332,6 +346,8 @@ def _profile_acs(
     profiled_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Profile ACS bronze volume, keys, values, balances, and snapshots."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     variable_codes = acs_variable_codes()
@@ -566,6 +582,8 @@ def _profile_manifest(
     profiled_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Profile manifest integrity, validation state, and source coverage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     accepted_statuses = ("acquired", "registered", "bronze_validated")
@@ -790,6 +808,8 @@ def _profile_geography_match(
     profiled_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Measure FHFA-to-ACS tract overlap without joining incompatible vintages."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     fhfa_keys = (

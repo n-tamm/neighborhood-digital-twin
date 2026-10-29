@@ -147,6 +147,8 @@ class GeographyHierarchyBuild:
 
 
 def _with_lineage(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Attach the hierarchy vintage, schema version, and build lineage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     return (
@@ -172,6 +174,8 @@ def _metric(
     metric_group: str = "integrity",
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped hierarchy quality metric."""
+
     return QualityMetric(
         quality_run_id=build_id,
         profiled_at_utc=built_at_utc,
@@ -195,6 +199,8 @@ def _profile_frame(
     built_at_utc: str,
     expected_count: int | None = None,
 ) -> list[QualityMetric]:
+    """Validate one hierarchy dimension's volume and key uniqueness."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summary = frame.agg(

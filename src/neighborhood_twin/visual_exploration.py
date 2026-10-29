@@ -56,6 +56,8 @@ def housing_composition_band(value: float | None) -> str:
 
 
 def _lineage(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Attach visual-EDA schema and build lineage to a Spark summary frame."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     return (
@@ -68,6 +70,8 @@ def _lineage(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
 
 
 def _housing_band_columns(functions: Any) -> tuple[Any, Any]:
+    """Build ordered Spark expressions for the housing-composition bands."""
+
     value = functions.col("single_family_share_estimate")
     order = functions.when(value.isNull(), functions.lit(6))
     label = functions.when(value.isNull(), functions.lit("Missing housing composition"))
@@ -80,6 +84,8 @@ def _housing_band_columns(functions: Any) -> tuple[Any, Any]:
 
 
 def _housing_coverage(profile: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Summarize FHFA and product eligibility by housing-composition band."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     band_order, band_label = _housing_band_columns(functions)
@@ -130,6 +136,8 @@ def _housing_coverage(profile: Any, *, build_id: str, built_at_utc: str) -> Any:
 
 
 def _feature_summary(profile: Any, feature: str, candidate: bool, order: int) -> Any:
+    """Summarize one feature for either included or excluded current tracts."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     cohort = profile.where(
@@ -155,6 +163,8 @@ def _feature_summary(profile: Any, feature: str, candidate: bool, order: int) ->
 
 
 def _cohort_comparison(profile: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Compare forecast candidates with excluded current-ACS tracts by feature."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summaries = [
@@ -199,6 +209,8 @@ def _cohort_comparison(profile: Any, *, build_id: str, built_at_utc: str) -> Any
 
 
 def _one_temporal_scope(fhfa: Any, *, state_fips: str | None, label: str) -> Any:
+    """Summarize annual FHFA change quantiles for one national or state scope."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     scoped = fhfa if state_fips is None else fhfa.where(functions.col("state_fips") == state_fips)
@@ -226,6 +238,8 @@ def _hpi_temporal(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
+    """Combine national and selected-state FHFA temporal summaries."""
+
     labels = {"04": "Arizona", "26": "Michigan", "42": "Pennsylvania"}
     scopes = [_one_temporal_scope(fhfa, state_fips=None, label="United States")]
     scopes.extend(
@@ -246,6 +260,8 @@ def _hpi_temporal(
 def _quality_metrics(
     frames: dict[str, Any], *, build_id: str, built_at_utc: str, catalog: str, schema: str
 ) -> list[QualityMetric]:
+    """Validate visual-EDA summary volume, keys, and effect-size availability."""
+
     keys = {
         HOUSING_COVERAGE_TABLE: ("housing_composition_band_order",),
         COHORT_COMPARISON_TABLE: ("feature_name",),

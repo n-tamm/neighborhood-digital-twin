@@ -23,6 +23,8 @@ from pathlib import Path
 
 
 def _add_repository_source() -> None:
+    """Make the deployed repository package importable by this notebook."""
+
     for candidate in [Path.cwd(), *Path.cwd().parents]:
         source_root = candidate / "src"
         if (source_root / "neighborhood_twin").exists():
@@ -116,6 +118,8 @@ manifest_records = []
 
 
 def save_figure(order: int, name: str, title: str, purpose: str, figure: object) -> None:
+    """Save one versioned PNG and append its lineage to the manifest records."""
+
     file_path = figure_directory / f"{order:02d}_{name}.png"
     figure.savefig(file_path, dpi=180, bbox_inches="tight", facecolor="white")
     plt.close(figure)
@@ -141,12 +145,16 @@ def save_figure(order: int, name: str, title: str, purpose: str, figure: object)
 
 
 def clean_axis(axis: object, *, grid_axis: str = "y") -> None:
+    """Apply the shared minimal axis and grid treatment to a chart."""
+
     axis.spines[["top", "right"]].set_visible(False)
     axis.grid(axis=grid_axis)
     axis.set_axisbelow(True)
 
 
 def add_source_note(figure: object, text: str) -> None:
+    """Add a small source or interpretation note below a figure."""
+
     figure.text(0.01, 0.005, text, ha="left", va="bottom", fontsize=8, color="#607D8B")
 
 # COMMAND ----------
@@ -384,6 +392,8 @@ save_figure(
 
 # Map helpers and geometry collection
 def polygon_patches(geometry: object) -> list[MatplotlibPolygon]:
+    """Convert a polygon or multipolygon into Matplotlib exterior patches."""
+
     polygons = [geometry] if isinstance(geometry, Polygon) else list(geometry.geoms)
     return [
         MatplotlibPolygon(np.asarray(polygon.exterior.coords), closed=True)

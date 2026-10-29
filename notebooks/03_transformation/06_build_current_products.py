@@ -22,6 +22,8 @@ from pathlib import Path
 
 
 def _add_repository_source() -> None:
+    """Make the deployed repository package importable by this notebook."""
+
     for candidate in (Path.cwd(), *Path.cwd().parents):
         source_root = candidate / "src"
         if (source_root / "neighborhood_twin").is_dir():

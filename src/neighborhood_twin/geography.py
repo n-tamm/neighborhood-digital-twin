@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Any
 
 from neighborhood_twin.data.databricks import qualified_name
+from neighborhood_twin.geography_hierarchy import SUPPORTED_STATE_FIPS
 from neighborhood_twin.validate import (
     QualityMetric,
     hard_failures,
@@ -119,6 +120,8 @@ def _metric(
     dimension: str = "all",
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped geography quality metric."""
+
     return QualityMetric(
         quality_run_id=build_id,
         profiled_at_utc=built_at_utc,
@@ -134,6 +137,8 @@ def _metric(
 
 
 def _count_when(functions: Any, condition: Any, alias: str) -> Any:
+    """Return a null-safe Spark expression that counts rows meeting a condition."""
+
     return (
         functions.coalesce(
             functions.sum(functions.when(condition, 1).otherwise(0)),
@@ -145,6 +150,8 @@ def _count_when(functions: Any, condition: Any, alias: str) -> Any:
 
 
 def _latest_snapshot(frame: Any) -> Any:
+    """Select every row from the most recently retrieved source snapshot."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     latest = (
@@ -162,6 +169,8 @@ def _latest_snapshot(frame: Any) -> Any:
 
 
 def _safe_share(functions: Any, numerator: Any, denominator: Any) -> Any:
+    """Divide valid positive-area Spark columns and return null otherwise."""
+
     return functions.when(
         numerator.isNotNull() & denominator.isNotNull() & (denominator > 0),
         numerator / denominator,
@@ -174,6 +183,8 @@ def _transform_relationship(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
+    """Transform Census relationship rows into typed, classified mapping edges."""
+
     from pyspark.sql import (
         Window,  # type: ignore[import-not-found]
         functions,  # type: ignore[import-not-found]
@@ -288,6 +299,8 @@ def _profile_relationship(
     built_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Profile relationship integrity and tract change within the project scope."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summary = (
@@ -363,6 +376,54 @@ def _profile_relationship(
         .agg(functions.sum("target_land_share").alias("share_sum"))
         .where(functions.abs(functions.col("share_sum") - 1.0) > 0.001)
         .count()
+    )
+    supported = frame.where(
+        functions.col("state_fips_2010").isin(*SUPPORTED_STATE_FIPS)
+        & functions.col("state_fips_2020").isin(*SUPPORTED_STATE_FIPS)
+    )
+    supported_summary = (
+        supported.agg(
+            functions.countDistinct("geoid_2010").alias("source_tract_count"),
+            functions.countDistinct("geoid_2020").alias("target_tract_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("source_target_count") == 1,
+                    functions.col("geoid_2010"),
+                )
+            ).alias("source_tract_with_one_target_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("source_target_count") > 1,
+                    functions.col("geoid_2010"),
+                )
+            ).alias("source_tract_with_multiple_targets_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("target_source_count") == 1,
+                    functions.col("geoid_2020"),
+                )
+            ).alias("target_tract_with_one_source_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("target_source_count") > 1,
+                    functions.col("geoid_2020"),
+                )
+            ).alias("target_tract_with_multiple_sources_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("geoid_2010") == functions.col("geoid_2020"),
+                    functions.col("geoid_2010"),
+                )
+            ).alias("same_geoid_source_tract_count"),
+            functions.countDistinct(
+                functions.when(
+                    functions.col("is_stable_measure_mapping"),
+                    functions.col("geoid_2010"),
+                )
+            ).alias("stable_same_geoid_source_tract_count"),
+        )
+        .first()
+        .asDict()
     )
 
     metrics = [
@@ -468,6 +529,80 @@ def _profile_relationship(
                     expectation="reported, not treated as a quality threshold",
                 )
             )
+
+    supported_source_count = int(supported_summary["source_tract_count"])
+    supported_target_count = int(supported_summary["target_tract_count"])
+    stable_supported_count = int(
+        supported_summary["stable_same_geoid_source_tract_count"]
+    )
+    tract_change_values = (
+        ("source_tract_count", supported_source_count),
+        ("target_tract_count", supported_target_count),
+        (
+            "net_tract_count_change",
+            supported_target_count - supported_source_count,
+        ),
+        (
+            "source_tract_with_one_target_count",
+            supported_summary["source_tract_with_one_target_count"],
+        ),
+        (
+            "source_tract_with_multiple_targets_count",
+            supported_summary["source_tract_with_multiple_targets_count"],
+        ),
+        (
+            "target_tract_with_one_source_count",
+            supported_summary["target_tract_with_one_source_count"],
+        ),
+        (
+            "target_tract_with_multiple_sources_count",
+            supported_summary["target_tract_with_multiple_sources_count"],
+        ),
+        (
+            "same_geoid_source_tract_count",
+            supported_summary["same_geoid_source_tract_count"],
+        ),
+        ("stable_same_geoid_source_tract_count", stable_supported_count),
+        (
+            "source_tract_requiring_harmonization_count",
+            supported_source_count - stable_supported_count,
+        ),
+    )
+    for metric_name, value in tract_change_values:
+        metrics.append(
+            _metric(
+                build_id=build_id,
+                built_at_utc=built_at_utc,
+                table_name=table_name,
+                metric_group="tract_change_2010_2020",
+                metric_name=metric_name,
+                value=value,
+                status="info",
+                expectation="reported for the 50 states and District of Columbia",
+                dimension="scope=50_states_dc",
+                notes=(
+                    "Stable means the 2010 and 2020 GEOIDs match and both land-overlap "
+                    "shares are at least 95%; it does not make area shares valid "
+                    "population or housing weights."
+                    if "stable" in metric_name or "harmonization" in metric_name
+                    else ""
+                ),
+            )
+        )
+    metrics.append(
+        _metric(
+            build_id=build_id,
+            built_at_utc=built_at_utc,
+            table_name=table_name,
+            metric_group="tract_change_2010_2020",
+            metric_name="stable_same_geoid_source_tract_rate",
+            value=(stable_supported_count / supported_source_count),
+            status="info",
+            expectation="reported for the 50 states and District of Columbia",
+            dimension="scope=50_states_dc",
+            notes="Share of 2010 tracts meeting the conservative stable-measure rule.",
+        )
+    )
 
     mapping_counts = frame.groupBy("mapping_type").count().collect()
     for row in mapping_counts:
@@ -608,6 +743,8 @@ def _transform_display_geometry(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
+    """Normalize display-only tract geometry and attach build lineage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     return frame.select(
@@ -652,6 +789,8 @@ def _profile_display_geometry(
     built_at_utc: str,
     table_name: str,
 ) -> list[QualityMetric]:
+    """Validate display geometry keys, shapes, bounds, and tract coverage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summary = (

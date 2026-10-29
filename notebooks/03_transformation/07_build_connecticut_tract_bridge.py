@@ -23,6 +23,8 @@ from pathlib import Path
 
 
 def _add_repository_source() -> None:
+    """Make the deployed repository package importable by this notebook."""
+
     candidates = (Path.cwd(), *Path.cwd().parents)
     for candidate in candidates:
         source_root = candidate / "src"

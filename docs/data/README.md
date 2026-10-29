@@ -70,17 +70,23 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 29. [`gold_application_demo_tract`](20_gold_application_demo_tract.md)
 30. [`gold_quality_metrics`](21_gold_quality_metrics.md)
 
+### Gold historical products
+
+31. [`gold_historical_tract_coverage`](40_gold_historical_tract_coverage.md)
+32. [`gold_neighborhood_state_historical`](41_gold_neighborhood_state_historical.md)
+33. [`gold_forecast_target_historical`](42_gold_forecast_target_historical.md)
+
 ### Gold exploration and readiness
 
-31. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
-32. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
-33. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
-34. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
-35. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
-36. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
-37. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
-38. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
-39. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
+34. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)
+35. [`gold_eda_acs_measure_quality`](25_gold_eda_acs_measure_quality.md)
+36. [`gold_eda_fhfa_history`](26_gold_eda_fhfa_history.md)
+37. [`gold_eda_horizon_feasibility`](27_gold_eda_horizon_feasibility.md)
+38. [`eda_readiness_quality_metrics`](28_eda_readiness_quality_metrics.md)
+39. [`gold_eda_housing_coverage`](29_gold_eda_housing_coverage.md)
+40. [`gold_eda_cohort_comparison`](30_gold_eda_cohort_comparison.md)
+41. [`gold_eda_hpi_temporal`](31_gold_eda_hpi_temporal.md)
+42. [`gold_eda_figure_manifest`](32_gold_eda_figure_manifest.md)
 
 ## Working conventions
 
@@ -93,6 +99,12 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
   project's geographic scope.
 - ACS estimates remain paired with their published 90 percent margins of error. A missing value is
   not treated as zero.
+- Complete source coverage does not imply complete longitudinal tract coverage. Historical work
+  spanning the 2010 and 2020 tract vintages follows the documented
+  [tract vintage coverage contract](../TRACT_VINTAGE_COVERAGE.md): pre-2020 ACS observations use
+  the 59,607-tract stable subset, while current-state products retain broad 2020-geography
+  coverage. A model or chart that crosses 2020 must either use that balanced cohort throughout or
+  disclose the changing tract population.
 - Simplified cartographic geometry is for display. It is not approved for adjacency, distance,
   intersection, or other analytical spatial operations.
 - Table descriptions and column comments are managed in code and applied after any table rebuild
@@ -100,7 +112,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 25, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
+As of October 26, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
 the 50 states and District of Columbia, national FHFA tract HPI history through 2025, and national
 Census geography support. The validated ACS contract contains all 765 required state-release
 pairs, 1,152,605 selected silver tract-release rows, and 24,204,705 normalized measure rows.
@@ -126,3 +138,11 @@ vintages. Current ACS profiles now populate those canonical tracts. Five current
 remain deliberately unmatched; this leaves zero unexpected current ACS mismatches. FHFA also
 uses the newer planning-region identifiers for 728 Connecticut tracts. Applying the same audited
 bridge restores FHFA history for all 728 and produces 662 current forecast candidates.
+
+Historical gold publication is also complete for the approved source scope. The coverage audit
+has 40 release-and-alignment rows; the neighborhood-state panel has 1,018,099 rows across all 15
+ACS releases; and the forecast-target table has 6,207,795 rows across one-, three-, and five-year
+horizons. Pre-2020 state releases contribute exactly 59,607 stable tracts each. Later releases
+retain roughly 84,400 supported tracts, so this table is longitudinal but not a balanced national
+panel unless downstream work explicitly restricts it to the stable cohort. The latest historical
+gold validation contains no hard failures.

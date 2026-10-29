@@ -125,6 +125,8 @@ def _metric(
     expectation: str,
     notes: str = "",
 ) -> QualityMetric:
+    """Create one consistently shaped gold-product quality metric."""
+
     return QualityMetric(
         quality_run_id=build_id,
         profiled_at_utc=built_at_utc,
@@ -140,12 +142,16 @@ def _metric(
 
 
 def _require_tables(spark: Any, names: tuple[str, ...]) -> None:
+    """Raise one actionable error when required analytical tables are absent."""
+
     missing = [name for name in names if not spark.catalog.tableExists(name)]
     if missing:
         raise ValueError(f"Required analytical tables do not exist: {', '.join(missing)}")
 
 
 def _build_fhfa_summary(fhfa: Any, connecticut_bridge: Any) -> tuple[Any, int]:
+    """Create latest/history FHFA features on canonical 2020 tract identifiers."""
+
     from pyspark.sql import Window, functions  # type: ignore[import-not-found]
 
     usable = (
@@ -188,6 +194,8 @@ def _build_current_profile(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
+    """Join canonical geography to current ACS and available FHFA summaries."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     current_acs_year = int(acs.agg(functions.max("acs_release_year")).first()[0])
@@ -290,6 +298,8 @@ def _profile_frame(
     expect_complete_canonical: bool,
     canonical_count: int,
 ) -> list[QualityMetric]:
+    """Validate one gold product's keys, volume, and canonical coverage."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summary = frame.agg(

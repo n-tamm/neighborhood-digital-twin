@@ -65,6 +65,8 @@ def redact_url(url: str, secret_parameters: frozenset[str]) -> str:
 
 
 def _header(response: Any, name: str) -> str | None:
+    """Read an optional HTTP response header across supported response objects."""
+
     headers = getattr(response, "headers", None)
     if headers is None:
         return None
@@ -72,6 +74,8 @@ def _header(response: Any, name: str) -> str | None:
 
 
 def _status(response: Any) -> int:
+    """Return the HTTP status code from a response-like object."""
+
     status = getattr(response, "status", None)
     if status is None:
         status = response.getcode()
@@ -79,6 +83,8 @@ def _status(response: Any) -> int:
 
 
 def _validate_response(request: SourceRequest, response: Any) -> tuple[int, str | None]:
+    """Reject unsuccessful responses or unexpected declared content types."""
+
     status = _status(response)
     if status < 200 or status >= 300:
         raise AcquisitionError(f"{request.source.source_id} returned HTTP {status}")

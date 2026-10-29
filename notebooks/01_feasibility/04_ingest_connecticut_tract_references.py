@@ -22,6 +22,8 @@ from pathlib import Path
 
 
 def _add_repository_source() -> None:
+    """Make the deployed repository package importable by this notebook."""
+
     candidates = (Path.cwd(), *Path.cwd().parents)
     for candidate in candidates:
         source_root = candidate / "src"
@@ -66,6 +68,8 @@ raw_root = volume_root(catalog, schema, volume)
 
 
 def _acquire_or_register(request):
+    """Acquire one tract reference or register its approved uploaded copy."""
+
     if uploaded_source_directory:
         uploaded_path = Path(uploaded_source_directory) / request.file_name
         if uploaded_path.is_file():

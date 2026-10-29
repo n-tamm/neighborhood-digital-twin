@@ -49,6 +49,8 @@ def validate_horizons(horizons: tuple[int, ...]) -> tuple[int, ...]:
 
 
 def _lineage(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Attach readiness schema and build lineage to a Spark summary frame."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     return (
@@ -61,6 +63,8 @@ def _lineage(frame: Any, *, build_id: str, built_at_utc: str) -> Any:
 
 
 def _state_coverage(profile: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Summarize source and product eligibility counts by state."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     summary = profile.groupBy("state_fips").agg(
@@ -99,6 +103,8 @@ def _state_coverage(profile: Any, *, build_id: str, built_at_utc: str) -> Any:
 
 
 def _acs_measure_quality(acs: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Summarize current ACS availability and sampling uncertainty by measure."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     latest_release = int(acs.agg(functions.max("acs_release_year")).first()[0])
@@ -136,6 +142,8 @@ def _acs_measure_quality(acs: Any, *, build_id: str, built_at_utc: str) -> Any:
 
 
 def _fhfa_history(fhfa: Any, *, build_id: str, built_at_utc: str) -> Any:
+    """Summarize usable FHFA history depth and coverage by state."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     by_tract = fhfa.groupBy("state_fips", "state_abbr", "geoid").agg(
@@ -175,6 +183,8 @@ def _horizon_feasibility(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
+    """Count usable tract-origin outcomes for each requested forecast horizon."""
+
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     usable = fhfa.where(functions.col("hpi_available") & (functions.col("hpi") > 0)).select(
@@ -229,6 +239,8 @@ def _horizon_feasibility(
 def _metrics(
     frames: dict[str, Any], *, build_id: str, built_at_utc: str, catalog: str, schema: str
 ) -> list[QualityMetric]:
+    """Validate readiness-summary row counts and natural-key uniqueness."""
+
     metrics = []
     key_columns = {
         STATE_COVERAGE_TABLE: ("state_fips",),
