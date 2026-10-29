@@ -6,6 +6,12 @@ The analogue system answers a different question from the forecast model: which 
 
 ## Representation baseline
 
+`gold_model_feature_historical` now supplies the point-in-time raw state needed for retrospective
+retrieval. It includes broad community descriptors, FHFA history, county/state context, source
+timing, and uncertainty fields, but it deliberately does not contain a fitted scaler, feature
+weights, PCA, or imputation. Those objects must be learned from the approved development period
+and reused unchanged for validation, test, and current-state queries.
+
 Start with a small, interpretable set of standardized state dimensions. The first representation should include housing-stock composition, affordability, tenure or vacancy, single-family HPI history, selected socioeconomic context, and regional conditions. This prevents a tract from being labeled similar only because its covered single-family market moved the same way. Fit scaling on the training period and compare two representations:
 
 1. distance in the standardized original feature space;
@@ -25,6 +31,12 @@ For a query tract at forecast origin `t`:
 - retain the representation and feature versions.
 
 This prevents a current state from retrieving its own future or near-duplicate row.
+
+The cohort change also needs to be part of retrieval policy. Historical queries through 2020 are
+limited to tracts with stable 2010-to-2020 geography, while the broader candidate population begins
+in 2021. A cross-period search should either restrict both query and candidates to the stable
+cohort or label that later candidates come from a wider tract universe. It should not treat the
+extra later tracts as if they had comparable earlier history.
 
 ## Distance and weighting
 
@@ -50,6 +62,12 @@ Compare analogue-based estimates with:
 - the supervised forecast model.
 
 Use outcome MAE when the analogue set is presented as evidence about what may follow. Also measure neighbor stability under small feature and scaling changes, balance across the displayed feature families, distance separation, geographic diversity, and coverage. The application should explain both the strongest similarities and important differences. Review case studies for obvious mismatches that a metric misses.
+
+FHFA outcome availability should not define whether two communities are descriptively similar.
+Heavily multifamily tracts may have useful ACS-based matches even when the single-family target is
+missing or less representative. Keep retrieval coverage, outcome-based analogue evaluation, and
+target representativeness as separate reported quantities. This avoids optimizing the entire
+similarity experience around the subset of places that FHFA measures best.
 
 ## Optional trajectory clustering
 

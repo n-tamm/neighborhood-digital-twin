@@ -16,6 +16,26 @@ Freeze split definitions before tuning:
 
 Use expanding-window or rolling-origin evaluation. Do not randomly split tract-year rows. Adjacent observations from the same tract share history, and ACS releases overlap.
 
+The first split contract is now frozen in `gold_model_split_assignment`. The locked test origins
+are 2024, 2022, and 2020 for the one-, three-, and five-year horizons. Calibration uses 2023, 2019,
+and 2015; validation uses 2021-2022, 2017-2018, and 2014. Labels that end after the applicable
+locked test origin are purged. Maine, North Dakota, West Virginia, and New Mexico are held out as
+the deterministic geographic transfer sample. If the team changes this contract, it should create
+a new split version rather than overwrite the meaning of the existing evaluation.
+
+The independent-year count is the binding limitation. One-year modeling has ten training origins
+and three-year modeling has six; five-year modeling has only three. Repeated tract rows provide
+cross-sectional information but do not turn three time origins into a large temporal sample. The
+one-year horizon is therefore primary, three years is secondary, and five years should remain a
+simple, exploratory comparison unless a revised design creates more defensible independent
+periods.
+
+The broader post-2020-only tract cohort first appears in validation and later periods because it
+does not have stable pre-2020 geography. Report it separately from the stable longitudinal cohort.
+Otherwise a change in the evaluated tract population could be mistaken for a change in temporal
+forecast performance. The broader slice remains useful as a realistic test of current national
+coverage, but the stable slice is the cleaner like-for-like time comparison.
+
 ## Baseline ladder
 
 Every horizon should include the baselines it can support:
@@ -33,6 +53,11 @@ Baselines use the same rows, split, and metrics as the candidate model. A baseli
 Select one gradient-boosted tree implementation based on missing-value support, training time, reproducibility, interpretability, Databricks compatibility, and team familiarity. HistGradientBoosting, XGBoost, LightGBM, or CatBoost can all be reasonable; the decision belongs in an ADR after a small comparison.
 
 Fit a separate direct model for each horizon. Do not recursively feed one-year forecasts into later years for the MVP. Each horizon can have its own eligible population, preprocessing, parameters, calibration, and limitation statement.
+
+Start from `gold_modeling_panel` and filter with its published eligibility fields. Do not rebuild
+splits in a notebook. The shared feature table intentionally contains raw values: imputation,
+scaling, encoding, feature selection, and any target-aware transformation must be fitted inside
+the appropriate training fold.
 
 ## Training pipeline
 
@@ -60,6 +85,12 @@ Add spatial information through explicit, lagged features before considering a g
 
 Spatial features must be computable for new or held-out locations without using their future targets. Record neighbor count and missingness. An island tract needs a documented fallback rather than silently receiving zero.
 
+County and state contemporaneous trend features are available for the first nonspatial baseline.
+True tract-neighbor features are not yet approved because the current geometry is simplified for
+display. The baseline and first nonlinear model should proceed without adjacency; add analytical
+geometry only if the nonspatial comparison leaves a specific question worth the added pipeline
+and validation work.
+
 ## Required ablations
 
 Compare at least:
@@ -78,6 +109,13 @@ The ablation should use the same split and model settings where practical. Its p
 Use mean absolute error as the primary point metric and inspect RMSE, median absolute error, directional accuracy against a majority-direction baseline, and performance relative to persistence and regional baselines. Report coverage and error by housing-stock composition as well as time, geography, HPI history length, and ACS quality. Selection should also consider calibration potential, geographic transfer, stability, runtime, and clarity.
 
 Choose the champion on validation results, write the decision record, and stop broad model search. The locked test is for estimating final performance, not picking a winner.
+
+Coverage must be reported alongside error. FHFA represents a filtered single-family market, and
+earlier EDA showed substantially lower target coverage in heavily multifamily tracts. The model
+can still use housing composition to describe where it is operating, but its output must not be
+reframed as a forecast for the entire local housing market. The ACS inputs are overlapping
+five-year estimates, so a non-overlapping-release sensitivity check is preferable where the
+remaining origin count permits it.
 
 ## Required outputs
 
