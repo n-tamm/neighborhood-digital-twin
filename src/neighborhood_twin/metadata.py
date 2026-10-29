@@ -342,6 +342,12 @@ COMMON_COLUMN_COMMENTS = {
     "summary_group": "Governed category of model-readiness summary rows.",
     "dimension_name": "Field summarized by the model-readiness row.",
     "dimension_value": "Value of the summarized model-readiness dimension.",
+    "non_null_count": "Rows with a populated value for the summarized feature.",
+    "non_null_rate": "Share of summarized rows with a populated feature value.",
+    "observed_target_count": "Rows with an observed direct FHFA outcome in the summary group.",
+    "observed_target_rate": "Share of summarized rows with an observed direct FHFA outcome.",
+    "eligible_evaluation_count": "Rows eligible for the frozen temporal evaluation.",
+    "eligible_evaluation_rate": "Share of summarized rows eligible for temporal evaluation.",
     "is_statistical_profile_safe": (
         "True only when the bridge permits a current tract profile to join to the 2020 identity."
     ),

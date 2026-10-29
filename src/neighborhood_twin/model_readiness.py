@@ -781,66 +781,176 @@ def _build_readiness_summary(
     build_id: str,
     built_at_utc: str,
 ) -> Any:
-    """Summarize feature coverage and panel roles for review before model fitting."""
+    """Summarize features, uncertainty, housing mix, and split coverage before fitting."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
-    feature_summary = features.groupBy("modeling_cohort").agg(
-        functions.count(functions.lit(1)).alias("row_count"),
-        functions.countDistinct("geoid_2020").alias("distinct_tract_count"),
-        functions.countDistinct("forecast_origin_year").alias("origin_year_count"),
-        functions.min("forecast_origin_year").alias("minimum_origin_year"),
-        functions.max("forecast_origin_year").alias("maximum_origin_year"),
-    ).select(
-        functions.lit("feature_cohort").alias("summary_group"),
-        functions.lit(None).cast("int").alias("horizon_years"),
-        functions.lit("modeling_cohort").alias("dimension_name"),
-        functions.col("modeling_cohort").alias("dimension_value"),
-        "row_count",
-        "distinct_tract_count",
-        "origin_year_count",
-        "minimum_origin_year",
-        "maximum_origin_year",
-        functions.lit(None).cast("long").alias("observed_target_count"),
-        functions.lit(None).cast("long").alias("eligible_evaluation_count"),
-    )
-
-    def panel_summary(group: str, dimension: str) -> Any:
-        """Aggregate the modeling panel by one governed review dimension."""
-
-        return panel.groupBy("horizon_years", dimension).agg(
+    feature_summary = (
+        features.groupBy("modeling_cohort")
+        .agg(
             functions.count(functions.lit(1)).alias("row_count"),
             functions.countDistinct("geoid_2020").alias("distinct_tract_count"),
             functions.countDistinct("forecast_origin_year").alias("origin_year_count"),
             functions.min("forecast_origin_year").alias("minimum_origin_year"),
             functions.max("forecast_origin_year").alias("maximum_origin_year"),
-            functions.sum(functions.col("target_is_observed").cast("long")).alias(
-                "observed_target_count"
-            ),
-            functions.sum(
-                functions.col("eligible_for_locked_temporal_evaluation").cast("long")
-            ).alias("eligible_evaluation_count"),
-        ).select(
-            functions.lit(group).alias("summary_group"),
-            "horizon_years",
-            functions.lit(dimension).alias("dimension_name"),
-            functions.col(dimension).alias("dimension_value"),
+        )
+        .select(
+            functions.lit("feature_cohort").alias("summary_group"),
+            functions.lit(None).cast("int").alias("horizon_years"),
+            functions.lit("modeling_cohort").alias("dimension_name"),
+            functions.col("modeling_cohort").alias("dimension_value"),
             "row_count",
             "distinct_tract_count",
             "origin_year_count",
             "minimum_origin_year",
             "maximum_origin_year",
-            "observed_target_count",
-            "eligible_evaluation_count",
+            functions.lit(None).cast("long").alias("non_null_count"),
+            functions.lit(None).cast("double").alias("non_null_rate"),
+            functions.lit(None).cast("long").alias("observed_target_count"),
+            functions.lit(None).cast("double").alias("observed_target_rate"),
+            functions.lit(None).cast("long").alias("eligible_evaluation_count"),
+            functions.lit(None).cast("double").alias("eligible_evaluation_rate"),
+        )
+    )
+
+    profiled_features = MODEL_ACS_FEATURE_COLUMNS + (
+        "origin_hpi",
+        "origin_annual_change_pct",
+        "hpi_lag_1",
+        "hpi_lag_3",
+        "hpi_lag_5",
+        "hpi_change_1_year_pct",
+        "hpi_change_3_year_pct",
+        "hpi_change_5_year_pct",
+        "hpi_recent_3_year_mean_change_pct",
+        "hpi_recent_5_year_change_stddev_pct",
+        "county_origin_mean_annual_change_pct",
+        "state_origin_mean_annual_change_pct",
+    )
+    feature_aggregate = features.agg(
+        functions.count(functions.lit(1)).alias("_row_count"),
+        functions.countDistinct("geoid_2020").alias("_distinct_tract_count"),
+        functions.countDistinct("forecast_origin_year").alias("_origin_year_count"),
+        functions.min("forecast_origin_year").alias("_minimum_origin_year"),
+        functions.max("forecast_origin_year").alias("_maximum_origin_year"),
+        *tuple(
+            functions.count(functions.col(feature)).alias(f"_non_null_{index}")
+            for index, feature in enumerate(profiled_features)
+        ),
+    )
+    feature_missingness = feature_aggregate.select(
+        "_row_count",
+        "_distinct_tract_count",
+        "_origin_year_count",
+        "_minimum_origin_year",
+        "_maximum_origin_year",
+        functions.explode(
+            functions.array(
+                *tuple(
+                    functions.struct(
+                        functions.lit(feature).alias("feature_name"),
+                        functions.col(f"_non_null_{index}").alias("non_null_count"),
+                    )
+                    for index, feature in enumerate(profiled_features)
+                )
+            )
+        ).alias("_feature"),
+    ).select(
+        functions.lit("feature_missingness").alias("summary_group"),
+        functions.lit(None).cast("int").alias("horizon_years"),
+        functions.lit("feature_name").alias("dimension_name"),
+        functions.col("_feature.feature_name").alias("dimension_value"),
+        functions.col("_row_count").alias("row_count"),
+        functions.col("_distinct_tract_count").alias("distinct_tract_count"),
+        functions.col("_origin_year_count").alias("origin_year_count"),
+        functions.col("_minimum_origin_year").alias("minimum_origin_year"),
+        functions.col("_maximum_origin_year").alias("maximum_origin_year"),
+        functions.col("_feature.non_null_count").alias("non_null_count"),
+        (
+            functions.col("_feature.non_null_count") / functions.col("_row_count")
+        ).alias("non_null_rate"),
+        functions.lit(None).cast("long").alias("observed_target_count"),
+        functions.lit(None).cast("double").alias("observed_target_rate"),
+        functions.lit(None).cast("long").alias("eligible_evaluation_count"),
+        functions.lit(None).cast("double").alias("eligible_evaluation_rate"),
+    )
+
+    panel_with_bands = (
+        panel.withColumn(
+            "housing_mix_band",
+            functions.when(
+                functions.col("single_family_share_estimate").isNull(),
+                functions.lit("missing"),
+            )
+            .when(functions.col("single_family_share_estimate") < 0.25, "under_25_percent")
+            .when(functions.col("single_family_share_estimate") < 0.50, "25_to_49_percent")
+            .when(functions.col("single_family_share_estimate") < 0.75, "50_to_74_percent")
+            .when(functions.col("single_family_share_estimate") < 0.90, "75_to_89_percent")
+            .otherwise("90_percent_or_more"),
+        )
+        .withColumn(
+            "housing_units_relative_moe_band",
+            functions.when(
+                functions.col("housing_units_total_relative_moe").isNull(),
+                functions.lit("missing"),
+            )
+            .when(functions.col("housing_units_total_relative_moe") < 0.10, "under_10_percent")
+            .when(functions.col("housing_units_total_relative_moe") < 0.25, "10_to_24_percent")
+            .when(functions.col("housing_units_total_relative_moe") < 0.50, "25_to_49_percent")
+            .otherwise("50_percent_or_more"),
+        )
+    )
+
+    def panel_summary(source: Any, group: str, dimension: str) -> Any:
+        """Aggregate the modeling panel by one governed review dimension."""
+
+        return (
+            source.groupBy("horizon_years", dimension)
+            .agg(
+                functions.count(functions.lit(1)).alias("row_count"),
+                functions.countDistinct("geoid_2020").alias("distinct_tract_count"),
+                functions.countDistinct("forecast_origin_year").alias("origin_year_count"),
+                functions.min("forecast_origin_year").alias("minimum_origin_year"),
+                functions.max("forecast_origin_year").alias("maximum_origin_year"),
+                functions.sum(functions.col("target_is_observed").cast("long")).alias(
+                    "observed_target_count"
+                ),
+                functions.sum(
+                    functions.col("eligible_for_locked_temporal_evaluation").cast("long")
+                ).alias("eligible_evaluation_count"),
+            )
+            .select(
+                functions.lit(group).alias("summary_group"),
+                "horizon_years",
+                functions.lit(dimension).alias("dimension_name"),
+                functions.col(dimension).alias("dimension_value"),
+                "row_count",
+                "distinct_tract_count",
+                "origin_year_count",
+                "minimum_origin_year",
+                "maximum_origin_year",
+                functions.lit(None).cast("long").alias("non_null_count"),
+                functions.lit(None).cast("double").alias("non_null_rate"),
+                "observed_target_count",
+                (functions.col("observed_target_count") / functions.col("row_count")).alias(
+                    "observed_target_rate"
+                ),
+                "eligible_evaluation_count",
+                (
+                    functions.col("eligible_evaluation_count") / functions.col("row_count")
+                ).alias("eligible_evaluation_rate"),
+            )
         )
 
-    summary = feature_summary
+    summary = feature_summary.unionByName(feature_missingness)
     for group, dimension in (
         ("panel_temporal_role", "temporal_role"),
         ("panel_geographic_role", "geographic_role"),
         ("panel_modeling_cohort", "modeling_cohort"),
+        ("panel_housing_mix", "housing_mix_band"),
+        ("panel_acs_uncertainty", "housing_units_relative_moe_band"),
     ):
-        summary = summary.unionByName(panel_summary(group, dimension))
+        summary = summary.unionByName(panel_summary(panel_with_bands, group, dimension))
     return _lineage(summary, build_id=build_id, built_at_utc=built_at_utc)
 
 
