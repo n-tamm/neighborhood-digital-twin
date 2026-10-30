@@ -8,9 +8,9 @@ committed as changing binary files in Git.
 ## Shared location
 
 - **Volume:** `workspace.neighborhood_twin_gold.eda_figures`
-- **Current build:** `20261030T142633664611Z`
+- **Current build:** `20261030T144543109338Z`
 - **Current build directory:**
-  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261030T142633664611Z/`
+  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261030T144543109338Z/`
 - **Manifest table:**
   `workspace.neighborhood_twin_gold.gold_eda_figure_manifest`
 
@@ -34,7 +34,7 @@ successful run will replace the current manifest while retaining prior versioned
 12. `12_state_forecast_coverage.png`
 
 The expanded workflow completed successfully on October 30, 2026. Its manifest contains all
-twelve expected files, and the smallest rendered PNG is 85,898 bytes. The publication guard
+twelve expected files, and the smallest rendered PNG is 86,138 bytes. The publication guard
 requires every file to exceed 10,000 bytes, so a blank or obviously incomplete render cannot
 silently become the current figure set.
 

@@ -516,7 +516,7 @@ for row_index in range(origin_matrix.shape[0]):
             str(value),
             ha="center",
             va="center",
-            color="white" if value >= 5 else TEXT,
+            color=TEXT if value >= 5 else "white",
             fontweight="semibold",
         )
 axis.set_xticks(range(len(role_labels)), role_labels)
@@ -863,14 +863,21 @@ axes[1, 0].text(
     va="center",
     fontweight="semibold",
 )
-coverage_colorbar = figure.colorbar(
-    coverage_collection, ax=list(axes[0, :]), shrink=0.65, pad=0.015
+figure.subplots_adjust(
+    top=0.91,
+    bottom=0.08,
+    left=0.10,
+    right=0.82,
+    hspace=0.12,
+    wspace=0.08,
 )
+coverage_colorbar_axis = figure.add_axes([0.85, 0.58, 0.015, 0.22])
+coverage_colorbar = figure.colorbar(coverage_collection, cax=coverage_colorbar_axis)
 coverage_colorbar.set_label("County share of tracts eligible for forecasting")
-change_colorbar = figure.colorbar(change_collection, ax=list(axes[1, :]), shrink=0.65, pad=0.015)
+change_colorbar_axis = figure.add_axes([0.85, 0.19, 0.015, 0.22])
+change_colorbar = figure.colorbar(change_collection, cax=change_colorbar_axis)
 change_colorbar.set_label("County median latest annual HPI change (%)")
 figure.suptitle("County rollups reveal patterns hidden by tract boundaries", y=0.98, fontsize=15)
-figure.subplots_adjust(top=0.91, bottom=0.08, hspace=0.12, wspace=0.08)
 add_source_note(
     figure,
     "County shapes are dissolved from display-only tract geometry. Aggregates summarize the "

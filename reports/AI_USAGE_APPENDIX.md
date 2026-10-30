@@ -180,8 +180,9 @@ unsupported claim that added model complexity was uniformly better. The similari
 the expected 120 non-self matches. PCA retained 95.5% of standardized variance, but its top-10
 neighbors overlapped the raw representation by only 5.5 matches on average, so the implementation
 notes require case review and retrospective evaluation before choosing a final representation.
-The expanded EDA manifest also reconciled to all twelve expected figures, with no file below
-85,898 bytes.
+The expanded EDA manifest also reconciled to all twelve expected figures. A follow-up visual QA
+pass corrected heatmap-label contrast and reserved separate colorbar space on the county rollup
+map; the replacement build again produced all twelve figures, with no file below 86,138 bytes.
 
 ## Maintenance requirements
 
