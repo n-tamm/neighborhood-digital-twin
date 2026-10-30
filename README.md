@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current similarity and forecast cohorts, governed EDA summaries, seven versioned report-ready figures, and published historical neighborhood-state and forecast-target tables. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe model features, frozen temporal and geographic assignments, a joined modeling panel, and readiness summaries are now live for 63,367 tracts. The next milestone is fitting and comparing forecast and similarity baselines while a descriptive application shell is developed against existing current-state products. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, model, evaluation, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current and historical analytical products, twelve versioned EDA figures, and seven model-evaluation figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe model features, frozen temporal and geographic assignments, and a joined modeling panel are live for 63,367 tracts. Forecast and current-state similarity baselines now run as tracked MLflow experiments; the next work is focused nonlinear comparison, uncertainty calibration, time-safe analogue evaluation, and a descriptive application shell. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -44,8 +44,11 @@ flowchart LR
     B --> C[Bronze schema]
     C --> D[Silver schema]
     D --> G[Gold neighborhood state]
-    G --> F[Forecasts and uncertainty]
-    G --> R[Representations and analogues]
+    G --> M[Model schema]
+    M --> F[Forecasts and uncertainty]
+    M --> R[Representations and analogues]
+    F --> E[Evaluation schema]
+    R --> E
     F --> X[Scenario engine]
     R --> X
     F --> P[Versioned serving tables]
@@ -121,8 +124,10 @@ The primary
 ACS silver product uses one tract-release-measure row with a companion data dictionary, while a
 generated wide table supports compact feature construction. The gold layer keeps all canonical
 tracts and exposes transparent similarity, forecasting, and application-development cohorts.
-Forecast and similarity models, uncertainty calibration, model outputs, serving tables, and the
-interactive application have not been implemented yet.
+Initial forecast and current-state similarity baselines, shared MLflow tracking, validation
+scorecards, and seven model-evaluation figures are implemented. Calibrated uncertainty,
+time-safe retrospective analogues, final locked-test results, serving tables, and the interactive
+application have not been implemented yet.
 
 PowerShell:
 
@@ -154,7 +159,7 @@ it works from a clean checkout using relative paths.
 
 The Databricks jobs are deployed through the root [databricks.yml](databricks.yml), so a second Git
 clone inside the Databricks workspace is not required. Their display names and tags group them as
-setup, bronze, silver, gold, analysis, and metadata jobs. The canonical commands, dependencies,
+setup, bronze, silver, gold, analysis, modeling, evaluation, and metadata jobs. The canonical commands, dependencies,
 source-refresh paths, and recovery instructions are maintained in the
 [Databricks pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
@@ -183,13 +188,13 @@ are in the [data guide](docs/data/README.md); implementation details are in [Sta
 - Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
-forecast-target, point-in-time feature, frozen split, and model-panel products, including the
-Connecticut current-geography bridge and the first reviewed visual-EDA figure set. It is ready for
-baseline forecasting and retrospective similarity work, but it is not yet a functioning model or
-application. Model-focused exploration, model fitting, evaluation, serving products, and the
-interactive application still remain. The current figure location and
-reproduction steps are documented in
-[reports/EDA_FIGURES.md](reports/EDA_FIGURES.md).
+forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
+initial forecast and similarity outputs in a dedicated model schema and governed diagnostics in
+a separate evaluation schema. These are development baselines, not final models: model selection,
+calibrated uncertainty, retrospective analogue evaluation, serving products, and the interactive
+application remain. Current figure locations and reproduction steps are documented in the
+[EDA figure guide](reports/EDA_FIGURES.md) and
+[model evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md).
 
 ## Planned deployment
 

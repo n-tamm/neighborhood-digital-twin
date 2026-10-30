@@ -27,8 +27,14 @@ variables:
     description: Cleaned and conformed analytical tables
     default: neighborhood_twin_silver
   gold_schema:
-    description: Analysis, modeling, and application-ready products
+    description: Curated analytical inputs and application-ready data products
     default: neighborhood_twin_gold
+  model_schema:
+    description: Model predictions, matches, fitted-output references, and model artifacts
+    default: neighborhood_twin_model
+  evaluation_schema:
+    description: Model scorecards, diagnostics, evaluation manifests, and reviewed figures
+    default: neighborhood_twin_evaluation
   quality_schema:
     description: Persisted validation and pipeline-observability outputs
     default: neighborhood_twin_quality
@@ -122,6 +128,12 @@ variables:
   eda_figure_manifest_table:
     description: Current manifest of rendered EDA figures
     default: gold_eda_figure_manifest
+  evaluation_figure_volume:
+    description: Managed volume for versioned model-evaluation figures
+    default: model_evaluation_figures
+  evaluation_figure_manifest_table:
+    description: Current manifest of rendered model-evaluation figures
+    default: model_evaluation_figure_manifest
   application_demo_state_fips:
     description: Small state scope used only for interactive application testing
     default: "04,26,42"
@@ -137,6 +149,12 @@ variables:
   geographic_holdout_seed:
     description: Seed for deterministic selection of one holdout state per Census region
     default: "699"
+  forecast_mlflow_experiment:
+    description: Shared MLflow experiment for validation-only forecast development
+    default: /Shared/neighborhood-digital-twin/forecast-baselines
+  similarity_mlflow_experiment:
+    description: Shared MLflow experiment for neighborhood representation development
+    default: /Shared/neighborhood-digital-twin/similarity-baselines
 
 resources:
   jobs:
@@ -159,8 +177,11 @@ resources:
               bronze_schema: ${var.bronze_schema}
               silver_schema: ${var.silver_schema}
               gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
               quality_schema: ${var.quality_schema}
               volume: ${var.volume}
+              evaluation_figure_volume: ${var.evaluation_figure_volume}
     core_source_ingestion:
       name: Neighborhood Digital Twin | 100 Bronze | Core Source Ingestion
       description: Ingests the initial FHFA, Census geography, and ACS feasibility sources.
@@ -369,6 +390,8 @@ resources:
               bronze_schema: ${var.bronze_schema}
               silver_schema: ${var.silver_schema}
               gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
               quality_schema: ${var.quality_schema}
     geography_relationship_pipeline:
       name: Neighborhood Digital Twin | 201 Silver | Tract Relationship
@@ -633,6 +656,89 @@ resources:
             dependencies:
               - matplotlib==3.9.2
               - shapely==2.0.6
+    forecast_baselines:
+      name: Neighborhood Digital Twin | 500 Modeling | Forecast Baselines
+      description: Fits interpretable development models and publishes validation-only scorecards.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "500"
+        lifecycle: model_development
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_forecast_baselines
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/01_run_forecast_baselines.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              modeling_panel_table: gold_modeling_panel
+              prediction_table: forecast_baseline_prediction
+              scorecard_table: forecast_baseline_scorecard
+              reg_param: "0.05"
+              mlflow_experiment: ${var.forecast_mlflow_experiment}
+    similarity_baselines:
+      name: Neighborhood Digital Twin | 501 Modeling | Similarity Baselines
+      description: Compares standardized and PCA neighborhood matches for a reviewable query set.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "501"
+        lifecycle: model_development
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_similarity_baselines
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/02_run_similarity_baselines.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              candidate_table: gold_similarity_candidate_current
+              match_table: similarity_baseline_match
+              summary_table: similarity_baseline_summary
+              query_geoids: ""
+              query_state_fips: ${var.application_demo_state_fips}
+              queries_per_state: "2"
+              top_k: "10"
+              pca_components: "6"
+              mlflow_experiment: ${var.similarity_mlflow_experiment}
+    model_evaluation_figures:
+      name: Neighborhood Digital Twin | 600 Evaluation | Model Diagnostics
+      description: Renders seven versioned forecast and similarity evaluation figures and a manifest.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: evaluation
+        run_order: "600"
+        lifecycle: model_diagnostic
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: render_model_evaluation_figures
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/03_render_model_evaluation.py
+            base_parameters:
+              catalog: ${var.catalog}
+              evaluation_schema: ${var.evaluation_schema}
+              scorecard_table: forecast_baseline_scorecard
+              similarity_summary_table: similarity_baseline_summary
+              figure_volume: ${var.evaluation_figure_volume}
+              figure_manifest_table: ${var.evaluation_figure_manifest_table}
+          environment_key: evaluation_figures
+      environments:
+        - environment_key: evaluation_figures
+          spec:
+            environment_version: "2"
+            dependencies:
+              - matplotlib==3.9.2
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.
@@ -653,6 +759,8 @@ resources:
               bronze_schema: ${var.bronze_schema}
               silver_schema: ${var.silver_schema}
               gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
               quality_schema: ${var.quality_schema}
 
 targets:

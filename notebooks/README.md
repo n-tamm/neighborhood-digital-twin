@@ -31,7 +31,14 @@ the quality schema, including failed attempts that explain why a run was correct
 
 `04_exploration/02_build_visual_eda.py` adds governed housing-composition, cohort-comparison, and
 temporal summaries. `04_exploration/03_render_eda_figures.py` consumes those contracts plus the
-approved display geometry and writes a versioned seven-figure set to the Unity Catalog
+approved display geometry and writes a versioned twelve-figure set to the Unity Catalog
 `eda_figures` volume. The gold figure manifest is the authoritative pointer to the current set.
+
+`05_modeling/01_run_forecast_baselines.py` fits the fixed baseline ladder and one regularized
+linear model from the published modeling panel. It writes validation-only predictions and sliced
+scorecards and records the run in MLflow; it does not score the locked temporal tests.
+`05_modeling/02_run_similarity_baselines.py` compares standardized raw and PCA current-state
+matches for a small deterministic review set. That output is an inspection baseline, not yet the
+time-safe historical analogue product used for final evaluation or serving.
 
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.

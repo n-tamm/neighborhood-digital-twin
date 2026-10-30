@@ -10,17 +10,20 @@ operational question: **what should run, in what order, and when should it not r
 Every bundle job has a sortable display name and four tags:
 
 - `project=neighborhood-digital-twin` keeps the project jobs filterable;
-- `pipeline_group` is `setup`, `bronze`, `silver`, `gold`, `analysis`, or `metadata`;
+- `pipeline_group` is `setup`, `bronze`, `silver`, `gold`, `analysis`, `modeling`, `evaluation`,
+  or `metadata`;
 - `run_order` matches the number in the display name; and
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, and `900 Metadata`. Jobs increment by one inside each three-digit layer range,
+`400-401 Analysis`, `500-501 Modeling`, `600 Evaluation`, and `900 Metadata`. Jobs increment by one inside each
+three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
 ranges are `000-099` for setup and operations, `100-199` for bronze, `200-299` for silver,
-`300-399` for gold, `400-499` for analysis, and `900-999` for metadata. The bundle job keys remain
-stable even if a display label is clarified later.
+`300-399` for gold, `400-499` for analysis, `500-599` for modeling, `600-699` for evaluation,
+and `900-999` for metadata.
+The bundle job keys remain stable even if a display label is clarified later.
 
 ## Job inventory
 
@@ -43,6 +46,9 @@ stable even if a display label is clarified later.
 | 302 | Gold | `gold_model_readiness` | After 301 or a feature/split-contract change | Rebuilds point-in-time features, frozen splits, panel, and readiness summaries |
 | 400 | Analysis | `data_readiness_eda` | After relevant silver or current-gold changes | Publishes governed coverage and feasibility summaries |
 | 401 | Analysis | `visual_eda` | After 400 or visual-analysis code changes | Rebuilds visual summaries and versioned EDA figures |
+| 500 | Modeling | `forecast_baselines` | After 302 or forecast-development code changes | Publishes validation-only baseline predictions and scorecards; does not open locked tests |
+| 501 | Modeling | `similarity_baselines` | After 300 or similarity-development code changes | Publishes a small reviewable current-state baseline, not the final retrospective analogue product |
+| 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -63,6 +69,9 @@ stable even if a display label is clarified later.
 200 Silver + 201/203/205 Geography -------------> 301 Historical gold
 301 Historical gold ----------------------------> 302 Model readiness
 200/300 Gold -----------------------------------> 400 Readiness EDA --> 401 Visual EDA
+302 Model readiness ----------------------------> 500 Forecast baselines
+300 Current gold -------------------------------> 501 Similarity baselines
+500 Forecast + 501 Similarity ------------------> 600 Model evaluation figures
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -109,6 +118,39 @@ databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t tea
 Run jobs 400 and 401 afterward only when the change affects an EDA input, documented finding, or
 figure. A documentation-only change requires no Databricks job.
 
+### Modeling development change
+
+The two initial workflows are independent after their upstream tables exist, so teammates may
+run them in parallel during an agreed deployment window:
+
+```powershell
+databricks bundle run forecast_baselines --profile neighborhood-twin -t team
+databricks bundle run similarity_baselines --profile neighborhood-twin -t team
+databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
+databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
+```
+
+Job 500 may read training and validation assignments but publishes validation predictions only.
+It must not be changed to inspect the locked temporal tests during model development. Job 501 is
+a current-state representation check; historical analogue evaluation will be a later numbered
+workflow once its time-safe retrieval contract is implemented.
+Job 600 reads the governed evaluation summaries, writes versioned PNGs to the evaluation volume,
+and records both source MLflow run IDs in its manifest.
+
+### Find the MLflow experiments
+
+The modeling notebooks create their shared experiment folders idempotently. In the Databricks
+left navigation, open **Workspace**, then **Shared**, then `neighborhood-digital-twin`. The current
+experiments are:
+
+- `/Shared/neighborhood-digital-twin/forecast-baselines` (experiment ID `3001817840578297`);
+- `/Shared/neighborhood-digital-twin/similarity-baselines` (experiment ID `3001817840578298`).
+
+They can also be found from **Machine Learning** or **Experiments** by searching for
+`forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
+corresponding MLflow run. The evaluation manifest records the exact forecast and similarity run
+IDs used by each figure build, so figures should not be associated with experiments by date alone.
+
 ## Source refresh paths
 
 ### New or corrected ACS snapshots
@@ -120,19 +162,22 @@ figure. A documentation-only change requires no Databricks job.
 4. Run 203-205 only if tract identifiers, the Connecticut reference, or canonical geography changed.
 5. Run 300, 301, and 302 in order.
 6. Run 400 and 401 when analytical summaries or figures need refreshing.
-7. Finish with 900.
+7. Run 500 and 501 when the source change should be reflected in model-development outputs.
+8. Run 600 when reviewed evaluation figures should reflect those model runs.
+9. Finish with 900.
 
 ### New FHFA release
 
 1. Run 100 only after confirming the core acquisition job points to the intended publisher file.
 2. Run 200, then 300, 301, and 302.
 3. Refresh 400 and 401 if the added year changes coverage or reported figures.
-4. Finish with 900.
+4. Refresh 500 and 501 after the upstream contracts pass.
+5. Finish with 900.
 
 ### Geography-source change
 
 Run only the affected jobs among 201-203, then run 204 and 205 when their inputs changed. Follow
-with 300, 301, 302, the affected analysis jobs, and 900. Do not use simplified display geometry
+with 300, 301, 302, the affected analysis and modeling jobs, and 900. Do not use simplified display geometry
 from job 202 for adjacency, distance, or other analytical spatial work.
 
 ## One-time national backfill and failure recovery
@@ -168,6 +213,10 @@ Do not continue merely because a job is green. Before advancing:
 - Model readiness: no future ACS use, target-timing error, duplicate key, split mismatch, or
   geographic-holdout failure exists.
 - Analysis: figures and manifests point to the current analytical build.
+- Modeling: MLflow records the input contract and parameters; forecast outputs contain only
+  validation roles; similarity outputs exclude self-matches and reconcile to the query count.
+- Evaluation: every expected figure exists, exceeds the publication size guard, links to current
+  source run IDs, and has been visually reviewed for readable labels and valid interpretation.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule

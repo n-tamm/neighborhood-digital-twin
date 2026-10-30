@@ -34,11 +34,23 @@ and test whether fine categories improve held-out performance enough to justify 
 ## Implemented visual checkpoint
 
 The `visual_eda` job completes the next descriptive pass with three additional governed tables and
-a versioned figure manifest. It produces seven reviewed PNGs covering pipeline attrition, housing
-composition, included-versus-excluded tracts, ACS uncertainty, FHFA behavior over time, forecast
-eligibility maps, and recent HPI-change maps. The figures live in the managed
+a versioned figure manifest. Its expanded workflow produces twelve PNGs covering pipeline
+attrition, housing composition, included-versus-excluded tracts, ACS uncertainty, FHFA behavior
+over time, the 2010-to-2020 tract-vintage break, model-feature completeness, independent split
+periods, state coverage, and county- and tract-level maps. The figures live in the managed
 `neighborhood_twin_gold.eda_figures` volume; `gold_eda_figure_manifest` identifies the matched
 current set and explains what each figure is intended to show.
+
+The tract-vintage view is a modeling guardrail, not just a source chart. It shows that pre-2020
+history uses the conservative stable-tract subset while later releases contain a larger tract
+universe. Stable and broader cohorts therefore need separate model results. The split-period view
+also keeps the five-year horizon's limited independent time evidence visible even though the
+underlying panel contains many repeated tract rows.
+
+The revised map treatment uses subdued tract boundaries, clearer dissolved county outlines,
+consistent color scales, and a separate missing-data color. County shapes are derived only for
+display. They do not change the rule that simplified geometry is prohibited for adjacency,
+distance, spatial weighting, or other analytical modeling.
 
 The October 24, 2026 run found a strong housing-composition limitation in the forecasting target.
 Among current-ACS tracts with less than 25% single-family housing, 21.2% have any FHFA history and

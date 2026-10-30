@@ -224,12 +224,52 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Versioned inventory of report-ready EDA figures stored in the managed figure volume.",
         "One row per figure in the current visual EDA build.",
     ),
+    "forecast_baseline_prediction": TableMetadata(
+        "Validation-only predictions from fixed forecasting baselines and the initial regularized "
+        "linear model; locked temporal tests are deliberately absent.",
+        "One row per tract, forecast origin, horizon, and baseline model.",
+    ),
+    "forecast_baseline_scorecard": TableMetadata(
+        "Forecast development metrics, bias, tail error, explanatory power, and baseline skill "
+        "across overall, geography, cohort, housing-composition, and state slices.",
+        "One row per model, horizon, slice name, and slice value.",
+    ),
+    "similarity_baseline_match": TableMetadata(
+        "Reviewable current-state neighborhood matches from standardized raw and PCA "
+        "representations.",
+        "One row per query tract, representation, and match rank.",
+    ),
+    "similarity_baseline_summary": TableMetadata(
+        "Separation, geographic diversity, overlap, and PCA coverage diagnostics for the initial "
+        "similarity representations.",
+        "One row per similarity representation and baseline run.",
+    ),
+    "model_evaluation_figure_manifest": TableMetadata(
+        "Versioned inventory of model-evaluation figures stored in the managed evaluation "
+        "figure volume.",
+        "One row per figure in the current model-evaluation build.",
+    ),
+}
+
+MODEL_TABLES = {
+    "forecast_baseline_prediction",
+    "similarity_baseline_match",
+}
+
+EVALUATION_TABLES = {
+    "forecast_baseline_scorecard",
+    "similarity_baseline_summary",
+    "model_evaluation_figure_manifest",
 }
 
 TABLE_LAYERS = {
     table: (
         "quality"
         if table.endswith("quality_metrics")
+        else "model"
+        if table in MODEL_TABLES
+        else "evaluation"
+        if table in EVALUATION_TABLES
         else "bronze"
         if table == "source_snapshot_manifest" or table.startswith("bronze_")
         else "silver"
@@ -414,6 +454,102 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "figure_purpose": "Decision or analytical question the figure is intended to support.",
     "byte_size": "Size of the rendered figure file in bytes.",
+    "model_name": "Stable name of the forecasting model or fixed baseline.",
+    "prediction_cumulative_log_change": (
+        "Predicted natural log of endpoint HPI divided by origin HPI."
+    ),
+    "prediction_annualized_change_pct": (
+        "Annualized percentage change implied by the cumulative model prediction."
+    ),
+    "residual_cumulative_log_change": "Observed minus predicted cumulative FHFA HPI log change.",
+    "absolute_error_cumulative_log_change": (
+        "Absolute observed-minus-predicted cumulative FHFA HPI log change."
+    ),
+    "residual_annualized_change_pct": (
+        "Observed minus predicted annualized FHFA HPI percentage change."
+    ),
+    "absolute_error_annualized_change_pct": (
+        "Absolute observed-minus-predicted annualized FHFA HPI percentage-point error."
+    ),
+    "evaluation_geography": "Development-state or held-out-state evaluation population.",
+    "housing_composition_band": (
+        "Interpretable band based on the ACS share of single-family housing units."
+    ),
+    "acs_uncertainty_band": (
+        "Band based on the largest available relative margin of error among median household "
+        "income, owner-occupied value, and gross rent."
+    ),
+    "slice_name": "Evaluation dimension used by this scorecard row.",
+    "slice_value": "Evaluated value within the named scorecard dimension.",
+    "observation_count": "Prediction rows included in the evaluation slice.",
+    "tract_count": "Distinct Census tracts included in the evaluation slice.",
+    "mae_log_change": "Mean absolute error on the cumulative FHFA HPI log-change target.",
+    "rmse_log_change": "Root mean squared error on the cumulative FHFA HPI log-change target.",
+    "median_absolute_error_log_change": (
+        "Median absolute error on the cumulative FHFA HPI log-change target."
+    ),
+    "p90_absolute_error_log_change": (
+        "Ninetieth percentile absolute error on the cumulative FHFA HPI log-change target."
+    ),
+    "mean_error_log_change": (
+        "Mean signed residual on the cumulative log-change scale; positive means underprediction."
+    ),
+    "error_standard_deviation_log_change": (
+        "Sample standard deviation of signed cumulative log-change residuals."
+    ),
+    "mae_annualized_change_pct": (
+        "Mean absolute error in annualized FHFA HPI percentage points."
+    ),
+    "rmse_annualized_change_pct": (
+        "Root mean squared error in annualized FHFA HPI percentage points."
+    ),
+    "mean_error_annualized_change_pct": (
+        "Mean signed annualized percentage-point error; positive means underprediction."
+    ),
+    "r_squared": "Coefficient of determination within the declared evaluation slice.",
+    "mae_skill_vs_zero_change": (
+        "Relative MAE improvement over the zero-change baseline; positive values are better."
+    ),
+    "rmse_skill_vs_zero_change": (
+        "Relative RMSE improvement over the zero-change baseline; positive values are better."
+    ),
+    "directional_accuracy": "Share of predictions with the same change direction as the target.",
+    "target_positive_share": "Share of observed targets with a positive cumulative log change.",
+    "majority_direction_accuracy": (
+        "Accuracy achieved by always predicting the majority target direction in the slice."
+    ),
+    "directional_accuracy_lift": (
+        "Directional accuracy minus the majority-direction accuracy in the same slice."
+    ),
+    "query_geoid_2020": "Canonical 2020 tract GEOID used as the similarity query.",
+    "match_geoid_2020": "Canonical 2020 tract GEOID returned as a similarity match.",
+    "representation_name": "Standardized-raw or PCA representation used for retrieval.",
+    "similarity_distance": "Euclidean distance in the named fitted representation.",
+    "match_rank": "One-based nearest-neighbor rank within query and representation.",
+    "pca_explained_variance": "Share of standardized feature variance retained by the PCA model.",
+    "cross_state_match_share": "Share of matches located outside their query tract's state.",
+    "mean_raw_pca_top_k_overlap": (
+        "Mean number of returned neighbors shared by the raw and PCA top-k lists."
+    ),
+    "mean_raw_pca_top_k_overlap_share": (
+        "Mean raw-versus-PCA neighbor overlap divided by the requested top-k count."
+    ),
+    "same_county_match_share": (
+        "Share of returned matches in the same state and county as the query tract."
+    ),
+    "p10_similarity_distance": "Tenth percentile match distance for the representation.",
+    "p25_similarity_distance": "Twenty-fifth percentile match distance for the representation.",
+    "p75_similarity_distance": "Seventy-fifth percentile match distance for the representation.",
+    "p90_similarity_distance": "Ninetieth percentile match distance for the representation.",
+    "similarity_distance_iqr": (
+        "Interquartile range of returned match distances within the representation."
+    ),
+    "evaluation_build_id": "Identifier for the model-evaluation figure build.",
+    "evaluation_built_at_utc": "UTC timestamp when the evaluation figure build completed.",
+    "figure_file_name": "Stable PNG file name within the versioned evaluation build directory.",
+    "figure_path": "Managed-volume path containing the rendered evaluation figure.",
+    "source_forecast_run_id": "Forecast MLflow run represented by the evaluation figure build.",
+    "source_similarity_run_id": "Similarity MLflow run represented by the evaluation figure build.",
 }
 
 
@@ -453,20 +589,29 @@ def apply_table_metadata(
     bronze_schema: str | None = None,
     silver_schema: str | None = None,
     gold_schema: str | None = None,
+    model_schema: str | None = None,
+    evaluation_schema: str | None = None,
     quality_schema: str | None = None,
 ) -> list[str]:
     """Apply idempotent table descriptions and column comments to existing managed tables."""
 
     if schema is not None:
-        bronze_schema = silver_schema = gold_schema = quality_schema = schema
+        bronze_schema = schema
+        silver_schema = schema
+        gold_schema = schema
+        model_schema = schema
+        evaluation_schema = schema
+        quality_schema = schema
     layer_schemas = {
         "bronze": bronze_schema,
         "silver": silver_schema,
         "gold": gold_schema,
+        "model": model_schema,
+        "evaluation": evaluation_schema,
         "quality": quality_schema,
     }
     if any(value is None for value in layer_schemas.values()):
-        raise ValueError("Provide schema or all four layer-specific schemas")
+        raise ValueError("Provide schema or all six layer-specific schemas")
 
     updated: list[str] = []
     for table, metadata in TABLE_METADATA.items():

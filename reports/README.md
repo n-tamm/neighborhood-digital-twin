@@ -20,3 +20,8 @@ specific report draft; do not treat a local export as the source of truth.
 
 See [EDA_FIGURES.md](EDA_FIGURES.md) for the current build, figure inventory, reproduction command,
 and export instructions.
+
+The model-development diagnostics are documented separately in
+[MODEL_EVALUATION_FIGURES.md](MODEL_EVALUATION_FIGURES.md). That guide records the seven current
+evaluation figures, their source MLflow runs, the main findings, and the evaluation work that
+must be completed before final model claims are made.
