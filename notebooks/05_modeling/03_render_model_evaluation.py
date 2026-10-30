@@ -525,8 +525,54 @@ save_figure(
 
 # COMMAND ----------
 
-if len(manifest_rows) != 6:
-    raise RuntimeError(f"Expected six model-evaluation figures, found {len(manifest_rows)}")
+temporal_rows = rows_as_dicts(
+    scorecard.where(
+        "slice_name = 'forecast_origin_year' "
+        "AND model_name IN ('state_current_trend', 'regularized_linear')"
+    ).orderBy("horizon_years", "slice_value", "model_name")
+)
+figure, axes = plt.subplots(1, 3, figsize=(15, 5.5), sharey=True)
+for axis, horizon in zip(axes, (1, 3, 5), strict=True):
+    horizon_rows = [row for row in temporal_rows if int(row["horizon_years"]) == horizon]
+    for model in ("state_current_trend", "regularized_linear"):
+        model_rows = sorted(
+            (row for row in horizon_rows if row["model_name"] == model),
+            key=lambda row: int(str(row["slice_value"])),
+        )
+        axis.plot(
+            [int(str(row["slice_value"])) for row in model_rows],
+            [float(row["mae_log_change"]) for row in model_rows],
+            marker="o",
+            linewidth=2,
+            color=MODEL_COLORS[model],
+            label=MODEL_LABELS[model],
+        )
+    origins = sorted({int(str(row["slice_value"])) for row in horizon_rows})
+    axis.set_xticks(origins)
+    axis.set_title(f"{horizon}-year horizon · {len(origins)} origin(s)")
+    axis.set_xlabel("Forecast-origin year")
+    axis.grid(color=GRID, linewidth=0.7, alpha=0.7)
+axes[0].set_ylabel("Mean absolute cumulative log-change error")
+axes[0].legend(frameon=False)
+figure.suptitle("Few validation origins limit claims about temporal stability", fontsize=15, y=0.98)
+add_source_note(
+    figure,
+    "Each point summarizes many tracts but only one independent forecast-origin year. The locked "
+    "test origin remains unopened and is not shown.",
+)
+save_figure(
+    7,
+    "forecast_temporal_stability",
+    "Forecast accuracy by independent validation origin",
+    "Makes the limited temporal evidence visible instead of treating tract rows as independent "
+    "years.",
+    figure,
+)
+
+# COMMAND ----------
+
+if len(manifest_rows) != 7:
+    raise RuntimeError(f"Expected seven model-evaluation figures, found {len(manifest_rows)}")
 manifest_name = qualified_name(catalog, evaluation_schema, manifest_table)
 manifest = spark.createDataFrame(manifest_rows).withColumn(
     "evaluation_built_at_utc", functions.to_timestamp("evaluation_built_at_utc")
@@ -537,7 +583,7 @@ manifest = spark.createDataFrame(manifest_rows).withColumn(
     .option("overwriteSchema", "true")
     .saveAsTable(manifest_name)
 )
-if spark.table(manifest_name).count() != 6:
-    raise RuntimeError("Published model-evaluation manifest does not contain six figures")
+if spark.table(manifest_name).count() != 7:
+    raise RuntimeError("Published model-evaluation manifest does not contain seven figures")
 display(spark.table(manifest_name).orderBy("figure_sequence"))
-print(f"Published six model-evaluation figures for build {build_id}.")
+print(f"Published seven model-evaluation figures for build {build_id}.")

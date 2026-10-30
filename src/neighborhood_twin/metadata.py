@@ -475,6 +475,10 @@ COMMON_COLUMN_COMMENTS = {
     "housing_composition_band": (
         "Interpretable band based on the ACS share of single-family housing units."
     ),
+    "acs_uncertainty_band": (
+        "Band based on the largest available relative margin of error among median household "
+        "income, owner-occupied value, and gross rent."
+    ),
     "slice_name": "Evaluation dimension used by this scorecard row.",
     "slice_value": "Evaluated value within the named scorecard dimension.",
     "observation_count": "Prediction rows included in the evaluation slice.",
@@ -510,6 +514,13 @@ COMMON_COLUMN_COMMENTS = {
         "Relative RMSE improvement over the zero-change baseline; positive values are better."
     ),
     "directional_accuracy": "Share of predictions with the same change direction as the target.",
+    "target_positive_share": "Share of observed targets with a positive cumulative log change.",
+    "majority_direction_accuracy": (
+        "Accuracy achieved by always predicting the majority target direction in the slice."
+    ),
+    "directional_accuracy_lift": (
+        "Directional accuracy minus the majority-direction accuracy in the same slice."
+    ),
     "query_geoid_2020": "Canonical 2020 tract GEOID used as the similarity query.",
     "match_geoid_2020": "Canonical 2020 tract GEOID returned as a similarity match.",
     "representation_name": "Standardized-raw or PCA representation used for retrieval.",

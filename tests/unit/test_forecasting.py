@@ -12,6 +12,7 @@ import pytest
 
 from neighborhood_twin.forecasting import (
     LINEAR_FEATURE_COLUMNS,
+    acs_uncertainty_band,
     annualized_rate_from_cumulative_log,
     cumulative_log_from_annual_rate,
     validate_feature_registry,
@@ -37,3 +38,7 @@ def test_forecast_feature_registry_names_missing_fields() -> None:
     validate_feature_registry(LINEAR_FEATURE_COLUMNS)
     with pytest.raises(ValueError, match="origin_annual_change_pct"):
         validate_feature_registry(LINEAR_FEATURE_COLUMNS[1:])
+
+
+def test_acs_uncertainty_band_is_publicly_importable() -> None:
+    assert callable(acs_uncertainty_band)

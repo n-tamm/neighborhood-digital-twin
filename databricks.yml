@@ -712,7 +712,7 @@ resources:
               mlflow_experiment: ${var.similarity_mlflow_experiment}
     model_evaluation_figures:
       name: Neighborhood Digital Twin | 600 Evaluation | Model Diagnostics
-      description: Renders versioned forecast and similarity evaluation figures and a manifest.
+      description: Renders seven versioned forecast and similarity evaluation figures and a manifest.
       tags:
         project: neighborhood-digital-twin
         pipeline_group: evaluation
@@ -736,7 +736,7 @@ resources:
       environments:
         - environment_key: evaluation_figures
           spec:
-            client: "1"
+            environment_version: "2"
             dependencies:
               - matplotlib==3.9.2
     table_metadata_pipeline:

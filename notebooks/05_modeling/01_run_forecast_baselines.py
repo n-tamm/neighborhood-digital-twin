@@ -114,6 +114,7 @@ with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run
             "p90_absolute_error_log_change",
             "r_squared",
             "mae_skill_vs_zero_change",
+            "directional_accuracy_lift",
         )
         .collect()
     )
@@ -133,6 +134,10 @@ with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run
                 f"{metric_stem}_mae_skill_vs_zero_change",
                 float(row["mae_skill_vs_zero_change"]),
             )
+        mlflow.log_metric(
+            f"{metric_stem}_directional_accuracy_lift",
+            float(row["directional_accuracy_lift"]),
+        )
 
 # COMMAND ----------
 

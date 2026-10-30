@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from math import exp, log1p
 from typing import Any
 
-FORECAST_MODEL_SCHEMA_VERSION = "1.1.0"
+FORECAST_MODEL_SCHEMA_VERSION = "1.2.0"
 FORECAST_PREDICTION_TABLE = "forecast_baseline_prediction"
 FORECAST_SCORECARD_TABLE = "forecast_baseline_scorecard"
 
@@ -109,6 +109,23 @@ def housing_composition_band(column: Any, functions: Any) -> Any:
         .when(column < 0.50, functions.lit("25% to under 50%"))
         .when(column < 0.75, functions.lit("50% to under 75%"))
         .otherwise(functions.lit("75% or more"))
+    )
+
+
+def acs_uncertainty_band(frame: Any, functions: Any) -> Any:
+    """Return a readable band for the largest available core ACS relative margin of error."""
+
+    maximum_relative_moe = functions.greatest(
+        functions.col("median_household_income_relative_moe"),
+        functions.col("median_owner_occupied_value_relative_moe"),
+        functions.col("median_gross_rent_relative_moe"),
+    )
+    return (
+        functions.when(maximum_relative_moe.isNull(), functions.lit("Missing"))
+        .when(maximum_relative_moe < 0.10, functions.lit("Under 10%"))
+        .when(maximum_relative_moe < 0.30, functions.lit("10% to under 30%"))
+        .when(maximum_relative_moe < 0.50, functions.lit("30% to under 50%"))
+        .otherwise(functions.lit("50% or more"))
     )
 
 
@@ -269,6 +286,7 @@ def _add_prediction_fields(frame: Any, *, run_id: str, built_at_utc: str) -> Any
             "housing_composition_band",
             housing_composition_band(functions.col("single_family_share_estimate"), functions),
         )
+        .withColumn("acs_uncertainty_band", acs_uncertainty_band(frame, functions))
         .withColumn(
             "evaluation_geography",
             functions.when(
@@ -312,6 +330,15 @@ def build_forecast_scorecard(predictions: Any) -> Any:
         predictions.withColumn("slice_name", functions.lit("state")).withColumn(
             "slice_value", functions.col("state_abbreviation")
         ),
+        predictions.withColumn("slice_name", functions.lit("census_region")).withColumn(
+            "slice_value", functions.col("region_name")
+        ),
+        predictions.withColumn("slice_name", functions.lit("forecast_origin_year")).withColumn(
+            "slice_value", functions.col("forecast_origin_year").cast("string")
+        ),
+        predictions.withColumn("slice_name", functions.lit("acs_uncertainty_band")).withColumn(
+            "slice_value", functions.col("acs_uncertainty_band")
+        ),
     ]
     sliced = slices[0]
     for current in slices[1:]:
@@ -323,6 +350,10 @@ def build_forecast_scorecard(predictions: Any) -> Any:
     direction_correct = functions.when(
         functions.signum(functions.col("prediction_cumulative_log_change"))
         == functions.signum(functions.col("target_cumulative_log_change")),
+        1.0,
+    ).otherwise(0.0)
+    target_positive = functions.when(
+        functions.col("target_cumulative_log_change") > 0,
         1.0,
     ).otherwise(0.0)
     summary = (
@@ -356,6 +387,7 @@ def build_forecast_scorecard(predictions: Any) -> Any:
                 "mean_error_annualized_change_pct"
             ),
             functions.avg(direction_correct).alias("directional_accuracy"),
+            functions.avg(target_positive).alias("target_positive_share"),
             functions.avg("target_annualized_change_pct").alias(
                 "mean_target_annualized_change_pct"
             ),
@@ -371,6 +403,18 @@ def build_forecast_scorecard(predictions: Any) -> Any:
                 - functions.col("mean_squared_error_log_change")
                 / functions.col("target_variance_log_change"),
             ),
+        )
+        .withColumn(
+            "majority_direction_accuracy",
+            functions.greatest(
+                functions.col("target_positive_share"),
+                1 - functions.col("target_positive_share"),
+            ),
+        )
+        .withColumn(
+            "directional_accuracy_lift",
+            functions.col("directional_accuracy")
+            - functions.col("majority_direction_accuracy"),
         )
         .drop("mean_squared_error_log_change", "target_variance_log_change")
     )

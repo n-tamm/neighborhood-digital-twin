@@ -48,7 +48,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 401 | Analysis | `visual_eda` | After 400 or visual-analysis code changes | Rebuilds visual summaries and versioned EDA figures |
 | 500 | Modeling | `forecast_baselines` | After 302 or forecast-development code changes | Publishes validation-only baseline predictions and scorecards; does not open locked tests |
 | 501 | Modeling | `similarity_baselines` | After 300 or similarity-development code changes | Publishes a small reviewable current-state baseline, not the final retrospective analogue product |
-| 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders six versioned model-diagnostic figures and publishes their run-linked manifest |
+| 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
