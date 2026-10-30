@@ -4,6 +4,7 @@
 
 - **Layer:** Gold model development
 - **Databricks table:** `workspace.neighborhood_twin_gold.gold_forecast_baseline_prediction`
+- **Sample:** [gold_forecast_baseline_prediction.jsonl](../../data/samples/gold_forecast_baseline_prediction.jsonl)
 - **Grain and key:** one tract GEOID, forecast-origin year, horizon, and model.
 - **Purpose:** preserves validation predictions from the fixed baseline ladder and initial
   regularized linear model so comparisons can be reproduced without rerunning training.
@@ -15,4 +16,6 @@ annualized percentage is for interpretation; model fitting and primary errors re
 cumulative log-change target. The table retains cohort, geography, housing-composition, target,
 and lineage fields needed to audit subgroup results.
 
-The table will receive a small sample in `data/samples/` after the first successful shared run.
+The first run contains 1,369,401 validation predictions across 59,562 tracts and six methods.
+Large row volume comes from preserving model-level predictions for later residual, subgroup, and
+map analysis; it is not a claim of independent temporal evidence.

@@ -8,9 +8,9 @@ committed as changing binary files in Git.
 ## Shared location
 
 - **Volume:** `workspace.neighborhood_twin_gold.eda_figures`
-- **Current build:** `20261025T012758088469Z`
+- **Current build:** `20261030T142633664611Z`
 - **Current build directory:**
-  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261025T012758088469Z/`
+  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261030T142633664611Z/`
 - **Manifest table:**
   `workspace.neighborhood_twin_gold.gold_eda_figure_manifest`
 
@@ -33,9 +33,10 @@ successful run will replace the current manifest while retaining prior versioned
 11. `11_county_rollup_maps.png`
 12. `12_state_forecast_coverage.png`
 
-The original seven-figure build was reviewed after its live Databricks run. The expanded workflow
-adds the tract-vintage break, feature completeness, independent split periods, county rollups,
-and state coverage. Its manifest requires all twelve files to be nonempty before publication.
+The expanded workflow completed successfully on October 30, 2026. Its manifest contains all
+twelve expected files, and the smallest rendered PNG is 85,898 bytes. The publication guard
+requires every file to exceed 10,000 bytes, so a blank or obviously incomplete render cannot
+silently become the current figure set.
 
 ## Visual and map design
 

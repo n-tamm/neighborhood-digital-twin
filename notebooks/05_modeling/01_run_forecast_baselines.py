@@ -19,7 +19,7 @@
 # COMMAND ----------
 
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 def _add_repository_source() -> None:
@@ -38,6 +38,7 @@ _add_repository_source()
 # COMMAND ----------
 
 import mlflow
+from databricks.sdk import WorkspaceClient
 
 from neighborhood_twin.data.databricks import qualified_name
 from neighborhood_twin.forecasting import (
@@ -69,6 +70,16 @@ panel = spark.table(qualified_name(catalog, gold_schema, panel_table))
 
 # COMMAND ----------
 
+
+def ensure_experiment_parent(experiment: str) -> None:
+    """Create the shared Workspace folder required by a nested MLflow experiment path."""
+
+    if not experiment.startswith("/"):
+        raise ValueError("The Databricks MLflow experiment path must be absolute")
+    WorkspaceClient().workspace.mkdirs(str(PurePosixPath(experiment).parent))
+
+
+ensure_experiment_parent(experiment_path)
 mlflow.set_experiment(experiment_path)
 with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run:
     mlflow.log_params(

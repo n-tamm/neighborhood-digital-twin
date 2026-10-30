@@ -31,6 +31,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Historical ACS pilot, October 23–24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Census tract relationship and display-geometry pipelines, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | ACS expansion, current analytical products, and data catalog, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Initial forecasting and similarity workflows and expanded EDA, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -166,6 +167,21 @@ was corrected and hard checks for numeric year types and valid chronological ran
 The final run passed all publication checks. Separate SQL review confirmed 51,263 forecast
 candidates after correctly bridging 728 Connecticut FHFA identifiers, viable one-, three-, and
 five-year target pairs, and substantial ACS uncertainty in several small housing categories.
+
+The initial modeling workflows were checked with Ruff, mypy, focused unit tests, Databricks
+bundle validation, and live runs of the visual EDA, forecasting, similarity, and metadata jobs.
+The first forecast run failed before fitting because the proposed shared MLflow experiment path
+did not have a parent Workspace folder. Both notebooks were changed to create that folder
+idempotently, then redeployed and rerun. The completed forecast run published 1,369,401
+validation-only predictions and 1,068 scorecard rows; a read-only SQL check confirmed that no
+nonvalidation workflow was needed to obtain the reported metrics. The regularized linear model
+led at one year, while a simpler state-trend baseline narrowly led at three years, preventing an
+unsupported claim that added model complexity was uniformly better. The similarity run published
+the expected 120 non-self matches. PCA retained 95.5% of standardized variance, but its top-10
+neighbors overlapped the raw representation by only 5.5 matches on average, so the implementation
+notes require case review and retrospective evaluation before choosing a final representation.
+The expanded EDA manifest also reconciled to all twelve expected figures, with no file below
+85,898 bytes.
 
 ## Maintenance requirements
 

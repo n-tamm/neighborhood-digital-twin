@@ -1,20 +1,21 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of October 29, 2026. The broader design remains in the
+This is the working handoff as of October 30, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
 
-The approved source and feature-preparation pipeline is complete enough to begin baseline
-forecasting and retrospective similarity work. The project now has reproducible public-source
+The approved source and feature-preparation pipeline is complete, and the first forecasting and
+current-state similarity baselines now run in Databricks. The project has reproducible public-source
 acquisition, bronze and silver transformations, governed geography, current and historical gold
 products, point-in-time model features, fixed evaluation assignments, and a joined modeling
-panel. There is no unresolved data-integrity or leakage failure blocking the first models.
+panel, tracked experiments, validation-only forecast scorecards, and reviewable neighborhood
+matches. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
-This does not mean the whole project is complete. Forecast and similarity models, calibrated
-uncertainty, model evaluation outputs, serving tables, and the interactive application still need
-to be built. New source families should not be added until a baseline result or required app view
-shows a specific gap.
+This does not mean the whole project is complete. Forecast model selection, time-safe historical
+analogue evaluation, calibrated uncertainty, serving tables, and the interactive application still
+need to be built. New source families should not be added until a baseline result or required app
+view shows a specific gap.
 
 ## Data checkpoint
 
@@ -36,9 +37,32 @@ shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 18 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, and `900`), grouping tags, and the maintained
+- The 20 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-501`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
+
+## Baseline modeling checkpoint
+
+- Job `500 Modeling | Forecast Baselines` completed on October 30 and published 1,369,401
+  validation predictions across 59,562 tracts and six methods, plus 1,068 sliced scorecard rows.
+- The regularized linear model has the best overall one-year validation MAE at 0.0724. The state
+  trend is close at 0.0757, which sets a strong and interpretable baseline.
+- At three years, the state trend is narrowly best at 0.0666, compared with 0.0679 for the linear
+  model. More model complexity has not yet earned a clear win at this horizon.
+- The five-year linear MAE is 0.0952, but it remains exploratory because the training contract has
+  only three independent origins. It must not drive broad claims or extensive tuning.
+- Job `501 Modeling | Similarity Baselines` published 120 matches for six review queries under
+  standardized raw and six-component PCA representations. PCA retains 95.5% of standardized
+  variance.
+- The raw and PCA top-10 lists overlap by 5.5 matches on average. Both search nationally rather
+  than collapsing to same-state results, but the moderate overlap means representation choice is
+  consequential and still needs case review and time-safe retrospective evaluation.
+- Both jobs record reproducible parameters and metrics in shared MLflow experiments. The first
+  forecast attempt exposed a missing shared experiment parent folder; the notebooks now create it
+  idempotently so a fresh workspace does not require a manual MLflow setup step.
+- The expanded visual EDA run published twelve checked PNGs. It adds tract-vintage coverage,
+  feature completeness, split-origin evidence, improved tract maps, dissolved county displays,
+  and a national state-coverage view. Display geometry remains prohibited for spatial modeling.
 
 ## Important interpretation limits
 
@@ -57,10 +81,10 @@ shows a specific gap.
 - The current feature and modeling tables are analytical products, not application serving
   tables. They are too wide and contain evaluation-only rows and fields.
 
-## Decisions to freeze before model fitting
+## Decisions to freeze before the next model iteration
 
-The data is ready, but the team should review these choices before results begin influencing the
-design:
+The first baseline has made these choices concrete. The team should review them before nonlinear
+modeling, calibration, or retrospective analogue work:
 
 1. **Forecast horizons:** keep one year as the primary result, three years as secondary, and
    either retain five years as explicitly exploratory or remove it from the MVP.
@@ -114,12 +138,13 @@ dimension of lived experience are already represented.
 - Record any revision through a new schema or contract version before fitting models.
 - Leave the locked temporal tests unopened during all following development work.
 
-### 1. Forecasting baseline pass
+### 1. Forecasting baseline pass: implemented, now review
 
 - Profile feature missingness and eligible-row attrition by horizon, origin year, region, held-out
   state, housing mix, ACS uncertainty, and stable versus broad cohort.
-- Implement zero-change, historical-average, persistence, and county/state regional baselines.
-- Fit one regularized linear pipeline with all preprocessing learned inside the training rows.
+- Review the implemented zero-change, persistence, recent-history, county/state, and regularized
+  linear results rather than adding another baseline family immediately.
+- Confirm the regularized linear preprocessing and feature registry before nonlinear comparison.
 - Use cumulative log HPI change as the modeling target and transform predictions only for
   reporting.
 - Compare every model on identical published validation rows; do not inspect the locked tests for
@@ -127,19 +152,19 @@ dimension of lived experience are already represented.
 - Record MAE, RMSE, median absolute error, directional accuracy, coverage, and subgroup results.
 - Report stable-cohort and broader post-2020 results separately, as well as housing-mix and ACS
   uncertainty slices.
-- Record source, feature, target, split, parameters, metrics, environment, and artifacts in MLflow
-  from the first baseline run rather than retrofitting experiment tracking later.
+- Keep recording source, feature, target, split, parameters, metrics, environment, and artifacts
+  in MLflow; the first shared experiment is now established.
 - After the baseline scorecard, compare at most one focused gradient-boosted-tree candidate and
   run feature-family ablations before selecting a champion.
 - Use the reserved calibration origins for prediction intervals, then open the locked tests only
   after point-model and uncertainty choices are final.
 
-### 2. Similarity baseline pass
+### 2. Similarity baseline pass: current-state scaffold implemented
 
 - Freeze a small, interpretable feature registry and feature-family weights.
-- Fit scaling on development data and compare standardized Euclidean retrieval with PCA retrieval.
-- Build current-state matches first, then use `gold_model_feature_historical` for time-safe
-  retrospective analogue evaluation.
+- Review the implemented standardized Euclidean and PCA matches for the six initial query tracts.
+- Use `gold_model_feature_historical` next for time-safe retrospective analogue evaluation with
+  transforms fitted only on the appropriate development period.
 - Exclude the same tract and future candidate states; report important differences as well as
   shared strengths.
 - Evaluate retrieval stability, distance separation, geographic diversity, coverage, reviewed

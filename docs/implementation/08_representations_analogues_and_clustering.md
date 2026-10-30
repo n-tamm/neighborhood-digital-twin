@@ -35,6 +35,13 @@ transforms, retrieve only states observable before each query date, compare agai
 regional matches, and preserve ACS-based retrieval for tracts without representative FHFA
 coverage.
 
+The first shared run completed on October 30, 2026. Six PCA components retain 95.5% of the
+standardized variance. Both representations return geographically broad matches: 91.7% of raw
+matches and 95.0% of PCA matches cross a state boundary. However, their top-10 lists overlap by
+only 5.5 communities on average. Compression is not simply reproducing the raw ranking, so the
+team needs to inspect shared strengths and important differences for the six queries before
+choosing either representation. Explained variance alone is not enough to select PCA.
+
 ## Time-safe retrieval
 
 For a query tract at forecast origin `t`:

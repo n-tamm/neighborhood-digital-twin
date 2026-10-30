@@ -64,6 +64,20 @@ establish honest difficulty, expose weak slices, and show whether more complex m
 the added work. The five-year linear result should be interpreted cautiously because its training
 sample contains only three independent origin years.
 
+The first shared run completed on October 30, 2026 and published 1,369,401 validation predictions
+and 1,068 scorecard rows. Regularized linear regression has the best overall one-year validation
+MAE at 0.0724, compared with 0.0757 for the state-trend baseline. At three years, the state trend
+is narrowly better at 0.0666 than the linear model at 0.0679. This is a useful warning against
+assuming that the more elaborate model is automatically better. The five-year linear MAE is
+0.0952, but that horizon remains exploratory because the fitted sample has only three independent
+training origins.
+
+The next forecast iteration should inspect subgroup scorecards and residual maps before adding
+complexity. If the linear improvement is consistent enough across time, geography, housing mix,
+cohort, and ACS uncertainty, compare one gradient-boosted model and a small feature-family
+ablation. If not, improve the feature or target contract before broad model search. Calibration
+rows and locked tests remain untouched until the point-model choice is frozen.
+
 ## Candidate nonlinear model
 
 Select one gradient-boosted tree implementation based on missing-value support, training time, reproducibility, interpretability, Databricks compatibility, and team familiarity. HistGradientBoosting, XGBoost, LightGBM, or CatBoost can all be reasonable; the decision belongs in an ADR after a small comparison.
