@@ -32,6 +32,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Census tract relationship and display-geometry pipelines, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | ACS expansion, current analytical products, and data catalog, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Initial forecasting and similarity workflows and expanded EDA, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Model-output governance, evaluation metrics, and diagnostic figures, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -173,7 +174,7 @@ bundle validation, and live runs of the visual EDA, forecasting, similarity, and
 The first forecast run failed before fitting because the proposed shared MLflow experiment path
 did not have a parent Workspace folder. Both notebooks were changed to create that folder
 idempotently, then redeployed and rerun. The completed forecast run published 1,369,401
-validation-only predictions and 1,068 scorecard rows; a read-only SQL check confirmed that no
+validation-only predictions and 1,248 scorecard rows; a read-only SQL check confirmed that no
 nonvalidation workflow was needed to obtain the reported metrics. The regularized linear model
 led at one year, while a simpler state-trend baseline narrowly led at three years, preventing an
 unsupported claim that added model complexity was uniformly better. The similarity run published
@@ -183,6 +184,26 @@ notes require case review and retrospective evaluation before choosing a final r
 The expanded EDA manifest also reconciled to all twelve expected figures. A follow-up visual QA
 pass corrected heatmap-label contrast and reserved separate colorbar space on the county rollup
 map; the replacement build again produced all twelve figures, with no file below 86,138 bytes.
+
+The evaluation expansion was reviewed against both the live tables and the rendered figures. The
+model outputs were first separated from gold into dedicated `neighborhood_twin_model` and
+`neighborhood_twin_evaluation` schemas, then rebuilt and reconciled to 1,369,401 forecast
+predictions, 1,248 scorecard rows, 120 similarity matches, and two representation summaries. The
+first evaluation-figure run failed before notebook execution because its serverless environment
+declared client version `1`; changing the job to supported environment version `2` allowed the
+same code to run successfully. The completed build produced all seven expected figures, recorded
+the exact forecast and similarity MLflow run IDs, and passed a minimum-file-size guard. Each image
+was then opened and visually checked for readable labels, sensible scales, and agreement with the
+underlying metrics.
+
+That review changed the interpretation of the forecast results. Directional accuracy initially
+looked strong, but the validation targets were overwhelmingly positive: about 90.2% at one year
+and more than 97% at the longer horizons. The scorecard was expanded to include the majority
+direction benchmark and directional lift, which showed that the strongest models added almost no
+directional information over the base rate. This prevented a technically correct but misleading
+metric from becoming a project claim. The review also retained bias, tail error, zero-change
+skill, housing-composition slices, geographic transfer, and origin-year stability because the
+lowest overall MAE alone did not describe model behavior well enough.
 
 ## Maintenance requirements
 

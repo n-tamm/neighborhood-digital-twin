@@ -66,12 +66,18 @@ the added work. The five-year linear result should be interpreted cautiously bec
 sample contains only three independent origin years.
 
 The first shared run completed on October 30, 2026 and published 1,369,401 validation predictions
-and 1,068 scorecard rows. Regularized linear regression has the best overall one-year validation
+and 1,248 scorecard rows. Regularized linear regression has the best overall one-year validation
 MAE at 0.0724, compared with 0.0757 for the state-trend baseline. At three years, the state trend
 is narrowly better at 0.0666 than the linear model at 0.0679. This is a useful warning against
 assuming that the more elaborate model is automatically better. The five-year linear MAE is
 0.0952, but that horizon remains exploratory because the fitted sample has only three independent
 training origins.
+
+Directional accuracy is also checked against the majority direction, not interpreted alone.
+Positive outcomes account for about 90.2% of one-year validation targets and more than 97% at the
+longer horizons. The strongest models currently add almost no directional lift over that base
+rate, despite apparently high raw accuracy. This makes MAE skill, signed bias, tail error, and
+origin-level stability more informative than the unadjusted direction percentage.
 
 The next forecast iteration should inspect subgroup scorecards and residual maps before adding
 complexity. If the linear improvement is consistent enough across time, geography, housing mix,

@@ -137,6 +137,20 @@ workflow once its time-safe retrieval contract is implemented.
 Job 600 reads the governed evaluation summaries, writes versioned PNGs to the evaluation volume,
 and records both source MLflow run IDs in its manifest.
 
+### Find the MLflow experiments
+
+The modeling notebooks create their shared experiment folders idempotently. In the Databricks
+left navigation, open **Workspace**, then **Shared**, then `neighborhood-digital-twin`. The current
+experiments are:
+
+- `/Shared/neighborhood-digital-twin/forecast-baselines` (experiment ID `3001817840578297`);
+- `/Shared/neighborhood-digital-twin/similarity-baselines` (experiment ID `3001817840578298`).
+
+They can also be found from **Machine Learning** or **Experiments** by searching for
+`forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
+corresponding MLflow run. The evaluation manifest records the exact forecast and similarity run
+IDs used by each figure build, so figures should not be associated with experiments by date alone.
+
 ## Source refresh paths
 
 ### New or corrected ACS snapshots
@@ -201,6 +215,8 @@ Do not continue merely because a job is green. Before advancing:
 - Analysis: figures and manifests point to the current analytical build.
 - Modeling: MLflow records the input contract and parameters; forecast outputs contain only
   validation roles; similarity outputs exclude self-matches and reconcile to the query count.
+- Evaluation: every expected figure exists, exceeds the publication size guard, links to current
+  source run IDs, and has been visually reviewed for readable labels and valid interpretation.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule

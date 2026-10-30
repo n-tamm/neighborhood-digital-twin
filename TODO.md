@@ -9,8 +9,10 @@ The approved source and feature-preparation pipeline is complete, and the first 
 current-state similarity baselines now run in Databricks. The project has reproducible public-source
 acquisition, bronze and silver transformations, governed geography, current and historical gold
 products, point-in-time model features, fixed evaluation assignments, and a joined modeling
-panel, tracked experiments, validation-only forecast scorecards, and reviewable neighborhood
-matches. There is no unresolved data-integrity or leakage failure blocking the next model stage.
+panel, tracked experiments, validation-only forecast scorecards, reviewable neighborhood matches,
+and seven versioned model-evaluation figures. Model outputs and diagnostics now live outside gold
+in dedicated model and evaluation schemas. There is no unresolved data-integrity or leakage
+failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, time-safe historical
 analogue evaluation, calibrated uncertainty, serving tables, and the interactive application still
@@ -37,14 +39,14 @@ view shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 20 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-501`, and `900`), grouping tags, and the maintained
+- The 21 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-501`, `600`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
 
 - Job `500 Modeling | Forecast Baselines` completed on October 30 and published 1,369,401
-  validation predictions across 59,562 tracts and six methods, plus 1,068 sliced scorecard rows.
+  validation predictions across 59,562 tracts and six methods, plus 1,248 sliced scorecard rows.
 - The regularized linear model has the best overall one-year validation MAE at 0.0724. The state
   trend is close at 0.0757, which sets a strong and interpretable baseline.
 - At three years, the state trend is narrowly best at 0.0666, compared with 0.0679 for the linear
@@ -57,9 +59,16 @@ view shows a specific gap.
 - The raw and PCA top-10 lists overlap by 5.5 matches on average. Both search nationally rather
   than collapsing to same-state results, but the moderate overlap means representation choice is
   consequential and still needs case review and time-safe retrospective evaluation.
+- Directional accuracy is not currently informative by itself. Positive outcomes make up about
+  90.2% of one-year validation rows and more than 97% at longer horizons, and the strongest models
+  add essentially no directional lift over always predicting that majority direction.
 - Both jobs record reproducible parameters and metrics in shared MLflow experiments. The first
   forecast attempt exposed a missing shared experiment parent folder; the notebooks now create it
   idempotently so a fresh workspace does not require a manual MLflow setup step.
+- Job `600 Evaluation | Model Diagnostics` published seven versioned PNGs and a run-linked
+  manifest in `neighborhood_twin_evaluation`. The figures cover accuracy, skill over zero change,
+  bias and tail error, geographic transfer, housing composition, similarity representation, and
+  independent forecast-origin stability. All seven passed publication checks and visual review.
 - The expanded visual EDA run published twelve checked PNGs. It adds tract-vintage coverage,
   feature completeness, split-origin evidence, improved tract maps, dissolved county displays,
   and a national state-coverage view. Display geometry remains prohibited for spatial modeling.
@@ -80,6 +89,8 @@ view shows a specific gap.
   geometry is approved for display only.
 - The current feature and modeling tables are analytical products, not application serving
   tables. They are too wide and contain evaluation-only rows and fields.
+- Current metrics and figures are validation evidence. They do not replace calibrated interval
+  evaluation or the locked temporal test, which must remain unopened until model choices freeze.
 
 ## Decisions to freeze before the next model iteration
 
@@ -149,7 +160,8 @@ dimension of lived experience are already represented.
   reporting.
 - Compare every model on identical published validation rows; do not inspect the locked tests for
   model choice.
-- Record MAE, RMSE, median absolute error, directional accuracy, coverage, and subgroup results.
+- Record MAE, RMSE, median and 90th-percentile absolute error, signed bias, R-squared, skill over
+  zero change, directional lift over the majority rule, and subgroup results.
 - Report stable-cohort and broader post-2020 results separately, as well as housing-mix and ACS
   uncertainty slices.
 - Keep recording source, feature, target, split, parameters, metrics, environment, and artifacts
@@ -158,6 +170,8 @@ dimension of lived experience are already represented.
   run feature-family ablations before selecting a champion.
 - Use the reserved calibration origins for prediction intervals, then open the locked tests only
   after point-model and uncertainty choices are final.
+- Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
+  origins supports it; do not present tract-row counts as the number of independent replications.
 
 ### 2. Similarity baseline pass: current-state scaffold implemented
 
@@ -198,6 +212,8 @@ dimension of lived experience are already represented.
 - Select and calibrate one uncertainty method using the reserved calibration origins.
 - Publish versioned forecast, interval, explanation, analogue, and evaluation tables only after
   validation passes.
+- Preserve the dedicated `neighborhood_twin_model` and `neighborhood_twin_evaluation` schemas so
+  gold remains the governed analytical input layer rather than a mixture of inputs and model runs.
 
 ### 5. Serving and integration
 
@@ -227,6 +243,8 @@ The next checkpoint is complete when:
 - the baseline models run from the published split and panel tables;
 - experiment runs record reproducible configurations and artifacts in MLflow;
 - all forecast candidates use identical validation rows and have a subgroup scorecard;
+- point metrics are interpreted together, including bias, tail error, baseline skill, and the
+  majority-direction comparison rather than only the most favorable metric;
 - the locked temporal tests remain untouched during model selection;
 - the current-state similarity baseline has stability results and reviewed examples;
 - retrospective analogue evaluation uses only information available at each query date;

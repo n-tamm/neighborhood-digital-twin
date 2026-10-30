@@ -1,11 +1,12 @@
 # Data Guide
 
 This folder explains the tables that currently exist across the shared Databricks bronze, silver,
-gold, and quality schemas. It is the
+gold, model, evaluation, and quality schemas. It is the
 starting point for understanding what a row represents, which table should be used for a given
 task, and where important limitations enter the pipeline.
 
-The pipeline deliberately keeps four different concerns separate:
+The pipeline deliberately keeps source preparation, analytical inputs, model outputs, and
+evaluation evidence separate:
 
 ```text
 public source files and APIs
@@ -19,7 +20,11 @@ silver tables                           typed, validated, analysis-ready source 
           v
 gold tables                             joined profiles and explicit candidate cohorts
           |
-          +---------------------> modeling, evaluation, and the interactive application
+          +--> model tables             versioned predictions and retrieved matches
+          |
+          +--> evaluation tables        scorecards, diagnostics, and figure manifests
+          |
+          +---------------------------> interactive application serving products
 ```
 
 Each implemented table has its own document below. Small, real extracts live in the repository's
@@ -83,12 +88,13 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 36. [`gold_modeling_panel`](45_gold_modeling_panel.md)
 37. [`gold_model_readiness_summary`](46_gold_model_readiness_summary.md)
 
-### Gold model-development outputs
+### Model outputs and evaluation
 
-47. [`gold_forecast_baseline_prediction`](47_gold_forecast_baseline_prediction.md)
-48. [`gold_forecast_baseline_scorecard`](48_gold_forecast_baseline_scorecard.md)
-49. [`gold_similarity_baseline_match`](49_gold_similarity_baseline_match.md)
-50. [`gold_similarity_baseline_summary`](50_gold_similarity_baseline_summary.md)
+47. [`forecast_baseline_prediction`](47_model_forecast_baseline_prediction.md)
+48. [`forecast_baseline_scorecard`](48_evaluation_forecast_baseline_scorecard.md)
+49. [`similarity_baseline_match`](49_model_similarity_baseline_match.md)
+50. [`similarity_baseline_summary`](50_evaluation_similarity_baseline_summary.md)
+51. [`model_evaluation_figure_manifest`](51_evaluation_model_evaluation_figure_manifest.md)
 
 ### Gold exploration and readiness
 
@@ -168,3 +174,10 @@ use the latest complete origin for each horizon, while Maine, North Dakota, West
 Mexico are held out for geographic transfer checks. All hard leakage, timing, key, and
 reconciliation checks passed. The only warning is substantive rather than a pipeline error: the
 five-year horizon has three independent training origins and must remain exploratory.
+
+The first model-development outputs were published on October 30, 2026. The dedicated model
+schema contains 1,369,401 validation forecast predictions and 120 current-state similarity
+matches. The evaluation schema contains 1,248 sliced forecast scorecard rows, two similarity
+representation summaries, and a seven-row figure manifest. These are development products rather
+than final claims: interval calibration, time-safe retrospective similarity evaluation, and the
+locked temporal tests remain outstanding.
