@@ -31,7 +31,7 @@ the quality schema, including failed attempts that explain why a run was correct
 
 `04_exploration/02_build_visual_eda.py` adds governed housing-composition, cohort-comparison, and
 temporal summaries. `04_exploration/03_render_eda_figures.py` consumes those contracts plus the
-approved display geometry and writes a versioned seven-figure set to the Unity Catalog
+approved display geometry and writes a versioned twelve-figure set to the Unity Catalog
 `eda_figures` volume. The gold figure manifest is the authoritative pointer to the current set.
 
 `05_modeling/01_run_forecast_baselines.py` fits the fixed baseline ladder and one regularized
