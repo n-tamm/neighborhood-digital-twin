@@ -8,8 +8,10 @@ flowchart LR
     B --> C[Bronze schema]
     C --> D1[Silver schema]
     D1 --> D[Gold neighborhood state]
-    D --> E[Forecasts and uncertainty]
-    D --> F[Historical analogues]
+    D --> E[Model schema: forecasts and uncertainty]
+    D --> F[Model schema: historical analogues]
+    E --> V[Evaluation schema: scorecards and figures]
+    F --> V
     E --> G[Scenario sensitivity]
     E --> H[Validated serving tables]
     F --> H
@@ -45,7 +47,13 @@ not compete in one long table list:
 ├── neighborhood_twin_silver
 │   └── tables: silver_*
 ├── neighborhood_twin_gold
-│   └── tables: gold_* and future model/application products
+│   └── curated analytical inputs and application-ready data products
+├── neighborhood_twin_model
+│   └── predictions, ranked matches, and future approved model outputs
+├── neighborhood_twin_evaluation
+│   ├── scorecards and representation diagnostics
+│   ├── volume: model_evaluation_figures
+│   └── table: model_evaluation_figure_manifest
 └── neighborhood_twin_quality
     └── tables: *_quality_metrics
 ```
@@ -61,7 +69,12 @@ Unity Catalog volumes hold files; Unity Catalog managed Delta tables hold tabula
 
 The core analytical table has one row per tract and forecast origin. Every feature must retain its reference period and the date it became available so historical backtests cannot use future information. Geography conversions, missingness, and source coverage must remain visible rather than being hidden by the model.
 
-Training consumes versioned, validated tables. Each experiment records its features, target, time split, geographic holdout, parameters, seed, metrics, and output version. Simple persistence, regional, and linear baselines remain part of the evaluation.
+Training consumes versioned, validated gold tables. Generated predictions and matches are written
+to the model schema; evaluation metrics, diagnostics, and figure manifests are written to the
+evaluation schema. This prevents development output from crowding the curated gold layer. Each
+MLflow experiment records its features, target, time split, geographic holdout, parameters, seed,
+metrics, and output version. Simple persistence, regional, and linear baselines remain part of
+the evaluation.
 
 ## Application boundary
 

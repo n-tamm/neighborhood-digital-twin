@@ -16,9 +16,9 @@ from datetime import UTC, datetime
 from math import exp, log1p
 from typing import Any
 
-FORECAST_MODEL_SCHEMA_VERSION = "1.0.0"
-FORECAST_PREDICTION_TABLE = "gold_forecast_baseline_prediction"
-FORECAST_SCORECARD_TABLE = "gold_forecast_baseline_scorecard"
+FORECAST_MODEL_SCHEMA_VERSION = "1.1.0"
+FORECAST_PREDICTION_TABLE = "forecast_baseline_prediction"
+FORECAST_SCORECARD_TABLE = "forecast_baseline_scorecard"
 
 BASELINE_MODELS = (
     "zero_change",
@@ -257,6 +257,15 @@ def _add_prediction_fields(frame: Any, *, run_id: str, built_at_utc: str) -> Any
             functions.abs(functions.col("residual_cumulative_log_change")),
         )
         .withColumn(
+            "residual_annualized_change_pct",
+            functions.col("target_annualized_change_pct")
+            - functions.col("prediction_annualized_change_pct"),
+        )
+        .withColumn(
+            "absolute_error_annualized_change_pct",
+            functions.abs(functions.col("residual_annualized_change_pct")),
+        )
+        .withColumn(
             "housing_composition_band",
             housing_composition_band(functions.col("single_family_share_estimate"), functions),
         )
@@ -308,12 +317,15 @@ def build_forecast_scorecard(predictions: Any) -> Any:
     for current in slices[1:]:
         sliced = sliced.unionByName(current)
     squared_error = functions.pow(functions.col("residual_cumulative_log_change"), 2)
+    squared_annualized_error = functions.pow(
+        functions.col("residual_annualized_change_pct"), 2
+    )
     direction_correct = functions.when(
         functions.signum(functions.col("prediction_cumulative_log_change"))
         == functions.signum(functions.col("target_cumulative_log_change")),
         1.0,
     ).otherwise(0.0)
-    return (
+    summary = (
         sliced.groupBy(*base_columns, "slice_name", "slice_value")
         .agg(
             functions.count(functions.lit(1)).alias("observation_count"),
@@ -323,6 +335,26 @@ def build_forecast_scorecard(predictions: Any) -> Any:
             functions.percentile_approx(
                 "absolute_error_cumulative_log_change", 0.5, 10000
             ).alias("median_absolute_error_log_change"),
+            functions.percentile_approx(
+                "absolute_error_cumulative_log_change", 0.9, 10000
+            ).alias("p90_absolute_error_log_change"),
+            functions.avg("residual_cumulative_log_change").alias("mean_error_log_change"),
+            functions.stddev_samp("residual_cumulative_log_change").alias(
+                "error_standard_deviation_log_change"
+            ),
+            functions.avg(squared_error).alias("mean_squared_error_log_change"),
+            functions.var_pop("target_cumulative_log_change").alias(
+                "target_variance_log_change"
+            ),
+            functions.avg("absolute_error_annualized_change_pct").alias(
+                "mae_annualized_change_pct"
+            ),
+            functions.sqrt(functions.avg(squared_annualized_error)).alias(
+                "rmse_annualized_change_pct"
+            ),
+            functions.avg("residual_annualized_change_pct").alias(
+                "mean_error_annualized_change_pct"
+            ),
             functions.avg(direction_correct).alias("directional_accuracy"),
             functions.avg("target_annualized_change_pct").alias(
                 "mean_target_annualized_change_pct"
@@ -331,6 +363,51 @@ def build_forecast_scorecard(predictions: Any) -> Any:
                 "mean_prediction_annualized_change_pct"
             ),
         )
+        .withColumn(
+            "r_squared",
+            functions.when(
+                functions.col("target_variance_log_change") > 0,
+                1
+                - functions.col("mean_squared_error_log_change")
+                / functions.col("target_variance_log_change"),
+            ),
+        )
+        .drop("mean_squared_error_log_change", "target_variance_log_change")
+    )
+    reference_keys = [
+        "horizon_years",
+        "forecast_model_schema_version",
+        "forecast_run_id",
+        "forecast_built_at_utc",
+        "slice_name",
+        "slice_value",
+    ]
+    zero_reference = summary.where(functions.col("model_name") == "zero_change").select(
+        *reference_keys,
+        functions.col("mae_log_change").alias("zero_change_mae_log_change"),
+        functions.col("rmse_log_change").alias("zero_change_rmse_log_change"),
+    )
+    return (
+        summary.join(zero_reference, reference_keys, "left")
+        .withColumn(
+            "mae_skill_vs_zero_change",
+            functions.when(
+                functions.col("zero_change_mae_log_change") > 0,
+                1
+                - functions.col("mae_log_change")
+                / functions.col("zero_change_mae_log_change"),
+            ),
+        )
+        .withColumn(
+            "rmse_skill_vs_zero_change",
+            functions.when(
+                functions.col("zero_change_rmse_log_change") > 0,
+                1
+                - functions.col("rmse_log_change")
+                / functions.col("zero_change_rmse_log_change"),
+            ),
+        )
+        .drop("zero_change_mae_log_change", "zero_change_rmse_log_change")
     )
 
 

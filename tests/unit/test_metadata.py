@@ -40,6 +40,10 @@ def test_table_layers_separate_pipeline_products_from_quality_results() -> None:
     assert TABLE_LAYERS["silver_acs_tract_measure"] == "silver"
     assert TABLE_LAYERS["gold_tract_profile_current"] == "gold"
     assert TABLE_LAYERS["gold_quality_metrics"] == "quality"
+    assert TABLE_LAYERS["forecast_baseline_prediction"] == "model"
+    assert TABLE_LAYERS["forecast_baseline_scorecard"] == "evaluation"
+    assert TABLE_LAYERS["similarity_baseline_match"] == "model"
+    assert TABLE_LAYERS["similarity_baseline_summary"] == "evaluation"
 
 
 def test_metadata_application_skips_matching_column_comments() -> None:
@@ -83,6 +87,8 @@ def test_metadata_application_uses_layer_specific_schemas() -> None:
             return name in {
                 "workspace.bronze.source_snapshot_manifest",
                 "workspace.gold.gold_tract_profile_current",
+                "workspace.model.forecast_baseline_prediction",
+                "workspace.evaluation.forecast_baseline_scorecard",
             }
 
     class Spark:
@@ -104,10 +110,14 @@ def test_metadata_application_uses_layer_specific_schemas() -> None:
         bronze_schema="bronze",
         silver_schema="silver",
         gold_schema="gold",
+        model_schema="model",
+        evaluation_schema="evaluation",
         quality_schema="quality",
     )
 
     assert updated == [
         "workspace.bronze.source_snapshot_manifest",
         "workspace.gold.gold_tract_profile_current",
+        "workspace.model.forecast_baseline_prediction",
+        "workspace.evaluation.forecast_baseline_scorecard",
     ]

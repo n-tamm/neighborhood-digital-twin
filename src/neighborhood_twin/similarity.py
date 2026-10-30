@@ -17,9 +17,9 @@ from typing import Any
 
 from neighborhood_twin.products import SIMILARITY_FEATURE_COLUMNS
 
-SIMILARITY_MODEL_SCHEMA_VERSION = "1.0.0"
-SIMILARITY_MATCH_TABLE = "gold_similarity_baseline_match"
-SIMILARITY_SUMMARY_TABLE = "gold_similarity_baseline_summary"
+SIMILARITY_MODEL_SCHEMA_VERSION = "1.1.0"
+SIMILARITY_MATCH_TABLE = "similarity_baseline_match"
+SIMILARITY_SUMMARY_TABLE = "similarity_baseline_summary"
 DEFAULT_PCA_COMPONENTS = 6
 
 LOG_TRANSFORM_FEATURES = (
@@ -191,6 +191,18 @@ def _representation_summary(matches: Any, *, feature_count: int, pca_variance: f
         functions.percentile_approx("similarity_distance", 0.5, 10000).alias(
             "median_similarity_distance"
         ),
+        functions.percentile_approx("similarity_distance", 0.1, 10000).alias(
+            "p10_similarity_distance"
+        ),
+        functions.percentile_approx("similarity_distance", 0.25, 10000).alias(
+            "p25_similarity_distance"
+        ),
+        functions.percentile_approx("similarity_distance", 0.75, 10000).alias(
+            "p75_similarity_distance"
+        ),
+        functions.percentile_approx("similarity_distance", 0.9, 10000).alias(
+            "p90_similarity_distance"
+        ),
         functions.avg(
             functions.when(
                 functions.col("query_state_abbreviation")
@@ -198,6 +210,16 @@ def _representation_summary(matches: Any, *, feature_count: int, pca_variance: f
                 1.0,
             ).otherwise(0.0)
         ).alias("cross_state_match_share"),
+        functions.avg(
+            functions.when(
+                (
+                    functions.col("query_state_abbreviation")
+                    == functions.col("match_state_abbreviation")
+                )
+                & (functions.col("query_county_name") == functions.col("match_county_name")),
+                1.0,
+            ).otherwise(0.0)
+        ).alias("same_county_match_share"),
     )
     raw = matches.where(functions.col("representation_name") == "standardized_raw").select(
         "query_geoid_2020", "match_geoid_2020"
@@ -216,6 +238,18 @@ def _representation_summary(matches: Any, *, feature_count: int, pca_variance: f
         summary.withColumn("feature_count", functions.lit(feature_count))
         .withColumn("pca_explained_variance", functions.lit(float(pca_variance)))
         .withColumn("mean_raw_pca_top_k_overlap", functions.lit(float(overlap or 0.0)))
+        .withColumn(
+            "mean_raw_pca_top_k_overlap_share",
+            functions.lit(float(overlap or 0.0))
+            / functions.greatest(
+                functions.col("match_count") / functions.col("query_count"),
+                functions.lit(1.0),
+            ),
+        )
+        .withColumn(
+            "similarity_distance_iqr",
+            functions.col("p75_similarity_distance") - functions.col("p25_similarity_distance"),
+        )
     )
 
 

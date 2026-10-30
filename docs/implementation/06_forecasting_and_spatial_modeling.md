@@ -54,9 +54,10 @@ Job `500 Modeling | Forecast Baselines` now implements the first comparison chec
 `gold_modeling_panel`, fits no preprocessing outside the published training rows, and publishes
 validation predictions from zero change, latest-change persistence, recent three-year mean,
 county trend, state trend, and one L2-regularized linear model. The output scorecard uses MAE,
-RMSE, median absolute error, directional accuracy, coverage, cohort, geography, housing mix, and
-state slices. MLflow records the feature list, target, regularization, and aggregate validation
-metrics.
+RMSE, median and 90th-percentile absolute error, signed bias, annualized percentage-point error,
+R-squared, directional accuracy, skill over zero change, coverage, cohort, geography, housing
+mix, and state slices. MLflow records the feature list, target, regularization, and aggregate
+validation metrics.
 
 The workflow is intentionally not a final model. It does not use calibration rows, does not open
 the locked temporal tests, and does not serialize an application model yet. Its purpose is to
@@ -159,8 +160,10 @@ remaining origin count permits it.
 - prediction contract for downstream calibration and serving.
 
 The initial prediction and scorecard contracts are documented as
-`gold_forecast_baseline_prediction` and `gold_forecast_baseline_scorecard`. They remain
-development artifacts rather than application serving tables.
+`neighborhood_twin_model.forecast_baseline_prediction` and
+`neighborhood_twin_evaluation.forecast_baseline_scorecard`. They remain development artifacts
+rather than application serving tables. Job `600 Evaluation | Model Diagnostics` turns the
+current scorecards into versioned, run-linked figures without recalculating or selecting models.
 
 ## Acceptance checks
 

@@ -51,6 +51,10 @@ from neighborhood_twin.similarity import (
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
 dbutils.widgets.text("gold_schema", "neighborhood_twin_gold", "Gold schema")
+dbutils.widgets.text("model_schema", "neighborhood_twin_model", "Model-output schema")
+dbutils.widgets.text(
+    "evaluation_schema", "neighborhood_twin_evaluation", "Model-evaluation schema"
+)
 dbutils.widgets.text(
     "candidate_table", "gold_similarity_candidate_current", "Current similarity candidates"
 )
@@ -69,6 +73,8 @@ dbutils.widgets.text(
 
 catalog = dbutils.widgets.get("catalog").strip()
 gold_schema = dbutils.widgets.get("gold_schema").strip()
+model_schema = dbutils.widgets.get("model_schema").strip()
+evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
 candidate_table = dbutils.widgets.get("candidate_table").strip()
 match_table = dbutils.widgets.get("match_table").strip()
 summary_table = dbutils.widgets.get("summary_table").strip()
@@ -127,17 +133,29 @@ with mlflow.start_run(run_name="current-similarity-baselines") as active_run:
             f"{representation}_median_distance",
             float(row["median_similarity_distance"]),
         )
+        mlflow.log_metric(
+            f"{representation}_distance_iqr",
+            float(row["similarity_distance_iqr"]),
+        )
+        mlflow.log_metric(
+            f"{representation}_same_county_match_share",
+            float(row["same_county_match_share"]),
+        )
     summary_row = result.summary.first()
     mlflow.log_metric("pca_explained_variance", float(summary_row["pca_explained_variance"]))
     mlflow.log_metric(
         "mean_raw_pca_top_k_overlap",
         float(summary_row["mean_raw_pca_top_k_overlap"]),
     )
+    mlflow.log_metric(
+        "mean_raw_pca_top_k_overlap_share",
+        float(summary_row["mean_raw_pca_top_k_overlap_share"]),
+    )
 
 # COMMAND ----------
 
-match_name = qualified_name(catalog, gold_schema, match_table)
-summary_name = qualified_name(catalog, gold_schema, summary_table)
+match_name = qualified_name(catalog, model_schema, match_table)
+summary_name = qualified_name(catalog, evaluation_schema, summary_table)
 (
     result.matches.write.format("delta")
     .mode("overwrite")

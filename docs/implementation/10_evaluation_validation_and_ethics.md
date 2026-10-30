@@ -2,6 +2,13 @@
 
 This stage turns model output into defensible evidence. Evaluation is not a final accuracy check; it is the process used to decide whether a component is reliable enough to appear in the application and how cautiously it should be described.
 
+Implemented evaluation outputs live in `workspace.neighborhood_twin_evaluation`, separate from
+generated predictions and matches in `workspace.neighborhood_twin_model`. The evaluation schema
+contains scorecards, representation diagnostics, and a manifest for versioned figures stored in
+its `model_evaluation_figures` volume. MLflow remains the experiment-level record of parameters
+and aggregate metrics; evaluation tables are the governed source for cross-run analysis,
+subgroup review, application approval, and report figures.
+
 ## Stage objective
 
 Create one evaluation protocol that covers forecasts, uncertainty intervals, historical analogues, optional trajectory clusters, scenario responses, and the application experience. The protocol should be frozen before final model selection so the team does not unknowingly tune to the test results.

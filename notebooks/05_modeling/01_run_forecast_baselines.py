@@ -50,6 +50,10 @@ from neighborhood_twin.forecasting import (
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
 dbutils.widgets.text("gold_schema", "neighborhood_twin_gold", "Gold schema")
+dbutils.widgets.text("model_schema", "neighborhood_twin_model", "Model-output schema")
+dbutils.widgets.text(
+    "evaluation_schema", "neighborhood_twin_evaluation", "Model-evaluation schema"
+)
 dbutils.widgets.text("modeling_panel_table", "gold_modeling_panel", "Modeling panel")
 dbutils.widgets.text("prediction_table", FORECAST_PREDICTION_TABLE, "Prediction output")
 dbutils.widgets.text("scorecard_table", FORECAST_SCORECARD_TABLE, "Scorecard output")
@@ -60,6 +64,8 @@ dbutils.widgets.text(
 
 catalog = dbutils.widgets.get("catalog").strip()
 gold_schema = dbutils.widgets.get("gold_schema").strip()
+model_schema = dbutils.widgets.get("model_schema").strip()
+evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
 panel_table = dbutils.widgets.get("modeling_panel_table").strip()
 prediction_table = dbutils.widgets.get("prediction_table").strip()
 scorecard_table = dbutils.widgets.get("scorecard_table").strip()
@@ -99,18 +105,39 @@ with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run
     )
     overall = (
         result.scorecard.where("slice_name = 'overall'")
-        .select("model_name", "horizon_years", "mae_log_change", "rmse_log_change")
+        .select(
+            "model_name",
+            "horizon_years",
+            "mae_log_change",
+            "rmse_log_change",
+            "mean_error_log_change",
+            "p90_absolute_error_log_change",
+            "r_squared",
+            "mae_skill_vs_zero_change",
+        )
         .collect()
     )
     for row in overall:
         metric_stem = f"{row['model_name']}_h{row['horizon_years']}"
         mlflow.log_metric(f"{metric_stem}_mae", float(row["mae_log_change"]))
         mlflow.log_metric(f"{metric_stem}_rmse", float(row["rmse_log_change"]))
+        mlflow.log_metric(f"{metric_stem}_mean_error", float(row["mean_error_log_change"]))
+        mlflow.log_metric(
+            f"{metric_stem}_p90_absolute_error",
+            float(row["p90_absolute_error_log_change"]),
+        )
+        if row["r_squared"] is not None:
+            mlflow.log_metric(f"{metric_stem}_r_squared", float(row["r_squared"]))
+        if row["mae_skill_vs_zero_change"] is not None:
+            mlflow.log_metric(
+                f"{metric_stem}_mae_skill_vs_zero_change",
+                float(row["mae_skill_vs_zero_change"]),
+            )
 
 # COMMAND ----------
 
-prediction_name = qualified_name(catalog, gold_schema, prediction_table)
-scorecard_name = qualified_name(catalog, gold_schema, scorecard_table)
+prediction_name = qualified_name(catalog, model_schema, prediction_table)
+scorecard_name = qualified_name(catalog, evaluation_schema, scorecard_table)
 (
     result.predictions.write.format("delta")
     .mode("overwrite")
