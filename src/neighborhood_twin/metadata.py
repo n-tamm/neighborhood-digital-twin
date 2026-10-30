@@ -224,6 +224,26 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Versioned inventory of report-ready EDA figures stored in the managed figure volume.",
         "One row per figure in the current visual EDA build.",
     ),
+    "gold_forecast_baseline_prediction": TableMetadata(
+        "Validation-only predictions from fixed forecasting baselines and the initial regularized "
+        "linear model; locked temporal tests are deliberately absent.",
+        "One row per tract, forecast origin, horizon, and baseline model.",
+    ),
+    "gold_forecast_baseline_scorecard": TableMetadata(
+        "Forecast development metrics across overall, geography, cohort, housing-composition, "
+        "and state slices.",
+        "One row per model, horizon, slice name, and slice value.",
+    ),
+    "gold_similarity_baseline_match": TableMetadata(
+        "Reviewable current-state neighborhood matches from standardized raw and PCA "
+        "representations.",
+        "One row per query tract, representation, and match rank.",
+    ),
+    "gold_similarity_baseline_summary": TableMetadata(
+        "Separation, geographic diversity, overlap, and PCA coverage diagnostics for the initial "
+        "similarity representations.",
+        "One row per similarity representation and baseline run.",
+    ),
 }
 
 TABLE_LAYERS = {
@@ -414,6 +434,41 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "figure_purpose": "Decision or analytical question the figure is intended to support.",
     "byte_size": "Size of the rendered figure file in bytes.",
+    "model_name": "Stable name of the forecasting model or fixed baseline.",
+    "prediction_cumulative_log_change": (
+        "Predicted natural log of endpoint HPI divided by origin HPI."
+    ),
+    "prediction_annualized_change_pct": (
+        "Annualized percentage change implied by the cumulative model prediction."
+    ),
+    "residual_cumulative_log_change": "Observed minus predicted cumulative FHFA HPI log change.",
+    "absolute_error_cumulative_log_change": (
+        "Absolute observed-minus-predicted cumulative FHFA HPI log change."
+    ),
+    "evaluation_geography": "Development-state or held-out-state evaluation population.",
+    "housing_composition_band": (
+        "Interpretable band based on the ACS share of single-family housing units."
+    ),
+    "slice_name": "Evaluation dimension used by this scorecard row.",
+    "slice_value": "Evaluated value within the named scorecard dimension.",
+    "observation_count": "Prediction rows included in the evaluation slice.",
+    "tract_count": "Distinct Census tracts included in the evaluation slice.",
+    "mae_log_change": "Mean absolute error on the cumulative FHFA HPI log-change target.",
+    "rmse_log_change": "Root mean squared error on the cumulative FHFA HPI log-change target.",
+    "median_absolute_error_log_change": (
+        "Median absolute error on the cumulative FHFA HPI log-change target."
+    ),
+    "directional_accuracy": "Share of predictions with the same change direction as the target.",
+    "query_geoid_2020": "Canonical 2020 tract GEOID used as the similarity query.",
+    "match_geoid_2020": "Canonical 2020 tract GEOID returned as a similarity match.",
+    "representation_name": "Standardized-raw or PCA representation used for retrieval.",
+    "similarity_distance": "Euclidean distance in the named fitted representation.",
+    "match_rank": "One-based nearest-neighbor rank within query and representation.",
+    "pca_explained_variance": "Share of standardized feature variance retained by the PCA model.",
+    "cross_state_match_share": "Share of matches located outside their query tract's state.",
+    "mean_raw_pca_top_k_overlap": (
+        "Mean number of returned neighbors shared by the raw and PCA top-k lists."
+    ),
 }
 
 

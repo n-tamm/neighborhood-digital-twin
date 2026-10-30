@@ -19,6 +19,22 @@ Start with a small, interpretable set of standardized state dimensions. The firs
 
 Choose component count through explained variance, stability, and downstream analogue results—not only a visual elbow. UMAP can support a map-like visualization, but it should not become the retrieval metric without evidence because it can distort global distances.
 
+### Implemented current-state scaffold
+
+Job `501 Modeling | Similarity Baselines` now creates a deliberately small review set from the
+current national candidate table. Population, housing-unit, income, value, and rent fields use a
+`log1p` transform; all fields are median-imputed and standardized. The job compares exact
+Euclidean neighbors in the standardized feature space with exact neighbors in a six-component
+PCA space. It records explained variance, distance distributions, cross-state match share, and
+raw-versus-PCA top-k overlap in MLflow and governed gold tables.
+
+This is a representation sanity check, not the completed historical-analogue system. It fits the
+current candidate population, uses a small deterministic query set, and has not yet tested whether
+the matches predict later outcomes. The next similarity iteration must reuse training-period
+transforms, retrieve only states observable before each query date, compare against random and
+regional matches, and preserve ACS-based retrieval for tracts without representative FHFA
+coverage.
+
 ## Time-safe retrieval
 
 For a query tract at forecast origin `t`:

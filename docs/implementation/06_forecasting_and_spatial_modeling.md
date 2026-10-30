@@ -48,6 +48,22 @@ Every horizon should include the baselines it can support:
 
 Baselines use the same rows, split, and metrics as the candidate model. A baseline should not receive less careful timing simply because it is simple.
 
+### Implemented development scaffold
+
+Job `500 Modeling | Forecast Baselines` now implements the first comparison checkpoint. It reads
+`gold_modeling_panel`, fits no preprocessing outside the published training rows, and publishes
+validation predictions from zero change, latest-change persistence, recent three-year mean,
+county trend, state trend, and one L2-regularized linear model. The output scorecard uses MAE,
+RMSE, median absolute error, directional accuracy, coverage, cohort, geography, housing mix, and
+state slices. MLflow records the feature list, target, regularization, and aggregate validation
+metrics.
+
+The workflow is intentionally not a final model. It does not use calibration rows, does not open
+the locked temporal tests, and does not serialize an application model yet. Its purpose is to
+establish honest difficulty, expose weak slices, and show whether more complex modeling is worth
+the added work. The five-year linear result should be interpreted cautiously because its training
+sample contains only three independent origin years.
+
 ## Candidate nonlinear model
 
 Select one gradient-boosted tree implementation based on missing-value support, training time, reproducibility, interpretability, Databricks compatibility, and team familiarity. HistGradientBoosting, XGBoost, LightGBM, or CatBoost can all be reasonable; the decision belongs in an ADR after a small comparison.
@@ -127,6 +143,10 @@ remaining origin count permits it.
 - residual maps and error slices;
 - approved model manifest and draft model card;
 - prediction contract for downstream calibration and serving.
+
+The initial prediction and scorecard contracts are documented as
+`gold_forecast_baseline_prediction` and `gold_forecast_baseline_scorecard`. They remain
+development artifacts rather than application serving tables.
 
 ## Acceptance checks
 

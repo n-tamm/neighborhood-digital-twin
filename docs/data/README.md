@@ -83,6 +83,13 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 36. [`gold_modeling_panel`](45_gold_modeling_panel.md)
 37. [`gold_model_readiness_summary`](46_gold_model_readiness_summary.md)
 
+### Gold model-development outputs
+
+47. [`gold_forecast_baseline_prediction`](47_gold_forecast_baseline_prediction.md)
+48. [`gold_forecast_baseline_scorecard`](48_gold_forecast_baseline_scorecard.md)
+49. [`gold_similarity_baseline_match`](49_gold_similarity_baseline_match.md)
+50. [`gold_similarity_baseline_summary`](50_gold_similarity_baseline_summary.md)
+
 ### Gold exploration and readiness
 
 38. [`gold_eda_state_coverage`](24_gold_eda_state_coverage.md)

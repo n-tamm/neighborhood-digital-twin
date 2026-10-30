@@ -137,6 +137,12 @@ variables:
   geographic_holdout_seed:
     description: Seed for deterministic selection of one holdout state per Census region
     default: "699"
+  forecast_mlflow_experiment:
+    description: Shared MLflow experiment for validation-only forecast development
+    default: /Shared/neighborhood-digital-twin/forecast-baselines
+  similarity_mlflow_experiment:
+    description: Shared MLflow experiment for neighborhood representation development
+    default: /Shared/neighborhood-digital-twin/similarity-baselines
 
 resources:
   jobs:
@@ -633,6 +639,56 @@ resources:
             dependencies:
               - matplotlib==3.9.2
               - shapely==2.0.6
+    forecast_baselines:
+      name: Neighborhood Digital Twin | 500 Modeling | Forecast Baselines
+      description: Fits interpretable development models and publishes validation-only scorecards.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "500"
+        lifecycle: model_development
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_forecast_baselines
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/01_run_forecast_baselines.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              modeling_panel_table: gold_modeling_panel
+              prediction_table: gold_forecast_baseline_prediction
+              scorecard_table: gold_forecast_baseline_scorecard
+              reg_param: "0.05"
+              mlflow_experiment: ${var.forecast_mlflow_experiment}
+    similarity_baselines:
+      name: Neighborhood Digital Twin | 501 Modeling | Similarity Baselines
+      description: Compares standardized and PCA neighborhood matches for a reviewable query set.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "501"
+        lifecycle: model_development
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_similarity_baselines
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/02_run_similarity_baselines.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              candidate_table: gold_similarity_candidate_current
+              match_table: gold_similarity_baseline_match
+              summary_table: gold_similarity_baseline_summary
+              query_geoids: ""
+              query_state_fips: ${var.application_demo_state_fips}
+              queries_per_state: "2"
+              top_k: "10"
+              pca_components: "6"
+              mlflow_experiment: ${var.similarity_mlflow_experiment}
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.
