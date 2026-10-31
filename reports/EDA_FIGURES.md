@@ -8,9 +8,9 @@ committed as changing binary files in Git.
 ## Shared location
 
 - **Volume:** `workspace.neighborhood_twin_gold.eda_figures`
-- **Current build:** `20261030T144543109338Z`
+- **Current build:** `20261031T164948080630Z`
 - **Current build directory:**
-  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261030T144543109338Z/`
+  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261031T164948080630Z/`
 - **Manifest table:**
   `workspace.neighborhood_twin_gold.gold_eda_figure_manifest`
 
@@ -33,7 +33,7 @@ successful run will replace the current manifest while retaining prior versioned
 11. `11_county_hpi_trend_story.png`
 12. `12_state_forecast_coverage.png`
 
-The expanded workflow completed successfully on October 30, 2026. Its manifest contains all
+The refined workflow completed successfully on October 31, 2026. Its manifest contains all
 twelve expected files, and the smallest rendered PNG is 86,138 bytes. The publication guard
 requires every file to exceed 10,000 bytes, so a blank or obviously incomplete render cannot
 silently become the current figure set.
@@ -67,6 +67,11 @@ They remain display-only and must not be reused as analytical adjacency or dista
 overall idea of pairing a map with supporting analytical context is inspired by the
 [Opportunity Atlas](https://opportunityatlas.org/); no Opportunity Atlas code or visual assets
 were copied.
+
+The final build was visually inspected at full resolution. That review caught an overlapping
+vertical color-bar label in the first county layout. The legend was changed to a horizontal scale,
+the job was rerun, and the corrected figure was inspected again before this build was recorded as
+current.
 
 ## Reproduce the figures
 
