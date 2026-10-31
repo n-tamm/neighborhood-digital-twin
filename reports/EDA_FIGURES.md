@@ -29,8 +29,8 @@ successful run will replace the current manifest while retaining prior versioned
 7. `07_model_feature_completeness.png`
 8. `08_model_split_origin_years.png`
 9. `09_forecast_candidate_maps.png`
-10. `10_latest_hpi_change_maps.png`
-11. `11_county_rollup_maps.png`
+10. `10_hpi_change_2020_2025_maps.png`
+11. `11_county_hpi_trend_story.png`
 12. `12_state_forecast_coverage.png`
 
 The expanded workflow completed successfully on October 30, 2026. Its manifest contains all
@@ -42,10 +42,24 @@ silently become the current figure set.
 
 The map code is original to this repository. It uses thin or absent tract outlines, stronger
 county boundaries, a dedicated missing-data gray, consistent scales across pilot states, and
-separate county and tract views. Ordered coverage uses a perceptually ordered sequential palette;
-HPI change uses a zero-centered diverging palette because zero has a real analytical meaning.
-That choice follows [Matplotlib's colormap guidance](https://matplotlib.org/stable/users/explain/colors/colormaps.html),
+separate county and tract views. Figure 9 combines the eligibility maps with a coverage chart so
+the audience can compare states without estimating area from the maps. It treats eligibility as
+a data-readiness measure rather than a model result.
+
+Figures 10 and 11 use fixed, observed endpoints instead of mixing each tract's most recently
+available value. The longer view is cumulative FHFA tract HPI change from 2020 through 2025; the
+second view is the 2024-to-2025 change, which provides recent context without replacing the
+five-year pattern. Each metric uses one shared scale across all three pilot states. The cumulative
+view uses a sequential palette because the values are ordered, while the latest-year view uses a
+zero-centered diverging palette because zero separates gains from declines. That choice follows
+[Matplotlib's colormap guidance](https://matplotlib.org/stable/users/explain/colors/colormaps.html),
 which distinguishes ordered sequential data from values that diverge around a meaningful center.
+
+The county figure does not ask a map to carry the entire analysis. It pairs county medians with a
+scatterplot of five-year change against latest-year movement, state summaries, and a computed
+count of counties with a negative latest-year median. This makes the visual's claim inspectable:
+strong post-2020 gains do not guarantee that a county still has the same momentum. The county
+medians are descriptive summaries of observed tract changes, not new county-level HPI estimates.
 
 County display shapes are dissolved from the approved tract display geometry with
 [Shapely `union_all`](https://shapely.readthedocs.io/en/latest/reference/shapely.unary_union.html).
