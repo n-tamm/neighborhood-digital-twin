@@ -1090,16 +1090,17 @@ for column_index, state_fips in enumerate(pilot_states):
     )
 legend_axis = figure.add_subplot(grid[0, 3])
 legend_axis.axis("off")
-colorbar_axis = legend_axis.inset_axes([0.10, 0.38, 0.10, 0.50])
+colorbar_axis = legend_axis.inset_axes([0.10, 0.64, 0.76, 0.08])
 county_colorbar = figure.colorbar(
     plt.cm.ScalarMappable(norm=county_five_normalizer, cmap=five_year_cmap),
     cax=colorbar_axis,
+    orientation="horizontal",
 )
-county_colorbar.set_label("County median cumulative HPI change (%)")
-legend_axis.text(0.10, 0.28, "2020–2025", fontsize=13, fontweight="semibold")
+county_colorbar.set_label("County median cumulative HPI change (%)", labelpad=8)
+legend_axis.text(0.10, 0.48, "2020–2025", fontsize=13, fontweight="semibold")
 legend_axis.text(
     0.10,
-    0.15,
+    0.34,
     (
         "Each county is colored by the\n"
         "median tract change. Gray marks\n"
