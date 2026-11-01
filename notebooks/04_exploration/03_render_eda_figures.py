@@ -405,41 +405,177 @@ eligible_coverage["excluded_tract_count"] = (
 )
 years = eligible_coverage["acs_release_year"].astype(float)
 eligible = eligible_coverage["eligible_tract_count"].astype(float)
-excluded = eligible_coverage["excluded_tract_count"].astype(float)
-figure, axis = plt.subplots(figsize=(11, 6))
-axis.fill_between(years, 0, eligible, color=TEAL, alpha=0.9, label="Usable canonical tracts")
+source = eligible_coverage["source_tract_count"].astype(float)
+pre_2020 = years < 2020
+post_2020 = years >= 2020
+stable_cohort_count = int(np.median(eligible[pre_2020]))
+current_cohort_count = int(np.median(eligible[post_2020]))
+
+figure = plt.figure(figsize=(14, 7.6))
+grid = GridSpec(
+    1,
+    2,
+    figure=figure,
+    width_ratios=[3.4, 1.3],
+    left=0.07,
+    right=0.96,
+    top=0.79,
+    bottom=0.15,
+    wspace=0.13,
+)
+axis = figure.add_subplot(grid[0, 0])
 axis.fill_between(
     years,
     eligible,
-    eligible + excluded,
-    color=GRAY,
-    alpha=0.9,
-    label="Excluded changed or unsupported tracts",
+    source,
+    color="#E5E7EB",
+    alpha=0.95,
+    label="Not used under the governed geography rule",
 )
-axis.axvline(2019.5, color="#546E7A", linewidth=1, linestyle="--")
-axis.annotate(
-    "2020 tract geography begins",
-    xy=(2020, float((eligible + excluded).max()) * 0.92),
-    xytext=(2016.4, float((eligible + excluded).max()) * 1.04),
-    arrowprops={"arrowstyle": "->", "color": "#546E7A"},
+axis.plot(
+    years,
+    source,
+    color=DARK_BLUE,
+    linewidth=2.2,
+    linestyle="--",
+    label="Source tract universe",
+)
+axis.plot(
+    years,
+    eligible,
+    color=TEAL,
+    linewidth=3,
+    marker="o",
+    markersize=4,
+    label="Usable analytical cohort",
+)
+axis.axvspan(2019.5, 2020.5, color=GOLD, alpha=0.18, linewidth=0)
+axis.axvline(2019.5, color="#8D6E63", linewidth=1.1, linestyle="--")
+axis.text(
+    2020,
+    float(source.max()) * 1.015,
+    "2020 Census\ntract redesign",
+    ha="center",
+    va="bottom",
+    fontsize=9,
+    color="#6D4C41",
+    fontweight="semibold",
+)
+axis.set_xlabel("ACS five-year release")
+axis.set_ylabel("Tracts represented")
+axis.yaxis.set_major_formatter(lambda value, _position: f"{value / 1000:,.0f}k")
+axis.set_ylim(float(eligible.min()) * 0.91, float(source.max()) * 1.075)
+axis.set_xlim(float(years.min()) - 0.4, float(years.max()) + 0.4)
+axis.legend(frameon=False, loc="upper left")
+clean_axis(axis)
+
+summary_axis = figure.add_subplot(grid[0, 1])
+summary_axis.axis("off")
+summary_axis.text(
+    0,
+    0.98,
+    "HOW TO READ THIS",
+    va="top",
+    fontsize=10,
+    fontweight="semibold",
     color="#455A64",
 )
-axis.set_title("The longitudinal tract universe expands after the 2020 geography change")
-axis.set_xlabel("ACS five-year release")
-axis.set_ylabel("Source tracts")
-axis.yaxis.set_major_formatter(lambda value, _position: f"{value / 1000:,.0f}k")
-axis.legend(frameon=False, loc="lower right")
-clean_axis(axis)
+summary_axis.text(
+    0,
+    0.86,
+    f"{stable_cohort_count:,}",
+    va="top",
+    fontsize=25,
+    fontweight="bold",
+    color=TEAL,
+)
+summary_axis.text(
+    0,
+    0.77,
+    "stable tracts for analysis that\ncrosses the 2020 boundary change",
+    va="top",
+    fontsize=9.5,
+    color="#546E7A",
+    linespacing=1.35,
+)
+summary_axis.plot([0, 0.88], [0.61, 0.61], color="#CFD8DC", linewidth=1)
+summary_axis.text(
+    0,
+    0.55,
+    f"{current_cohort_count:,}",
+    va="top",
+    fontsize=25,
+    fontweight="bold",
+    color=DARK_BLUE,
+)
+summary_axis.text(
+    0,
+    0.46,
+    "tracts available for broader\npost-2020 analysis",
+    va="top",
+    fontsize=9.5,
+    color="#546E7A",
+    linespacing=1.35,
+)
+summary_axis.text(
+    0,
+    0.27,
+    "MODELING RULE",
+    va="top",
+    fontsize=10,
+    fontweight="semibold",
+    color="#455A64",
+)
+summary_axis.text(
+    0,
+    0.20,
+    (
+        "Use the stable cohort when a trend\n"
+        "crosses 2020. Use broader coverage\n"
+        "for post-2020 work. Report the two\n"
+        "populations separately."
+    ),
+    va="top",
+    fontsize=9.5,
+    color=TEXT,
+    linespacing=1.45,
+)
+summary_axis.set_xlim(0, 1)
+summary_axis.set_ylim(0, 1)
+
+figure.text(
+    0.055,
+    0.965,
+    "The 2020 tract redesign changes which communities can be compared over time",
+    ha="left",
+    va="top",
+    fontsize=18,
+    fontweight="semibold",
+)
+figure.text(
+    0.055,
+    0.915,
+    (
+        "A stable cohort supports like-for-like historical analysis; post-2020 work can use "
+        "broader current coverage."
+    ),
+    ha="left",
+    va="top",
+    fontsize=10.5,
+    color="#546E7A",
+)
 add_source_note(
     figure,
-    "Pre-2020 releases retain only conservative stable 2010-to-2020 tract mappings. "
-    "The larger 2020-vintage universe is not a balanced continuation of the earlier panel.",
+    (
+        "Source: governed historical tract-coverage summary. The post-2020 increase reflects a "
+        "geography and cohort change, not the creation of new neighborhoods."
+    ),
 )
 save_figure(
     6,
     "tract_vintage_coverage",
-    "Historical tract coverage across the 2010 and 2020 vintages",
-    "Makes the governed geography break and its effect on longitudinal sample size explicit.",
+    "Stable historical cohort and broader post-2020 tract coverage",
+    "Explains which tract cohort is valid for cross-vintage and post-2020 analysis.",
     figure,
 )
 
