@@ -36,28 +36,73 @@ For this project, a Neighborhood Digital Twin is:
 
 The name does not imply a perfect replica of a neighborhood, live sensor coverage, or causal simulation. Those limits will remain visible in the application and final report.
 
-## Planned system
+## Current system and next delivery stages
 
 ```mermaid
-flowchart LR
-    S[Public sources] --> B[Unity Catalog raw snapshots]
-    B --> C[Bronze schema]
-    C --> D[Silver schema]
-    D --> G[Gold neighborhood state]
-    G --> M[Model schema]
-    M --> F[Forecasts and uncertainty]
-    M --> R[Representations and analogues]
-    F --> E[Evaluation schema]
-    R --> E
-    F --> X[Scenario engine]
-    R --> X
-    F --> P[Versioned serving tables]
-    R --> P
-    X --> P
-    P --> A[Databricks Streamlit application]
+flowchart TB
+    GIT["GitHub<br/>source of truth"] --> DAB["Databricks Asset Bundle<br/>validate and deploy"]
+    DAB --> JOBS["Numbered Databricks jobs<br/>000 setup through 900 metadata"]
+
+    SRC["Public sources<br/>ACS, FHFA, and Census"] --> B["100-104 Bronze<br/>snapshots, manifests, and source tables"]
+    JOBS -.->|orchestrates| B
+
+    B --> SS["200 Silver source tables<br/>typed and validated ACS and FHFA"]
+    B --> SG["201-205 Silver geography<br/>relationships, display geometry, and hierarchy"]
+
+    SS --> GC["300 Gold current products<br/>tract profiles and candidate cohorts"]
+    SG --> GC
+    SS --> GH["301 Gold historical products<br/>aligned neighborhood states and direct targets"]
+    SG --> GH
+    GH --> GR["302 Gold model readiness<br/>point-in-time features, frozen splits, and modeling panel"]
+
+    GC --> EDA["400-401 Analysis<br/>readiness summaries and 12 versioned EDA figures"]
+    GR --> EDA
+
+    GR --> FM["500 Forecast baseline workflow"]
+    GC --> SM["501 Similarity baseline workflow"]
+    FM --> MO["Model schema<br/>validation predictions and ranked matches"]
+    SM --> MO
+    FM --> MLF["Shared MLflow experiments"]
+    SM --> MLF
+    MO --> EV["Evaluation schema and 600 workflow<br/>scorecards, diagnostics, and 7 versioned figures"]
+    MLF --> EV
+
+    B -.->|quality checks| QM["Quality schema and 900 metadata<br/>reconciliation, table descriptions, and column comments"]
+    SS -.->|quality checks| QM
+    SG -.->|quality checks| QM
+    GR -.->|quality checks| QM
+    EV -.->|evaluation checks| QM
+
+    GR -.->|next| NF["Focused nonlinear forecast<br/>and calibrated uncertainty"]
+    GH -.->|next| NA["Time-safe historical<br/>analogue evaluation"]
+    EV -.->|model-selection evidence| NF
+    GC -.->|planned input| SV["Versioned serving tables"]
+    NF -.->|planned output| SV
+    NA -.->|planned output| SV
+    SV -.-> APP["Interactive Databricks<br/>Streamlit application"]
+
+    classDef control fill:#EEF2F7,stroke:#455A64,color:#263238,stroke-width:1.4px;
+    classDef source fill:#FFFFFF,stroke:#78909C,color:#263238,stroke-width:1.4px;
+    classDef implemented fill:#E5F3F1,stroke:#287271,color:#263238,stroke-width:1.6px;
+    classDef planned fill:#FFF4DD,stroke:#D99035,color:#263238,stroke-width:1.5px,stroke-dasharray:5 4;
+    class GIT,DAB,JOBS control;
+    class SRC source;
+    class B,SS,SG,GC,GH,GR,EDA,FM,SM,MO,MLF,EV,QM implemented;
+    class NF,NA,SV,APP planned;
 ```
 
-Databricks Free Edition is the shared environment for raw snapshots, Delta tables, transformations, experiments, and the primary Streamlit application. GitHub remains the source of truth for code and review. The application will read compact serving tables rather than downloading national data or training models during a user session. Because Databricks Apps require authenticated access, a separate public mirror remains a deployment fallback if the capstone needs an anonymous portfolio URL.
+Teal nodes are implemented; gold nodes with dashed borders are the next planned delivery stages.
+The diagram reflects the current operational split: current and historical gold products are built
+separately, forecast and similarity baselines publish to dedicated model and evaluation schemas,
+and EDA and model figures are versioned Databricks outputs. Quality checks run throughout the
+pipeline, while job 900 reapplies table and column metadata after schema-overwriting jobs.
+
+Databricks Free Edition is the shared environment for source snapshots, Delta tables,
+transformations, MLflow experiments, figures, and the planned primary Streamlit application.
+GitHub remains the source of truth for code and review. The application will read compact serving
+tables rather than downloading national data or training models during a session. Because
+Databricks Apps require authenticated access, a separate public mirror remains a deployment
+fallback if the capstone needs an anonymous portfolio URL.
 
 ## Initial data scope
 

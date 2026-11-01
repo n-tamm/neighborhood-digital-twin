@@ -8,9 +8,9 @@ committed as changing binary files in Git.
 ## Shared location
 
 - **Volume:** `workspace.neighborhood_twin_gold.eda_figures`
-- **Current build:** `20261030T144543109338Z`
+- **Current build:** `20261101T144931442020Z`
 - **Current build directory:**
-  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261030T144543109338Z/`
+  `/Volumes/workspace/neighborhood_twin_gold/eda_figures/build_id=20261101T144931442020Z/`
 - **Manifest table:**
   `workspace.neighborhood_twin_gold.gold_eda_figure_manifest`
 
@@ -29,23 +29,44 @@ successful run will replace the current manifest while retaining prior versioned
 7. `07_model_feature_completeness.png`
 8. `08_model_split_origin_years.png`
 9. `09_forecast_candidate_maps.png`
-10. `10_latest_hpi_change_maps.png`
-11. `11_county_rollup_maps.png`
+10. `10_hpi_change_2020_2025_maps.png`
+11. `11_county_hpi_trend_story.png`
 12. `12_state_forecast_coverage.png`
 
-The expanded workflow completed successfully on October 30, 2026. Its manifest contains all
+The refined workflow completed successfully on November 1, 2026. Its manifest contains all
 twelve expected files, and the smallest rendered PNG is 86,138 bytes. The publication guard
 requires every file to exceed 10,000 bytes, so a blank or obviously incomplete render cannot
 silently become the current figure set.
 
 ## Visual and map design
 
+Figure 6 separates the conservative cross-vintage cohort from the broader post-2020 cohort. It
+uses lines and an explicit excluded-area band instead of a stacked area chart, then places the two
+cohort counts and the modeling rule in a separate reading panel. The post-2020 step is labeled as
+a geography and cohort change so it cannot be mistaken for sudden growth in the number of
+communities. The figure supports one operational rule: use the stable cohort when an analysis
+crosses the 2020 tract redesign and report broader post-2020 coverage separately.
+
 The map code is original to this repository. It uses thin or absent tract outlines, stronger
 county boundaries, a dedicated missing-data gray, consistent scales across pilot states, and
-separate county and tract views. Ordered coverage uses a perceptually ordered sequential palette;
-HPI change uses a zero-centered diverging palette because zero has a real analytical meaning.
-That choice follows [Matplotlib's colormap guidance](https://matplotlib.org/stable/users/explain/colors/colormaps.html),
+separate county and tract views. Figure 9 combines the eligibility maps with a coverage chart so
+the audience can compare states without estimating area from the maps. It treats eligibility as
+a data-readiness measure rather than a model result.
+
+Figures 10 and 11 use fixed, observed endpoints instead of mixing each tract's most recently
+available value. The longer view is cumulative FHFA tract HPI change from 2020 through 2025; the
+second view is the 2024-to-2025 change, which provides recent context without replacing the
+five-year pattern. Each metric uses one shared scale across all three pilot states. The cumulative
+view uses a sequential palette because the values are ordered, while the latest-year view uses a
+zero-centered diverging palette because zero separates gains from declines. That choice follows
+[Matplotlib's colormap guidance](https://matplotlib.org/stable/users/explain/colors/colormaps.html),
 which distinguishes ordered sequential data from values that diverge around a meaningful center.
+
+The county figure does not ask a map to carry the entire analysis. It pairs county medians with a
+scatterplot of five-year change against latest-year movement, state summaries, and a computed
+count of counties with a negative latest-year median. This makes the visual's claim inspectable:
+strong post-2020 gains do not guarantee that a county still has the same momentum. The county
+medians are descriptive summaries of observed tract changes, not new county-level HPI estimates.
 
 County display shapes are dissolved from the approved tract display geometry with
 [Shapely `union_all`](https://shapely.readthedocs.io/en/latest/reference/shapely.unary_union.html).
@@ -53,6 +74,12 @@ They remain display-only and must not be reused as analytical adjacency or dista
 overall idea of pairing a map with supporting analytical context is inspired by the
 [Opportunity Atlas](https://opportunityatlas.org/); no Opportunity Atlas code or visual assets
 were copied.
+
+The figure set was visually inspected at full resolution. An earlier review caught an overlapping
+vertical color-bar label in the county layout, which was replaced with a horizontal scale. The
+November 1 review corrected Figure 6's crowded title, annotation, legend, and explanation by
+separating the chart from a dedicated interpretation panel. Each correction was rerun and
+inspected before its replacement build was recorded as current.
 
 ## Reproduce the figures
 

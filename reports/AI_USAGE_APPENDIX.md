@@ -33,6 +33,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | ACS expansion, current analytical products, and data catalog, October 24, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Initial forecasting and similarity workflows and expanded EDA, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Model-output governance, evaluation metrics, and diagnostic figures, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -204,6 +205,25 @@ directional information over the base rate. This prevented a technically correct
 metric from becoming a project claim. The review also retained bias, tail error, zero-change
 skill, housing-composition slices, geographic transfer, and origin-year stability because the
 lowest overall MAE alone did not describe model behavior well enough.
+
+The EDA map refinement was evaluated through Ruff, Python compilation, bundle validation, two
+successful Databricks runs, manifest and file-size reconciliation, and manual inspection of the
+rendered PNGs. The original map request was not handled as a styling exercise alone. The revised
+figures replaced a mixed "latest available" comparison with exact observed 2020-to-2025 and
+2024-to-2025 endpoints, used one scale per metric across the three pilot states, and paired the
+county maps with a quantitative comparison of longer-run gains and recent momentum. Inspection of
+the first live render caught a color-bar label overlapping explanatory text. The layout was
+corrected, rerun, and inspected again before the new build was accepted. This review also kept
+missing endpoints visible in gray rather than allowing the mapped subset to look like complete
+coverage.
+
+A later review of the tract-vintage figure found that its title, geography-change annotation, and
+legend competed for the same space and that the stacked-area presentation did not clearly explain
+the modeling consequence. The figure was redesigned around the two governed cohorts, with a
+separate interpretation panel stating the cross-2020 and post-2020 rules. The replacement passed
+lint and compilation, rendered successfully in Databricks, and was inspected at full resolution.
+The corresponding standup explanation was also revised so the increase after 2020 is described as
+a geography and cohort change rather than an increase in the number of neighborhoods.
 
 ## Maintenance requirements
 

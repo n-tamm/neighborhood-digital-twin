@@ -46,6 +46,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import Normalize, TwoSlopeNorm
+from matplotlib.gridspec import GridSpec
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.patches import Polygon as MatplotlibPolygon
 from pyspark.sql import functions as spark_functions
@@ -403,41 +405,177 @@ eligible_coverage["excluded_tract_count"] = (
 )
 years = eligible_coverage["acs_release_year"].astype(float)
 eligible = eligible_coverage["eligible_tract_count"].astype(float)
-excluded = eligible_coverage["excluded_tract_count"].astype(float)
-figure, axis = plt.subplots(figsize=(11, 6))
-axis.fill_between(years, 0, eligible, color=TEAL, alpha=0.9, label="Usable canonical tracts")
+source = eligible_coverage["source_tract_count"].astype(float)
+pre_2020 = years < 2020
+post_2020 = years >= 2020
+stable_cohort_count = int(np.median(eligible[pre_2020]))
+current_cohort_count = int(np.median(eligible[post_2020]))
+
+figure = plt.figure(figsize=(14, 7.6))
+grid = GridSpec(
+    1,
+    2,
+    figure=figure,
+    width_ratios=[3.4, 1.3],
+    left=0.07,
+    right=0.96,
+    top=0.79,
+    bottom=0.15,
+    wspace=0.13,
+)
+axis = figure.add_subplot(grid[0, 0])
 axis.fill_between(
     years,
     eligible,
-    eligible + excluded,
-    color=GRAY,
-    alpha=0.9,
-    label="Excluded changed or unsupported tracts",
+    source,
+    color="#E5E7EB",
+    alpha=0.95,
+    label="Not used under the governed geography rule",
 )
-axis.axvline(2019.5, color="#546E7A", linewidth=1, linestyle="--")
-axis.annotate(
-    "2020 tract geography begins",
-    xy=(2020, float((eligible + excluded).max()) * 0.92),
-    xytext=(2016.4, float((eligible + excluded).max()) * 1.04),
-    arrowprops={"arrowstyle": "->", "color": "#546E7A"},
+axis.plot(
+    years,
+    source,
+    color=DARK_BLUE,
+    linewidth=2.2,
+    linestyle="--",
+    label="Source tract universe",
+)
+axis.plot(
+    years,
+    eligible,
+    color=TEAL,
+    linewidth=3,
+    marker="o",
+    markersize=4,
+    label="Usable analytical cohort",
+)
+axis.axvspan(2019.5, 2020.5, color=GOLD, alpha=0.18, linewidth=0)
+axis.axvline(2019.5, color="#8D6E63", linewidth=1.1, linestyle="--")
+axis.text(
+    2020,
+    float(source.max()) * 1.015,
+    "2020 Census\ntract redesign",
+    ha="center",
+    va="bottom",
+    fontsize=9,
+    color="#6D4C41",
+    fontweight="semibold",
+)
+axis.set_xlabel("ACS five-year release")
+axis.set_ylabel("Tracts represented")
+axis.yaxis.set_major_formatter(lambda value, _position: f"{value / 1000:,.0f}k")
+axis.set_ylim(float(eligible.min()) * 0.91, float(source.max()) * 1.075)
+axis.set_xlim(float(years.min()) - 0.4, float(years.max()) + 0.4)
+axis.legend(frameon=False, loc="upper left")
+clean_axis(axis)
+
+summary_axis = figure.add_subplot(grid[0, 1])
+summary_axis.axis("off")
+summary_axis.text(
+    0,
+    0.98,
+    "HOW TO READ THIS",
+    va="top",
+    fontsize=10,
+    fontweight="semibold",
     color="#455A64",
 )
-axis.set_title("The longitudinal tract universe expands after the 2020 geography change")
-axis.set_xlabel("ACS five-year release")
-axis.set_ylabel("Source tracts")
-axis.yaxis.set_major_formatter(lambda value, _position: f"{value / 1000:,.0f}k")
-axis.legend(frameon=False, loc="lower right")
-clean_axis(axis)
+summary_axis.text(
+    0,
+    0.86,
+    f"{stable_cohort_count:,}",
+    va="top",
+    fontsize=25,
+    fontweight="bold",
+    color=TEAL,
+)
+summary_axis.text(
+    0,
+    0.77,
+    "stable tracts for analysis that\ncrosses the 2020 boundary change",
+    va="top",
+    fontsize=9.5,
+    color="#546E7A",
+    linespacing=1.35,
+)
+summary_axis.plot([0, 0.88], [0.61, 0.61], color="#CFD8DC", linewidth=1)
+summary_axis.text(
+    0,
+    0.55,
+    f"{current_cohort_count:,}",
+    va="top",
+    fontsize=25,
+    fontweight="bold",
+    color=DARK_BLUE,
+)
+summary_axis.text(
+    0,
+    0.46,
+    "tracts available for broader\npost-2020 analysis",
+    va="top",
+    fontsize=9.5,
+    color="#546E7A",
+    linespacing=1.35,
+)
+summary_axis.text(
+    0,
+    0.27,
+    "MODELING RULE",
+    va="top",
+    fontsize=10,
+    fontweight="semibold",
+    color="#455A64",
+)
+summary_axis.text(
+    0,
+    0.20,
+    (
+        "Use the stable cohort when a trend\n"
+        "crosses 2020. Use broader coverage\n"
+        "for post-2020 work. Report the two\n"
+        "populations separately."
+    ),
+    va="top",
+    fontsize=9.5,
+    color=TEXT,
+    linespacing=1.45,
+)
+summary_axis.set_xlim(0, 1)
+summary_axis.set_ylim(0, 1)
+
+figure.text(
+    0.055,
+    0.965,
+    "The 2020 tract redesign changes which communities can be compared over time",
+    ha="left",
+    va="top",
+    fontsize=18,
+    fontweight="semibold",
+)
+figure.text(
+    0.055,
+    0.915,
+    (
+        "A stable cohort supports like-for-like historical analysis; post-2020 work can use "
+        "broader current coverage."
+    ),
+    ha="left",
+    va="top",
+    fontsize=10.5,
+    color="#546E7A",
+)
 add_source_note(
     figure,
-    "Pre-2020 releases retain only conservative stable 2010-to-2020 tract mappings. "
-    "The larger 2020-vintage universe is not a balanced continuation of the earlier panel.",
+    (
+        "Source: governed historical tract-coverage summary. The post-2020 increase reflects a "
+        "geography and cohort change, not the creation of new neighborhoods."
+    ),
 )
 save_figure(
     6,
     "tract_vintage_coverage",
-    "Historical tract coverage across the 2010 and 2020 vintages",
-    "Makes the governed geography break and its effect on longitudinal sample size explicit.",
+    "Stable historical cohort and broader post-2020 tract coverage",
+    "Explains which tract cohort is valid for cross-vintage and post-2020 analysis.",
     figure,
 )
 
@@ -570,13 +708,50 @@ def format_map_axis(axis: object, title: str) -> None:
     axis.set_title(title, pad=8)
 
 
-profile_for_maps = spark.table(f"{catalog}.{gold_schema}.gold_tract_profile_current").select(
-    "geoid_2020",
-    "state_fips",
-    "state_abbreviation",
-    "county_geoid",
-    "forecast_candidate",
-    "latest_hpi_annual_change_pct",
+target_change = spark_functions.exp(spark_functions.col("target_cumulative_log_change")) - 1
+period_changes = (
+    spark.table(f"{catalog}.{gold_schema}.gold_forecast_target_historical")
+    .where(spark_functions.col("target_is_observed"))
+    .where(
+        (
+            (spark_functions.col("forecast_origin_year") == 2020)
+            & (spark_functions.col("horizon_years") == 5)
+        )
+        | (
+            (spark_functions.col("forecast_origin_year") == 2024)
+            & (spark_functions.col("horizon_years") == 1)
+        )
+    )
+    .groupBy("geoid_2020")
+    .agg(
+        spark_functions.max(
+            spark_functions.when(
+                (spark_functions.col("forecast_origin_year") == 2020)
+                & (spark_functions.col("horizon_years") == 5),
+                target_change * 100,
+            )
+        ).alias("hpi_change_2020_2025_pct"),
+        spark_functions.max(
+            spark_functions.when(
+                (spark_functions.col("forecast_origin_year") == 2024)
+                & (spark_functions.col("horizon_years") == 1),
+                target_change * 100,
+            )
+        ).alias("hpi_change_2024_2025_pct"),
+    )
+)
+profile_for_maps = (
+    spark.table(f"{catalog}.{gold_schema}.gold_tract_profile_current")
+    .select(
+        "geoid_2020",
+        "state_fips",
+        "state_abbreviation",
+        "state_name",
+        "county_geoid",
+        "county_name",
+        "forecast_candidate",
+    )
+    .join(period_changes, "geoid_2020", "left")
 )
 display_geometry = spark.table(f"{catalog}.{silver_schema}.silver_canonical_tract_2020").select(
     "geoid_2020", "display_geometry_wkb"
@@ -589,10 +764,13 @@ geometry_rows = (
     .select(
         "state_fips",
         "state_abbreviation",
+        "state_name",
         "county_geoid",
+        "county_name",
         "display_geometry_wkb",
         "forecast_candidate",
-        "latest_hpi_annual_change_pct",
+        "hpi_change_2020_2025_pct",
+        "hpi_change_2024_2025_pct",
     )
     .collect()
 )
@@ -606,42 +784,67 @@ for row in geometry_rows:
         {
             "state_fips": row["state_fips"],
             "state_abbreviation": row["state_abbreviation"],
+            "state_name": row["state_name"],
             "county_geoid": row["county_geoid"],
+            "county_name": row["county_name"],
             "geometry": geometry,
             "forecast_candidate": bool(row["forecast_candidate"]),
-            "latest_hpi_annual_change_pct": row["latest_hpi_annual_change_pct"],
+            "hpi_change_2020_2025_pct": row["hpi_change_2020_2025_pct"],
+            "hpi_change_2024_2025_pct": row["hpi_change_2024_2025_pct"],
         }
     )
 
-state_labels = {
+state_abbreviations = {
     code: next(
         str(record["state_abbreviation"]) for record in map_records if record["state_fips"] == code
+    )
+    for code in pilot_states
+}
+state_names = {
+    code: next(
+        str(record["state_name"]) for record in map_records if record["state_fips"] == code
     )
     for code in pilot_states
 }
 
 county_tract_geometries = defaultdict(list)
 county_candidates = defaultdict(list)
-county_changes = defaultdict(list)
+county_five_year_changes = defaultdict(list)
+county_recent_changes = defaultdict(list)
 county_states = {}
+county_names = {}
 for record in map_records:
     county_geoid = str(record["county_geoid"])
     county_tract_geometries[county_geoid].append(record["geometry"])
     county_candidates[county_geoid].append(float(record["forecast_candidate"]))
-    if record["latest_hpi_annual_change_pct"] is not None:
-        county_changes[county_geoid].append(float(record["latest_hpi_annual_change_pct"]))
+    if record["hpi_change_2020_2025_pct"] is not None:
+        county_five_year_changes[county_geoid].append(
+            float(record["hpi_change_2020_2025_pct"])
+        )
+    if record["hpi_change_2024_2025_pct"] is not None:
+        county_recent_changes[county_geoid].append(
+            float(record["hpi_change_2024_2025_pct"])
+        )
     county_states[county_geoid] = str(record["state_fips"])
+    county_names[county_geoid] = str(record["county_name"])
 
 county_records = []
 for county_geoid, tract_geometries in county_tract_geometries.items():
-    changes = county_changes[county_geoid]
+    five_year_changes = county_five_year_changes[county_geoid]
+    recent_changes = county_recent_changes[county_geoid]
     county_records.append(
         {
             "county_geoid": county_geoid,
+            "county_name": county_names[county_geoid],
             "state_fips": county_states[county_geoid],
             "geometry": union_all(tract_geometries),
             "forecast_candidate_share": float(np.mean(county_candidates[county_geoid])),
-            "median_hpi_change_pct": float(np.median(changes)) if changes else None,
+            "median_hpi_change_2020_2025_pct": (
+                float(np.median(five_year_changes)) if five_year_changes else None
+            ),
+            "median_hpi_change_2024_2025_pct": (
+                float(np.median(recent_changes)) if recent_changes else None
+            ),
         }
     )
 
@@ -667,227 +870,512 @@ def add_county_outlines(axis: object, state_fips: str) -> None:
         )
 
 
-# Forecast coverage maps
-figure, axes = plt.subplots(1, len(pilot_states), figsize=(15, 6))
-for axis, state_fips in zip(axes, pilot_states, strict=True):
-    included_patches = []
-    excluded_patches = []
-    for record in map_records:
+def metric_values(records: list[dict[str, object]], metric: str) -> np.ndarray:
+    """Return finite numeric values for one map or summary metric."""
+
+    return np.asarray(
+        [
+            float(record[metric])
+            for record in records
+            if record[metric] is not None and np.isfinite(float(record[metric]))
+        ],
+        dtype=float,
+    )
+
+
+def robust_linear_normalizer(values: np.ndarray) -> Normalize:
+    """Create a shared linear scale clipped to the central 90 percent of values."""
+
+    lower, upper = np.quantile(values, [0.05, 0.95])
+    if upper <= lower:
+        upper = lower + 1.0
+    return Normalize(vmin=float(lower), vmax=float(upper), clip=True)
+
+
+def robust_zero_centered_normalizer(values: np.ndarray) -> TwoSlopeNorm:
+    """Create a symmetric zero-centered scale from robust change limits."""
+
+    lower, upper = np.quantile(values, [0.05, 0.95])
+    limit = max(abs(float(lower)), abs(float(upper)), 1.0)
+    return TwoSlopeNorm(vmin=-limit, vcenter=0, vmax=limit)
+
+
+def draw_choropleth(
+    axis: object,
+    records: list[dict[str, object]],
+    *,
+    state_fips: str,
+    metric: str,
+    cmap: str,
+    normalizer: object,
+    county_outlines: bool,
+    polygon_edges: bool = False,
+) -> None:
+    """Draw one state panel with shared scaling and explicit missing-data treatment."""
+
+    colored_patches = []
+    colored_values = []
+    missing_patches = []
+    for record in records:
         if record["state_fips"] != state_fips:
             continue
+        patches = polygon_patches(record["geometry"])
+        value = record[metric]
+        if value is None:
+            missing_patches.extend(patches)
+        else:
+            colored_patches.extend(patches)
+            colored_values.extend([float(value)] * len(patches))
+    if missing_patches:
+        axis.add_collection(
+            PatchCollection(
+                missing_patches,
+                facecolor="#E5E7EB",
+                edgecolor="#FFFFFF" if polygon_edges else "none",
+                linewidth=0.35 if polygon_edges else 0,
+            )
+        )
+    if colored_patches:
+        collection = PatchCollection(
+            colored_patches,
+            cmap=cmap,
+            norm=normalizer,
+            edgecolor="#FFFFFF" if polygon_edges else "none",
+            linewidth=0.35 if polygon_edges else 0,
+        )
+        collection.set_array(np.asarray(colored_values))
+        axis.add_collection(collection)
+    if county_outlines:
+        add_county_outlines(axis, state_fips)
+    format_map_axis(axis, "")
+
+
+def add_map_header(figure: object, title: str, subtitle: str) -> None:
+    """Add a consistent left-aligned title and analytical subtitle."""
+
+    figure.text(0.035, 0.965, title, ha="left", va="top", fontsize=18, fontweight="semibold")
+    figure.text(0.035, 0.925, subtitle, ha="left", va="top", fontsize=10.5, color="#546E7A")
+
+
+# Forecast coverage maps with a quantitative sidebar
+coverage_by_state = {
+    state_fips: float(
+        np.mean(
+            [
+                float(record["forecast_candidate"])
+                for record in map_records
+                if record["state_fips"] == state_fips
+            ]
+        )
+    )
+    for state_fips in pilot_states
+}
+figure = plt.figure(figsize=(16, 7))
+grid = GridSpec(
+    1,
+    4,
+    figure=figure,
+    width_ratios=[1.1, 1.1, 1.1, 0.78],
+    left=0.035,
+    right=0.97,
+    top=0.82,
+    bottom=0.13,
+    wspace=0.07,
+)
+for column_index, state_fips in enumerate(pilot_states):
+    axis = figure.add_subplot(grid[0, column_index])
+    included_patches = []
+    excluded_patches = []
+    state_records = [record for record in map_records if record["state_fips"] == state_fips]
+    for record in state_records:
         target = included_patches if record["forecast_candidate"] else excluded_patches
         target.extend(polygon_patches(record["geometry"]))
-    if excluded_patches:
-        axis.add_collection(
-            PatchCollection(
-                excluded_patches,
-                facecolor="#E3E7EA",
-                edgecolor="none",
-            )
-        )
-    if included_patches:
-        axis.add_collection(
-            PatchCollection(
-                included_patches,
-                facecolor=TEAL,
-                edgecolor="none",
-            )
-        )
+    axis.add_collection(
+        PatchCollection(excluded_patches, facecolor="#E5E7EB", edgecolor="none")
+    )
+    axis.add_collection(PatchCollection(included_patches, facecolor=TEAL, edgecolor="none"))
     add_county_outlines(axis, state_fips)
-    format_map_axis(axis, state_labels[state_fips])
-figure.legend(
+    format_map_axis(axis, state_names[state_fips])
+    axis.text(
+        0.5,
+        -0.025,
+        f"{coverage_by_state[state_fips]:.0%} eligible  •  {len(state_records):,} tracts",
+        transform=axis.transAxes,
+        ha="center",
+        va="top",
+        fontsize=9,
+        color="#546E7A",
+    )
+summary_axis = figure.add_subplot(grid[0, 3])
+positions = np.arange(len(pilot_states))[::-1]
+shares = np.asarray([coverage_by_state[code] for code in pilot_states])
+summary_axis.barh(positions, shares * 100, height=0.48, color=TEAL)
+summary_axis.set_yticks(positions, [state_abbreviations[code] for code in pilot_states])
+summary_axis.set_xlim(0, 100)
+summary_axis.set_xlabel("Eligible tracts (%)")
+summary_axis.set_title("Coverage at a glance", loc="left", pad=12)
+for position, share in zip(positions, shares, strict=True):
+    summary_axis.text(share * 100 + 2, position, f"{share:.0%}", va="center", fontweight="semibold")
+summary_axis.spines[["top", "right", "left"]].set_visible(False)
+summary_axis.grid(axis="x")
+summary_axis.set_axisbelow(True)
+summary_axis.legend(
     handles=[
-        Patch(facecolor=TEAL, label="Forecast candidate"),
-        Patch(facecolor="#E3E7EA", label="Excluded or unavailable"),
+        Patch(facecolor=TEAL, label="Current forecast candidate"),
+        Patch(facecolor="#E5E7EB", label="Unavailable"),
     ],
     frameon=False,
-    ncol=2,
-    loc="upper center",
-    bbox_to_anchor=(0.5, 0.91),
+    loc="lower left",
+    bbox_to_anchor=(-0.04, -0.28),
 )
-figure.suptitle("Forecast eligibility varies within each pilot state", y=0.97, fontsize=15)
-figure.subplots_adjust(top=0.84, bottom=0.1, wspace=0.12)
+add_map_header(
+    figure,
+    "Forecast coverage is broad in Michigan, but more selective in Arizona and Pennsylvania",
+    (
+        "Eligibility requires a current ACS profile and sufficient recent FHFA history; "
+        "it is not a model result."
+    ),
+)
 add_source_note(
     figure,
-    "Display-only Census geometry. Eligibility requires current ACS and sufficient "
-    "recent FHFA history; it is not a forecast result.",
+    (
+        "Source: current gold tract profile and display-only Census geometry. "
+        "White lines show county boundaries."
+    ),
 )
 save_figure(
     9,
     "forecast_candidate_maps",
     "Forecast eligibility in the pilot states",
-    "Maps within-state gaps in current forecast eligibility for Arizona, Michigan, "
-    "and Pennsylvania.",
+    "Combines tract maps with a state coverage summary to show where the forecast can speak.",
     figure,
 )
 
-# Latest HPI change maps
-available_changes = np.asarray(
-    [
-        float(record["latest_hpi_annual_change_pct"])
-        for record in map_records
-        if record["latest_hpi_annual_change_pct"] is not None
-    ],
-    dtype=float,
+# Five-year housing-market movement compared with the latest annual change
+five_year_metric = "hpi_change_2020_2025_pct"
+recent_metric = "hpi_change_2024_2025_pct"
+five_year_values = metric_values(map_records, five_year_metric)
+recent_values = metric_values(map_records, recent_metric)
+five_year_normalizer = robust_linear_normalizer(five_year_values)
+recent_normalizer = robust_zero_centered_normalizer(recent_values)
+five_year_cmap = "YlGnBu"
+recent_cmap = "BrBG"
+
+figure = plt.figure(figsize=(16, 10.5))
+grid = GridSpec(
+    2,
+    4,
+    figure=figure,
+    width_ratios=[1, 1, 1, 0.08],
+    left=0.065,
+    right=0.94,
+    top=0.84,
+    bottom=0.09,
+    hspace=0.08,
+    wspace=0.05,
 )
-lower, upper = np.quantile(available_changes, [0.05, 0.95])
-limit = max(abs(lower), abs(upper), 1.0)
-normalizer = TwoSlopeNorm(vmin=-limit, vcenter=0, vmax=limit)
-cmap = plt.get_cmap("PuOr")
-figure, axes = plt.subplots(1, len(pilot_states), figsize=(15, 6))
-for axis, state_fips in zip(axes, pilot_states, strict=True):
-    colored_patches = []
-    values_for_patches = []
-    missing_patches = []
-    for record in map_records:
-        if record["state_fips"] != state_fips:
-            continue
-        patches = polygon_patches(record["geometry"])
-        change = record["latest_hpi_annual_change_pct"]
-        if change is None:
-            missing_patches.extend(patches)
-        else:
-            colored_patches.extend(patches)
-            values_for_patches.extend([float(change)] * len(patches))
-    if missing_patches:
-        axis.add_collection(
-            PatchCollection(
-                missing_patches,
-                facecolor="#E3E7EA",
-                edgecolor="none",
-            )
-        )
-    collection = PatchCollection(
-        colored_patches,
-        cmap=cmap,
-        norm=normalizer,
-        edgecolor="none",
+for column_index, state_fips in enumerate(pilot_states):
+    state_records = [record for record in map_records if record["state_fips"] == state_fips]
+    top_axis = figure.add_subplot(grid[0, column_index])
+    draw_choropleth(
+        top_axis,
+        map_records,
+        state_fips=state_fips,
+        metric=five_year_metric,
+        cmap=five_year_cmap,
+        normalizer=five_year_normalizer,
+        county_outlines=True,
     )
-    collection.set_array(np.asarray(values_for_patches))
-    axis.add_collection(collection)
-    add_county_outlines(axis, state_fips)
-    format_map_axis(axis, state_labels[state_fips])
-colorbar = figure.colorbar(collection, ax=list(axes), shrink=0.72, pad=0.02)
-colorbar.set_label("Latest annual HPI change (%)")
-figure.suptitle("Recent tract-level HPI changes are spatially uneven", y=0.98, fontsize=15)
+    top_values = metric_values(state_records, five_year_metric)
+    top_axis.set_title(state_names[state_fips], pad=8, fontsize=13, fontweight="semibold")
+    top_axis.text(
+        0.02,
+        0.02,
+        f"Median {np.median(top_values):.1f}%  •  {len(top_values):,} observed tracts",
+        transform=top_axis.transAxes,
+        fontsize=8.5,
+        bbox={
+            "boxstyle": "round,pad=0.35",
+            "facecolor": "white",
+            "edgecolor": "none",
+            "alpha": 0.9,
+        },
+    )
+    bottom_axis = figure.add_subplot(grid[1, column_index])
+    draw_choropleth(
+        bottom_axis,
+        map_records,
+        state_fips=state_fips,
+        metric=recent_metric,
+        cmap=recent_cmap,
+        normalizer=recent_normalizer,
+        county_outlines=True,
+    )
+    bottom_values = metric_values(state_records, recent_metric)
+    bottom_axis.text(
+        0.02,
+        0.02,
+        f"Median {np.median(bottom_values):+.1f}%  •  {len(bottom_values):,} observed tracts",
+        transform=bottom_axis.transAxes,
+        fontsize=8.5,
+        bbox={
+            "boxstyle": "round,pad=0.35",
+            "facecolor": "white",
+            "edgecolor": "none",
+            "alpha": 0.9,
+        },
+    )
+five_colorbar_axis = figure.add_subplot(grid[0, 3])
+five_colorbar = figure.colorbar(
+    plt.cm.ScalarMappable(norm=five_year_normalizer, cmap=five_year_cmap),
+    cax=five_colorbar_axis,
+)
+five_colorbar.set_label("Cumulative HPI change (%)")
+recent_colorbar_axis = figure.add_subplot(grid[1, 3])
+recent_colorbar = figure.colorbar(
+    plt.cm.ScalarMappable(norm=recent_normalizer, cmap=recent_cmap),
+    cax=recent_colorbar_axis,
+)
+recent_colorbar.set_label("Annual HPI change (%)")
+figure.text(
+    0.025,
+    0.63,
+    "CUMULATIVE\n2020–2025",
+    ha="center",
+    va="center",
+    rotation=90,
+    fontsize=9,
+    fontweight="semibold",
+    color="#455A64",
+)
+figure.text(
+    0.025,
+    0.28,
+    "LATEST YEAR\n2024–2025",
+    ha="center",
+    va="center",
+    rotation=90,
+    fontsize=9,
+    fontweight="semibold",
+    color="#455A64",
+)
+add_map_header(
+    figure,
+    "Five-year housing gains were broad, while the latest year is more uneven",
+    (
+        "The same tract geography and shared color scale are used across Arizona, "
+        "Michigan, and Pennsylvania."
+    ),
+)
 add_source_note(
     figure,
-    "Display-only Census geometry. Color scale is symmetric and clipped to the "
-    "pilot-state 5th and 95th percentiles; gray indicates no usable FHFA value.",
+    (
+        "Source: FHFA annual tract HPI, observed endpoints only. Scales are clipped to "
+        "pilot-state 5th–95th percentiles; gray means an endpoint is unavailable. "
+        "Maps are descriptive, not causal."
+    ),
 )
 save_figure(
     10,
-    "latest_hpi_change_maps",
-    "Latest annual HPI change in the pilot states",
-    "Shows spatial variation in the latest available FHFA annual change without "
-    "implying causality.",
+    "hpi_change_2020_2025_maps",
+    "Tract HPI change from 2020 to 2025 and in the latest year",
+    "Contrasts the cumulative post-2020 housing-market pattern with the latest annual momentum.",
     figure,
 )
 
 # COMMAND ----------
 
-# County rollups for coverage and recent HPI behavior
-county_change_values = np.asarray(
-    [
-        float(record["median_hpi_change_pct"])
-        for record in county_records
-        if record["median_hpi_change_pct"] is not None
-    ],
-    dtype=float,
+# County trend story: maps, paired comparison, and computed takeaways
+county_five_values = metric_values(county_records, "median_hpi_change_2020_2025_pct")
+county_five_normalizer = robust_linear_normalizer(county_five_values)
+state_colors = {pilot_states[0]: ORANGE, pilot_states[1]: TEAL, pilot_states[2]: DARK_BLUE}
+
+figure = plt.figure(figsize=(16, 10.5))
+grid = GridSpec(
+    2,
+    4,
+    figure=figure,
+    height_ratios=[1.08, 0.92],
+    width_ratios=[1, 1, 1, 0.78],
+    left=0.045,
+    right=0.97,
+    top=0.84,
+    bottom=0.10,
+    hspace=0.24,
+    wspace=0.10,
 )
-county_lower, county_upper = np.quantile(county_change_values, [0.05, 0.95])
-county_limit = max(abs(county_lower), abs(county_upper), 1.0)
-county_change_normalizer = TwoSlopeNorm(vmin=-county_limit, vcenter=0, vmax=county_limit)
-coverage_normalizer = Normalize(vmin=0, vmax=1)
-figure, axes = plt.subplots(2, len(pilot_states), figsize=(15, 10))
 for column_index, state_fips in enumerate(pilot_states):
+    axis = figure.add_subplot(grid[0, column_index])
+    draw_choropleth(
+        axis,
+        county_records,
+        state_fips=state_fips,
+        metric="median_hpi_change_2020_2025_pct",
+        cmap=five_year_cmap,
+        normalizer=county_five_normalizer,
+        county_outlines=False,
+        polygon_edges=True,
+    )
     state_counties = [record for record in county_records if record["state_fips"] == state_fips]
-    coverage_patches = []
-    coverage_values = []
-    change_patches = []
-    change_values = []
-    missing_change_patches = []
-    for record in state_counties:
-        patches = polygon_patches(record["geometry"])
-        coverage_patches.extend(patches)
-        coverage_values.extend([record["forecast_candidate_share"]] * len(patches))
-        if record["median_hpi_change_pct"] is None:
-            missing_change_patches.extend(patches)
-        else:
-            change_patches.extend(patches)
-            change_values.extend([record["median_hpi_change_pct"]] * len(patches))
-    coverage_collection = PatchCollection(
-        coverage_patches,
-        cmap="viridis",
-        norm=coverage_normalizer,
-        edgecolor="white",
-        linewidth=0.25,
+    values = metric_values(state_counties, "median_hpi_change_2020_2025_pct")
+    axis.set_title(
+        f"{state_names[state_fips]}\nMedian county change: {np.median(values):.1f}%",
+        pad=8,
+        fontsize=12,
+        fontweight="semibold",
     )
-    coverage_collection.set_array(np.asarray(coverage_values))
-    axes[0, column_index].add_collection(coverage_collection)
-    change_collection = PatchCollection(
-        change_patches,
-        cmap="PuOr",
-        norm=county_change_normalizer,
+legend_axis = figure.add_subplot(grid[0, 3])
+legend_axis.axis("off")
+colorbar_axis = legend_axis.inset_axes([0.10, 0.64, 0.76, 0.08])
+county_colorbar = figure.colorbar(
+    plt.cm.ScalarMappable(norm=county_five_normalizer, cmap=five_year_cmap),
+    cax=colorbar_axis,
+    orientation="horizontal",
+)
+county_colorbar.set_label("County median cumulative HPI change (%)", labelpad=8)
+legend_axis.text(0.10, 0.48, "2020–2025", fontsize=13, fontweight="semibold")
+legend_axis.text(
+    0.10,
+    0.34,
+    (
+        "Each county is colored by the\n"
+        "median tract change. Gray marks\n"
+        "insufficient observed endpoints."
+    ),
+    fontsize=9,
+    color="#546E7A",
+    linespacing=1.4,
+)
+
+scatter_axis = figure.add_subplot(grid[1, :3])
+paired_counties = [
+    record
+    for record in county_records
+    if record["median_hpi_change_2020_2025_pct"] is not None
+    and record["median_hpi_change_2024_2025_pct"] is not None
+]
+for state_fips in pilot_states:
+    state_counties = [record for record in paired_counties if record["state_fips"] == state_fips]
+    scatter_axis.scatter(
+        [record["median_hpi_change_2020_2025_pct"] for record in state_counties],
+        [record["median_hpi_change_2024_2025_pct"] for record in state_counties],
+        s=38,
+        alpha=0.78,
+        color=state_colors[state_fips],
         edgecolor="white",
-        linewidth=0.25,
+        linewidth=0.4,
+        label=state_abbreviations[state_fips],
     )
-    change_collection.set_array(np.asarray(change_values))
-    axes[1, column_index].add_collection(change_collection)
-    if missing_change_patches:
-        axes[1, column_index].add_collection(
-            PatchCollection(
-                missing_change_patches,
-                facecolor="#E3E7EA",
-                edgecolor="white",
-                linewidth=0.25,
-            )
+scatter_axis.axhline(0, color="#90A4AE", linewidth=1, linestyle="--")
+pilot_five_median = float(
+    np.median([record["median_hpi_change_2020_2025_pct"] for record in paired_counties])
+)
+scatter_axis.axvline(pilot_five_median, color="#CFD8DC", linewidth=1, linestyle="--")
+scatter_axis.text(
+    pilot_five_median,
+    scatter_axis.get_ylim()[1],
+    "  Pilot-state county median",
+    va="top",
+    fontsize=8,
+    color="#607D8B",
+)
+notable_records = []
+for _key, selector in (
+    ("highest five-year", lambda record: record["median_hpi_change_2020_2025_pct"]),
+    ("strongest latest", lambda record: record["median_hpi_change_2024_2025_pct"]),
+    ("weakest latest", lambda record: -record["median_hpi_change_2024_2025_pct"]),
+):
+    selected = max(paired_counties, key=selector)
+    if selected not in notable_records:
+        notable_records.append(selected)
+for record in notable_records:
+    scatter_axis.annotate(
+        f"{record['county_name']}, {state_abbreviations[str(record['state_fips'])]}",
+        (
+            float(record["median_hpi_change_2020_2025_pct"]),
+            float(record["median_hpi_change_2024_2025_pct"]),
+        ),
+        xytext=(6, 6),
+        textcoords="offset points",
+        fontsize=7.5,
+        color="#455A64",
+    )
+scatter_axis.set_title("County gains since 2020 do not determine current momentum", loc="left")
+scatter_axis.set_xlabel("Median tract HPI change, 2020–2025 (%)")
+scatter_axis.set_ylabel("Median tract HPI change, 2024–2025 (%)")
+scatter_axis.legend(frameon=False, ncol=3, loc="upper left")
+clean_axis(scatter_axis, grid_axis="both")
+
+insight_axis = figure.add_subplot(grid[1, 3])
+insight_axis.axis("off")
+insight_axis.text(0, 0.98, "STATE MEDIANS", va="top", fontsize=10, fontweight="semibold")
+line_y = 0.86
+for state_fips in pilot_states:
+    state_counties = [record for record in paired_counties if record["state_fips"] == state_fips]
+    five_median = float(
+        np.median([record["median_hpi_change_2020_2025_pct"] for record in state_counties])
+    )
+    recent_median = float(
+        np.median([record["median_hpi_change_2024_2025_pct"] for record in state_counties])
+    )
+    insight_axis.add_line(
+        Line2D(
+            [0, 0.08],
+            [line_y + 0.01, line_y + 0.01],
+            color=state_colors[state_fips],
+            linewidth=4,
         )
-    format_map_axis(axes[0, column_index], state_labels[state_fips])
-    format_map_axis(axes[1, column_index], state_labels[state_fips])
-axes[0, 0].text(
-    -0.08,
-    0.5,
-    "Forecast\ncandidate share",
-    transform=axes[0, 0].transAxes,
-    ha="right",
-    va="center",
-    fontweight="semibold",
+    )
+    insight_axis.text(
+        0.12,
+        line_y,
+        f"{state_names[state_fips]}\n{five_median:.1f}% five-year  •  {recent_median:+.1f}% latest",
+        va="center",
+        fontsize=8.5,
+        linespacing=1.35,
+    )
+    line_y -= 0.18
+cooled_count = sum(
+    float(record["median_hpi_change_2024_2025_pct"]) < 0 for record in paired_counties
 )
-axes[1, 0].text(
-    -0.08,
-    0.5,
-    "Median latest\nHPI change",
-    transform=axes[1, 0].transAxes,
-    ha="right",
-    va="center",
-    fontweight="semibold",
+insight_axis.text(0, 0.28, "WHAT TO NOTICE", fontsize=10, fontweight="semibold")
+insight_axis.text(
+    0,
+    0.20,
+    (
+        f"{cooled_count} of {len(paired_counties)} counties had a\n"
+        "negative median change in the latest\n"
+        "year despite the broader five-year gains."
+    ),
+    va="top",
+    fontsize=8.5,
+    color="#546E7A",
+    linespacing=1.4,
 )
-figure.subplots_adjust(
-    top=0.91,
-    bottom=0.08,
-    left=0.10,
-    right=0.82,
-    hspace=0.12,
-    wspace=0.08,
+add_map_header(
+    figure,
+    "Five-year gains do not imply the same current momentum",
+    (
+        "County medians reduce tract-level noise, while the paired view shows where "
+        "recent movement diverges from the post-2020 pattern."
+    ),
 )
-coverage_colorbar_axis = figure.add_axes([0.85, 0.58, 0.015, 0.22])
-coverage_colorbar = figure.colorbar(coverage_collection, cax=coverage_colorbar_axis)
-coverage_colorbar.set_label("County share of tracts eligible for forecasting")
-change_colorbar_axis = figure.add_axes([0.85, 0.19, 0.015, 0.22])
-change_colorbar = figure.colorbar(change_collection, cax=change_colorbar_axis)
-change_colorbar.set_label("County median latest annual HPI change (%)")
-figure.suptitle("County rollups reveal patterns hidden by tract boundaries", y=0.98, fontsize=15)
 add_source_note(
     figure,
-    "County shapes are dissolved from display-only tract geometry. Aggregates summarize the "
-    "current profile and are not analytical spatial weights or causal estimates.",
+    (
+        "Source: FHFA annual tract HPI. County shapes are dissolved from display-only "
+        "tract geometry; county values are medians of observed tract changes and are "
+        "not spatial-model inputs."
+    ),
 )
 save_figure(
     11,
-    "county_rollup_maps",
-    "County-level forecast coverage and latest HPI change",
-    "Adds a county view between national summaries and detailed tract maps.",
+    "county_hpi_trend_story",
+    "County HPI change from 2020 to 2025 and latest-year momentum",
+    (
+        "Pairs county maps with a quantitative comparison so the geographic view "
+        "communicates a testable trend rather than standing alone."
+    ),
     figure,
 )
 
