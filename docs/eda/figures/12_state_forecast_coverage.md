@@ -28,5 +28,6 @@ performance.
 - States with the same percentage can have very different tract counts and housing composition.
 - A current candidate may still be ineligible for a particular historical origin or horizon.
 
-**Source contract:** [`gold_eda_state_coverage`](../../data/24_gold_eda_state_coverage.md)  
+**Source contract:** [`gold_eda_state_coverage`](../../data/24_gold_eda_state_coverage.md)
+
 **Geography contract:** [`silver_geography_state`](../../data/36_silver_geography_state.md)

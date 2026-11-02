@@ -26,5 +26,6 @@ housing market.
 - Error is only calculated where a target exists; missing target coverage is a separate issue.
 - The bands are based on estimated ACS shares and therefore carry sampling uncertainty.
 
-**Coverage context:** [EDA housing-composition coverage](../../eda/figures/02_housing_composition_coverage.md)  
+**Coverage context:** [EDA housing-composition coverage](../../eda/figures/02_housing_composition_coverage.md)
+
 **Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)

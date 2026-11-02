@@ -30,5 +30,6 @@ eligibility.
 - Missingness may vary by year, geography, housing composition, or cohort even when the national
   rate is high.
 
-**Source contract:** [`gold_model_readiness_summary`](../../data/46_gold_model_readiness_summary.md)  
+**Source contract:** [`gold_model_readiness_summary`](../../data/46_gold_model_readiness_summary.md)
+
 **Related implementation:** [Forecasting module](../../forecasting/forecasting_module.md)

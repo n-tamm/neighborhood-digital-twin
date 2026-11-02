@@ -30,5 +30,6 @@ prediction for every origin and horizon.
 - Counts do not indicate model accuracy or neighborhood quality.
 - Current coverage does not describe pre-2020 tract-vintage comparability.
 
-**Source contract:** [`gold_eda_state_coverage`](../../data/24_gold_eda_state_coverage.md)  
+**Source contract:** [`gold_eda_state_coverage`](../../data/24_gold_eda_state_coverage.md)
+
 **Rendering code:** [`03_render_eda_figures.py`](../../../notebooks/04_exploration/03_render_eda_figures.py)

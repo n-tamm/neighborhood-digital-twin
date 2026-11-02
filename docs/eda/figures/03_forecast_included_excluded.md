@@ -35,5 +35,6 @@ users with and without available forecasts.
 - Statistical significance is not the goal; the full national population is being profiled for
   practical selection differences.
 
-**Source contract:** [`gold_eda_cohort_comparison`](../../data/30_gold_eda_cohort_comparison.md)  
+**Source contract:** [`gold_eda_cohort_comparison`](../../data/30_gold_eda_cohort_comparison.md)
+
 **Related context:** [Analytical data and cohorts](../../forecasting/target_and_split_design.md)

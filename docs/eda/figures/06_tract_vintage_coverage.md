@@ -27,5 +27,6 @@ after the redesign can use broader coverage, but its results should be labeled s
 - The conservative rule favors comparability over maximum row retention.
 - Connecticut's later planning-region change is handled through a separate governed bridge.
 
-**Source contract:** [`gold_historical_tract_coverage`](../../data/40_gold_historical_tract_coverage.md)  
+**Source contract:** [`gold_historical_tract_coverage`](../../data/40_gold_historical_tract_coverage.md)
+
 **Detailed methodology:** [Tract Vintage Coverage](../../TRACT_VINTAGE_COVERAGE.md)

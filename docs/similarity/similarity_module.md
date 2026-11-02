@@ -1,6 +1,7 @@
 # Similarity Module
 
-**Code file:** [`src/neighborhood_twin/similarity.py`](../../src/neighborhood_twin/similarity.py)  
+**Code file:** [`src/neighborhood_twin/similarity.py`](../../src/neighborhood_twin/similarity.py)
+
 **Current schema version:** `1.1.0`
 
 ## Responsibility

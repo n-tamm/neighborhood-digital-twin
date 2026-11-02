@@ -27,5 +27,6 @@ Both search nationally, but representation choice changes many selected communit
 - Historical outcome utility, perturbation stability, and structured case review are not yet
   implemented.
 
-**Source:** [`similarity_baseline_summary`](../../data/50_evaluation_similarity_baseline_summary.md)  
+**Source:** [`similarity_baseline_summary`](../../data/50_evaluation_similarity_baseline_summary.md)
+
 **Detailed interpretation:** [Similarity evaluation](../../similarity/evaluation_and_results.md)

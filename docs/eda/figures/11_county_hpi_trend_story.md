@@ -28,5 +28,6 @@ The scatterplot carries the analytical comparison; the map supplies geographic c
 - Median aggregation hides within-county variation.
 - The pattern is descriptive and not an investment signal.
 
-**Source contract:** [`gold_forecast_target_historical`](../../data/42_gold_forecast_target_historical.md)  
+**Source contract:** [`gold_forecast_target_historical`](../../data/42_gold_forecast_target_historical.md)
+
 **Geometry method:** Shapely `union_all`, documented in the [EDA figure inventory](../../../reports/EDA_FIGURES.md)

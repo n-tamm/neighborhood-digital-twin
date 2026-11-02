@@ -25,5 +25,6 @@ the fit.
 - Lowest MAE does not establish calibration, low bias, or stable performance.
 - These are validation results; locked temporal tests remain unopened.
 
-**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)  
+**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)
+
 **Related results:** [Forecast evaluation](../../forecasting/evaluation_and_results.md)

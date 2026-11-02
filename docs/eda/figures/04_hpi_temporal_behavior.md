@@ -29,5 +29,6 @@ uncertainty interval.
 - The three states are visual examples rather than the full national analysis.
 - Observed association with time or state does not explain the cause of HPI changes.
 
-**Source contract:** [`gold_eda_hpi_temporal`](../../data/31_gold_eda_hpi_temporal.md)  
+**Source contract:** [`gold_eda_hpi_temporal`](../../data/31_gold_eda_hpi_temporal.md)
+
 **Related design:** [Forecast target and split design](../../forecasting/target_and_split_design.md)

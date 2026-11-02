@@ -25,5 +25,6 @@ This is important even though it has the lowest one-year MAE.
 - A 90th percentile describes the tail threshold, not the single worst case.
 - Annualized signed error and cumulative-log tail error use different but intentional scales.
 
-**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)  
+**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)
+
 **Residual convention:** [Forecasting module](../../forecasting/forecasting_module.md)

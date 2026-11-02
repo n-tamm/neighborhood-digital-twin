@@ -1,6 +1,7 @@
 # Model Evaluation Figure Workflow
 
-**Databricks job:** `600 Evaluation | Model Diagnostics`  
+**Databricks job:** `600 Evaluation | Model Diagnostics`
+
 **Notebook:** [`03_render_model_evaluation.py`](../../notebooks/05_modeling/03_render_model_evaluation.py)
 
 ## Purpose

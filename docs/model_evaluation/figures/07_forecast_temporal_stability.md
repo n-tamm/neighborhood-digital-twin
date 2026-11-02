@@ -24,5 +24,6 @@ one-year horizon has two validation origins, three years has two, and five years
 - Tracts within an origin remain geographically and economically related.
 - The locked-test origins are deliberately absent.
 
-**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)  
+**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)
+
 **Temporal design:** [Target and split design](../../forecasting/target_and_split_design.md)

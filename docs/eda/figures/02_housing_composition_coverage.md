@@ -29,5 +29,6 @@ remain eligible for current profiles and ACS-based similarity when the relevant 
 - A covered tract can still have incomplete history for a particular horizon.
 - Single-family share is an ACS estimate and carries sampling uncertainty.
 
-**Source contract:** [`gold_eda_housing_coverage`](../../data/29_gold_eda_housing_coverage.md)  
+**Source contract:** [`gold_eda_housing_coverage`](../../data/29_gold_eda_housing_coverage.md)
+
 **Related model slice:** [Forecast housing-composition evaluation](../../model_evaluation/figures/05_forecast_housing_composition.md)

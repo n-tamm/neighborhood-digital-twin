@@ -1,6 +1,7 @@
 # Forecast Baseline Workflow
 
-**Databricks job:** `500 Modeling | Forecast Baselines`  
+**Databricks job:** `500 Modeling | Forecast Baselines`
+
 **Notebook:** [`01_run_forecast_baselines.py`](../../notebooks/05_modeling/01_run_forecast_baselines.py)
 
 ## Inputs

@@ -28,5 +28,6 @@ does not mean those outcomes have been used for model choice.
 - One origin can contain many tracts with spatially correlated outcomes.
 - The five-year limitation cannot be solved by adding a more complex algorithm.
 
-**Source contract:** [`gold_model_split_assignment`](../../data/44_gold_model_split_assignment.md)  
+**Source contract:** [`gold_model_split_assignment`](../../data/44_gold_model_split_assignment.md)
+
 **Detailed design:** [Forecast target and split design](../../forecasting/target_and_split_design.md)

@@ -30,5 +30,6 @@ profiles and candidate logic are national.
   adjacency.
 
 **Source contracts:** [`gold_tract_profile_current`](../../data/17_gold_tract_profile_current.md),
-[`silver_canonical_tract_2020`](../../data/15_silver_canonical_tract_2020.md)  
+[`silver_canonical_tract_2020`](../../data/15_silver_canonical_tract_2020.md)
+
 **Rendering implementation:** [EDA workflow](../workflow.md)

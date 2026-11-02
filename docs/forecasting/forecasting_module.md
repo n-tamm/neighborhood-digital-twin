@@ -1,6 +1,7 @@
 # Forecasting Module
 
-**Code file:** [`src/neighborhood_twin/forecasting.py`](../../src/neighborhood_twin/forecasting.py)  
+**Code file:** [`src/neighborhood_twin/forecasting.py`](../../src/neighborhood_twin/forecasting.py)
+
 **Current schema version:** `1.2.0`
 
 ## Responsibility

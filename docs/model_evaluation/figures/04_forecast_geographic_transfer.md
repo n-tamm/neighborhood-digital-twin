@@ -26,5 +26,6 @@ transfer to every U.S. market.
 - Counts and housing composition may differ between the two columns and should accompany the
   error comparison.
 
-**Split design:** [Target and split design](../../forecasting/target_and_split_design.md)  
+**Split design:** [Target and split design](../../forecasting/target_and_split_design.md)
+
 **Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)

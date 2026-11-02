@@ -29,5 +29,6 @@ weak recent movement; the two measures answer different questions.
 - Display geometry must not be reused for spatial model features.
 
 **Source contracts:** [`gold_forecast_target_historical`](../../data/42_gold_forecast_target_historical.md),
-[`gold_tract_profile_current`](../../data/17_gold_tract_profile_current.md)  
+[`gold_tract_profile_current`](../../data/17_gold_tract_profile_current.md)
+
 **Color-design reference:** [Matplotlib colormap guidance](https://matplotlib.org/stable/users/explain/colors/colormaps.html)

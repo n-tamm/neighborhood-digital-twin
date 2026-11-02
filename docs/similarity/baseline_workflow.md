@@ -1,6 +1,7 @@
 # Similarity Baseline Workflow
 
-**Databricks job:** `501 Modeling | Similarity Baselines`  
+**Databricks job:** `501 Modeling | Similarity Baselines`
+
 **Notebook:** [`02_run_similarity_baselines.py`](../../notebooks/05_modeling/02_run_similarity_baselines.py)
 
 ## Default configuration

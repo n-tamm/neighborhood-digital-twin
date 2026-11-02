@@ -28,5 +28,6 @@ equally well. The current one-year linear model improves MAE by about 39% relati
 - Positive skill can coexist with bias, negative R-squared, or weak subgroup performance.
 - The plotted results are validation-only.
 
-**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)  
+**Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)
+
 **Metric definition:** [Forecast evaluation](../../forecasting/evaluation_and_results.md)

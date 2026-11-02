@@ -29,5 +29,6 @@ slicing forecast results by ACS uncertainty.
 - The figure does not automatically disqualify a feature; it identifies where aggregation,
   sensitivity checks, or cautious explanation may be needed.
 
-**Source contract:** [`gold_eda_acs_measure_quality`](../../data/25_gold_eda_acs_measure_quality.md)  
+**Source contract:** [`gold_eda_acs_measure_quality`](../../data/25_gold_eda_acs_measure_quality.md)
+
 **Related input contract:** [`silver_acs_tract_measure`](../../data/08_silver_acs_tract_measure.md)
