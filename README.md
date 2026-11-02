@@ -159,24 +159,39 @@ Start with:
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
-## Run the current code
+## How to run the project
 
-The repository now contains tested source acquisition, bronze and silver validation, national
-geography products, a canonical tract dimension, nationwide annual 2010-2024 ACS coverage,
-current gold profiles, a governed historical neighborhood-state panel, direct one-, three-, and
-five-year FHFA targets, point-in-time model features, frozen splits, and a joined modeling panel.
-The primary
-ACS silver product uses one tract-release-measure row with a companion data dictionary, while a
-generated wide table supports compact feature construction. The gold layer keeps all canonical
-tracts and exposes transparent similarity, forecasting, and application-development cohorts.
-Initial forecast and current-state similarity baselines, shared MLflow tracking, validation
-scorecards, and seven model-evaluation figures are implemented. Calibrated uncertainty,
-time-safe retrospective analogues, final locked-test results, serving tables, and the interactive
-application have not been implemented yet.
+The repository has two execution environments:
+
+- **Local Python** is used for package development, linting, type checking, and tests against small
+  fixtures. It does not reproduce the national Spark pipeline.
+- **Databricks serverless jobs** run acquisition, ETL, validation, modeling, MLflow tracking, and
+  figure generation against the shared Unity Catalog tables.
+
+The interactive application, calibrated uncertainty workflow, final time-safe analogue workflow,
+and locked-test release have not been implemented yet. There is currently no application-start
+command to run.
+
+### Prerequisites
+
+- Git and access to this repository;
+- Python 3.11, which is the version used by CI (`pyproject.toml` also permits Python 3.12);
+- Databricks CLI version `0.218.0` or newer, as enforced by `databricks.yml`;
+- membership in the shared Databricks workspace with access to the `workspace` Unity Catalog
+  catalog and serverless jobs; and
+- a Census API key stored in the Databricks secret scope only when acquiring or refreshing ACS
+  source data. Local tests and downstream runs against the existing shared tables do not need the
+  key.
+
+Run every command below from the repository root.
+
+### 1. Install and validate the local code
 
 PowerShell:
 
 ```powershell
+git clone <repository-url>
+Set-Location neighborhood-digital-twin
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -189,6 +204,8 @@ python -m pytest
 macOS or Linux:
 
 ```bash
+git clone <repository-url>
+cd neighborhood-digital-twin
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -198,30 +215,130 @@ python -m mypy src
 python -m pytest
 ```
 
-The pipeline run-order guide lists the exact operational paths for source acquisition, downstream
-rebuilds, validation, analysis, and metadata. A required command is not considered complete until
-it works from a clean checkout using relative paths.
+A successful local check requires all three commandsâ€”Ruff, mypy, and pytestâ€”to pass. The tests use
+small committed fixtures; they do not download or process the national datasets.
 
-The Databricks jobs are deployed through the root [databricks.yml](databricks.yml), so a second Git
-clone inside the Databricks workspace is not required. Their display names and tags group them as
-setup, bronze, silver, gold, analysis, modeling, evaluation, and metadata jobs. The canonical commands, dependencies,
-source-refresh paths, and recovery instructions are maintained in the
-[Databricks pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
+### 2. Authenticate and deploy the Databricks jobs
 
-After authenticating the Databricks CLI with a local profile named `neighborhood-twin`, validate
-and deploy the current branch before running an affected stage:
+The bundle deploys source files and job definitions from the local Git checkout. Do not create a
+second repository clone inside the Databricks workspace.
+
+Authenticate once with an OAuth profile named `neighborhood-twin`, then confirm the active user:
+
+```powershell
+databricks --version
+databricks auth login --host https://<your-workspace-host> --profile neighborhood-twin
+databricks current-user me --profile neighborhood-twin
+```
+
+Before running project code, validate and deploy the checked-out branch to the shared `team`
+target:
 
 ```powershell
 databricks bundle validate --profile neighborhood-twin -t team
 databricks bundle deploy --profile neighborhood-twin -t team
 ```
 
-The jobs remain separate so only affected stages and their downstream consumers need to run. The
-national historical backfill is explicitly one-time and must not be included in an ordinary
-refresh. Raw source files and secrets remain outside Git. Complete table grains and limitations
-are in the [data guide](docs/data/README.md); implementation details are in [Stage
-02](docs/implementation/02_data_acquisition_and_pipeline.md), and geography decisions are in
-[Stage 03](docs/implementation/03_geography_and_time_alignment.md).
+Deployment updates code and job definitions; it does not run a job or rebuild a table. Coordinate
+the deployment window with the other teammate so two branches do not replace the same shared job
+definitions.
+
+### 3. Reproduce the current EDA, model results, and figures
+
+The following sequence assumes the shared bronze, silver, gold, and model-readiness tables already
+exist and have passed their quality checks. It reproduces the implemented report inputs without
+rerunning source acquisition:
+
+```powershell
+# Rebuild governed readiness summaries and the 12 EDA figures.
+databricks bundle run data_readiness_eda --profile neighborhood-twin -t team
+databricks bundle run visual_eda --profile neighborhood-twin -t team
+
+# Refit the development baselines and publish validation-only outputs.
+databricks bundle run forecast_baselines --profile neighborhood-twin -t team
+databricks bundle run similarity_baselines --profile neighborhood-twin -t team
+
+# Render the 7 model-evaluation figures from the two completed model runs.
+databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
+
+# Reapply descriptions and column comments after table-overwriting jobs.
+databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
+```
+
+The forecast and similarity jobs are independent after their upstream tables exist; the evaluation
+job must wait for both. These are development runs. They do not open or score the locked temporal
+test outcomes.
+
+### 4. Run only the stage affected by a change
+
+Routine development should start at the first changed stage rather than rerunning the national
+pipeline:
+
+| Change | Jobs to run after deployment |
+|---|---|
+| Documentation or local unit-test change | No Databricks job |
+| EDA summary or figure code | `data_readiness_eda`, `visual_eda`, then `table_metadata_pipeline` |
+| Forecast code | `forecast_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
+| Similarity code | `similarity_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
+| Point-in-time features or split rules | `gold_model_readiness`, affected analysis/modeling jobs, then `table_metadata_pipeline` |
+| Historical gold logic | `gold_historical_products`, `gold_model_readiness`, affected downstream jobs, then `table_metadata_pipeline` |
+| Source or geography data | Follow the reviewed refresh path in `docs/PIPELINE_RUN_ORDER.md` |
+
+The exact dependency graph, source-refresh sequences, failure recovery, and completion gates are in
+the [Databricks pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md). That guide is canonical when
+a source, geography, table contract, or job dependency changes.
+
+Do not run `national_historical_acs_backfill` during ordinary development. The national 2010-2024
+ACS history is already populated, and that one-time acquisition can run for well over an hour. A
+new workspace or genuine source repair also requires the Census secret, reviewed acquisition
+scope, and stage-by-stage validation described in [the acquisition guide](docs/implementation/02_data_acquisition_and_pipeline.md).
+
+### Generated results and where to find them
+
+| Result | Generating code | Shared output |
+|---|---|---|
+| Readiness summaries and 12 EDA figures | `notebooks/04_exploration/01_build_data_readiness.py`, `02_build_visual_eda.py`, and `03_render_eda_figures.py` | `workspace.neighborhood_twin_gold` tables and the `eda_figures` volume |
+| Forecast predictions and scorecards | `notebooks/05_modeling/01_run_forecast_baselines.py` | `workspace.neighborhood_twin_model.forecast_baseline_prediction`, `workspace.neighborhood_twin_evaluation.forecast_baseline_scorecard`, and the shared forecast MLflow experiment |
+| Similarity matches and diagnostics | `notebooks/05_modeling/02_run_similarity_baselines.py` | `workspace.neighborhood_twin_model.similarity_baseline_match`, `workspace.neighborhood_twin_evaluation.similarity_baseline_summary`, and the shared similarity MLflow experiment |
+| Seven model-evaluation figures | `notebooks/05_modeling/03_render_model_evaluation.py` | `workspace.neighborhood_twin_evaluation.model_evaluation_figures` and its manifest table |
+
+The current build IDs, filenames, and export commands are maintained in the
+[EDA figure guide](reports/EDA_FIGURES.md) and
+[model-evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md). Local figure exports belong in
+the ignored `reports/generated/` directory.
+
+### Dependencies
+
+The dependency declarations follow the two execution environments:
+
+- [pyproject.toml](pyproject.toml) is authoritative for the local package and development tools.
+  `python -m pip install -e ".[dev]"` installs only what the local checks require.
+- [databricks.yml](databricks.yml) is authoritative for Databricks serverless job dependencies. It
+  pins the job-specific GIS and plotting libraries (`pyshp`, `shapely`, and `matplotlib`), while
+  the serverless runtime supplies Spark, Spark ML, MLflow, and its standard data libraries.
+
+Do not add a library simply because it might be useful later. A new local import must be declared
+in `pyproject.toml`; a Databricks-only dependency must be added to the relevant bundle environment.
+
+## Data access, credentials, and attribution
+
+The implemented datasets are public U.S. government data from the Census Bureau and FHFA. The
+project does not use private partner data, paid data, an NDA, or personally identifiable records.
+Raw national files are acquired from the publishers and stored in the shared Databricks bronze
+volume; they are not redistributed through Git. Small tracked samples under `data/samples/` are for
+inspecting table structure, not reproducing national analyses. Source links, access methods,
+limitations, licenses, and redistribution rules are maintained in the
+[data access statement](DATA_SOURCES.md).
+
+ACS acquisition requires a Census API key in the Databricks secret scope `neighborhood-twin` under
+the key `census-api-key`. Never place the key in source code, a notebook widget value, a local
+`.env` file committed to Git, or command output. The acquisition code redacts the key from recorded
+source endpoints.
+
+Code copied or adapted from another project must include an inline source link and compatible
+license notice next to the relevant code. The complete contribution and attribution rule is in
+[CONTRIBUTING.md](CONTRIBUTING.md). Ordinary use of an installed library does not require an inline
+source comment, but the dependency must be declared in the correct environment file.
 
 ## Development workflow
 
