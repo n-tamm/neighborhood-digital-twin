@@ -135,7 +135,7 @@ Forecast evaluation will use time-based splits and a separate geographic holdout
 |---|---|
 | [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Canonical scope, research questions, non-goals, and definition of success |
 | [ROADMAP.md](ROADMAP.md) | Twelve-week delivery plan, decision gates, and team ownership options |
-| [docs/](docs/) | Architecture, implementation guide, and one reference document per data table |
+| [docs/](docs/) | Architecture, domain-specific EDA and model documentation, run order, implementation plan, and one reference document per data table |
 | [data/](data/) | Local-only raw, interim, processed, and demonstration data zones |
 | [notebooks/](notebooks/) | Numbered exploration and communication notebooks; reusable logic belongs in `src/` |
 | [src/](src/) | Reusable acquisition, validation, geography, feature, modeling, simulation, and export code |
@@ -152,10 +152,14 @@ Start with:
 1. [Project charter](PROJECT_CHARTER.md)
 2. [Twelve-week roadmap](ROADMAP.md)
 3. [Documentation index](docs/README.md)
-4. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
-5. [Data guide and per-table documentation](docs/data/README.md)
-6. [Implementation sequence](docs/implementation/README.md)
-7. [System architecture](docs/ARCHITECTURE.md)
+4. [EDA documentation](docs/eda/README.md)
+5. [Forecasting documentation](docs/forecasting/README.md)
+6. [Similarity documentation](docs/similarity/README.md)
+7. [Model-evaluation documentation](docs/model_evaluation/README.md)
+8. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
+9. [Data guide and per-table documentation](docs/data/README.md)
+10. [Implementation sequence](docs/implementation/README.md)
+11. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
