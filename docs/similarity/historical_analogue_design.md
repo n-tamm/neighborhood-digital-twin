@@ -108,5 +108,6 @@ not replace later-outcome evaluation.
   household composition, commuting, amenities, or environmental context.
 - Historical outcome spread is not a calibrated uncertainty interval.
 - Locked temporal test rows remain unopened.
-- Current application-serving matches are not published until this retrospective design passes
-  review.
+- The retrospective workflow now passes its leakage and publication checks. Current
+  application-serving matches remain unpublished until case review and perturbation stability
+  testing resolve the low agreement between the two representations.

@@ -225,6 +225,21 @@ lint and compilation, rendered successfully in Databricks, and was inspected at 
 The corresponding standup explanation was also revised so the increase after 2020 is described as
 a geography and cohort change rather than an increase in the number of neighborhoods.
 
+The historical-analogue workflow was evaluated with focused unit tests, Ruff, mypy, bundle
+validation, repeated live serverless runs, post-publication contract checks, and read-only SQL
+review of every output table. The live runs exposed problems that local checks could not: an
+ambiguous horizon name after the query-candidate cross join, repeated Spark recomputation of the
+same exact-neighbor plan, Spark Connect invalidating downstream plans when a cached parent was
+released too early, and serverless compute rejecting a final `CLEAR CACHE` command. The join was
+made explicit, match plans were cached and materialized once, and cache lifetime was left to the
+job session after publication. The final run completed successfully in 170 seconds and published
+640 leakage-safe matches, 224 prediction rows, four retrieval summaries, and 147 scorecard rows.
+SQL review then changed the project interpretation: every analogue estimate beat zero change on
+the small validation sample, but none beat the state-trend or regularized-linear comparators, and
+the two representations shared only about 21% to 27% of their top-ten matches. The documentation
+therefore treats analogues as historical context and a secondary estimate pending case review and
+stability testing, rather than turning a successful pipeline run into an unsupported model claim.
+
 ## Maintenance requirements
 
 - Update the model table when a materially contributing model or configuration changes.
