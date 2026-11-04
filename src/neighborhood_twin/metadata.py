@@ -244,6 +244,26 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "similarity representations.",
         "One row per similarity representation and baseline run.",
     ),
+    "historical_analogue_match": TableMetadata(
+        "Time-safe ranked historical tract-year matches with observed later FHFA outcomes and "
+        "query, candidate, representation, and MLflow lineage.",
+        "One row per validation query, representation, and historical match rank.",
+    ),
+    "historical_analogue_prediction": TableMetadata(
+        "Historical analogue outcome estimates and fixed forecast comparators evaluated on the "
+        "same deterministic validation query sample.",
+        "One row per validation query, horizon, and prediction method.",
+    ),
+    "historical_analogue_summary": TableMetadata(
+        "Distance, geography, candidate-age, PCA, and representation-overlap diagnostics for "
+        "time-safe historical analogue retrieval.",
+        "One row per horizon, representation, and historical analogue run.",
+    ),
+    "historical_analogue_scorecard": TableMetadata(
+        "Development error, bias, explanatory power, baseline skill, and coverage metrics for "
+        "historical analogue estimates and matched forecast comparators.",
+        "One row per prediction method, horizon, evaluation slice, and slice value.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -254,11 +274,15 @@ TABLE_METADATA: dict[str, TableMetadata] = {
 MODEL_TABLES = {
     "forecast_baseline_prediction",
     "similarity_baseline_match",
+    "historical_analogue_match",
+    "historical_analogue_prediction",
 }
 
 EVALUATION_TABLES = {
     "forecast_baseline_scorecard",
     "similarity_baseline_summary",
+    "historical_analogue_summary",
+    "historical_analogue_scorecard",
     "model_evaluation_figure_manifest",
 }
 
@@ -522,10 +546,55 @@ COMMON_COLUMN_COMMENTS = {
         "Directional accuracy minus the majority-direction accuracy in the same slice."
     ),
     "query_geoid_2020": "Canonical 2020 tract GEOID used as the similarity query.",
+    "query_origin_year": "Forecast-origin year represented by the historical analogue query.",
+    "query_target_end_year": "Observed target endpoint year for the validation query.",
+    "query_target_cumulative_log_change": (
+        "Observed cumulative FHFA HPI log change used only after historical retrieval."
+    ),
+    "query_target_annualized_change_pct": (
+        "Observed annualized FHFA HPI percentage change for the validation query."
+    ),
+    "query_state_abbreviation": "State abbreviation for the historical analogue query.",
+    "query_county_name": "County name for the historical analogue query.",
+    "query_region_name": "Census region for the historical analogue query.",
+    "query_modeling_cohort": "Stable or post-2020-only cohort assigned to the query.",
+    "query_temporal_role": (
+        "Frozen temporal role of the query; development output requires validation."
+    ),
+    "query_geographic_role": "Development-state or held-out-state role of the query.",
+    "candidate_geoid_2020": "Canonical 2020 tract GEOID returned as a historical analogue.",
+    "candidate_origin_year": "Historical feature year represented by the candidate analogue.",
+    "candidate_target_end_year": (
+        "Candidate outcome endpoint, required to be no later than the query origin year."
+    ),
+    "candidate_target_cumulative_log_change": (
+        "Observed later cumulative FHFA HPI log change for the historical candidate."
+    ),
+    "candidate_target_annualized_change_pct": (
+        "Observed later annualized FHFA HPI percentage change for the historical candidate."
+    ),
+    "candidate_state_abbreviation": "State abbreviation for the historical candidate.",
+    "candidate_county_name": "County name for the historical candidate.",
+    "candidate_region_name": "Census region for the historical candidate.",
+    "candidate_modeling_cohort": "Stable or post-2020-only cohort assigned to the candidate.",
+    "candidate_age_years": "Query origin minus candidate origin in calendar years.",
     "match_geoid_2020": "Canonical 2020 tract GEOID returned as a similarity match.",
     "representation_name": "Standardized-raw or PCA representation used for retrieval.",
     "similarity_distance": "Euclidean distance in the named fitted representation.",
     "match_rank": "One-based nearest-neighbor rank within query and representation.",
+    "prediction_method": "Stable name of the analogue estimate or forecast comparator.",
+    "prediction_source": "Historical analogue or forecast-comparator source of the prediction.",
+    "analogue_match_count": "Historical matches summarized into the analogue estimate.",
+    "mean_similarity_distance": "Mean distance among the query's returned historical matches.",
+    "analogue_outcome_p10_log_change": (
+        "Tenth percentile observed cumulative log change among returned historical matches."
+    ),
+    "analogue_outcome_p90_log_change": (
+        "Ninetieth percentile observed cumulative log change among returned historical matches."
+    ),
+    "mean_candidate_age_years": "Mean number of years between query and candidate origins.",
+    "query_count": "Distinct sampled validation queries represented by the evaluation row.",
+    "query_tract_count": "Distinct tract GEOIDs represented among sampled validation queries.",
     "pca_explained_variance": "Share of standardized feature variance retained by the PCA model.",
     "cross_state_match_share": "Share of matches located outside their query tract's state.",
     "mean_raw_pca_top_k_overlap": (

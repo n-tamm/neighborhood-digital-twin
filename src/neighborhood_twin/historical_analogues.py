@@ -383,6 +383,7 @@ def _rank_matches(
         functions.col("county_name").alias("query_county_name"),
         functions.col("region_name").alias("query_region_name"),
         functions.col("modeling_cohort").alias("query_modeling_cohort"),
+        functions.col("temporal_role").alias("query_temporal_role"),
         functions.col("geographic_role").alias("query_geographic_role"),
         vector_to_array(vector_column).alias("_query_vector"),
     )
@@ -464,6 +465,7 @@ def _analogue_predictions(matches: Any, *, distance_epsilon: float = 1e-9) -> An
         "query_county_name",
         "query_region_name",
         "query_modeling_cohort",
+        "query_temporal_role",
         "query_geographic_role",
         "representation_name",
     )
@@ -543,6 +545,7 @@ def _comparator_predictions(
         functions.col("county_name").alias("query_county_name"),
         functions.col("region_name").alias("query_region_name"),
         functions.col("modeling_cohort").alias("query_modeling_cohort"),
+        functions.col("temporal_role").alias("query_temporal_role"),
         functions.col("geographic_role").alias("query_geographic_role"),
     )
     forecasts = forecast_predictions.where(

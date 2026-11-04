@@ -44,6 +44,10 @@ def test_table_layers_separate_pipeline_products_from_quality_results() -> None:
     assert TABLE_LAYERS["forecast_baseline_scorecard"] == "evaluation"
     assert TABLE_LAYERS["similarity_baseline_match"] == "model"
     assert TABLE_LAYERS["similarity_baseline_summary"] == "evaluation"
+    assert TABLE_LAYERS["historical_analogue_match"] == "model"
+    assert TABLE_LAYERS["historical_analogue_prediction"] == "model"
+    assert TABLE_LAYERS["historical_analogue_summary"] == "evaluation"
+    assert TABLE_LAYERS["historical_analogue_scorecard"] == "evaluation"
 
 
 def test_metadata_application_skips_matching_column_comments() -> None:

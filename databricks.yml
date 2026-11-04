@@ -155,6 +155,9 @@ variables:
   similarity_mlflow_experiment:
     description: Shared MLflow experiment for neighborhood representation development
     default: /Shared/neighborhood-digital-twin/similarity-baselines
+  historical_analogue_mlflow_experiment:
+    description: Shared MLflow experiment for time-safe historical analogue development
+    default: /Shared/neighborhood-digital-twin/historical-analogues
 
 resources:
   jobs:
@@ -710,6 +713,38 @@ resources:
               top_k: "10"
               pca_components: "6"
               mlflow_experiment: ${var.similarity_mlflow_experiment}
+    historical_analogue_baseline:
+      name: Neighborhood Digital Twin | 502 Modeling | Historical Analogue Baseline
+      description: Retrieves time-safe historical matches and evaluates their later outcomes.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "502"
+        lifecycle: model_development
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_historical_analogue_baseline
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/04_run_historical_analogue_baseline.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              modeling_panel_table: gold_modeling_panel
+              forecast_prediction_table: forecast_baseline_prediction
+              match_table: historical_analogue_match
+              analogue_prediction_table: historical_analogue_prediction
+              summary_table: historical_analogue_summary
+              scorecard_table: historical_analogue_scorecard
+              horizons: "1,3"
+              queries_per_group: "1"
+              top_k: "10"
+              pca_components: "6"
+              comparator_models: zero_change,state_current_trend,regularized_linear
+              mlflow_experiment: ${var.historical_analogue_mlflow_experiment}
     model_evaluation_figures:
       name: Neighborhood Digital Twin | 600 Evaluation | Model Diagnostics
       description: Renders seven versioned forecast and similarity evaluation figures and a manifest.
