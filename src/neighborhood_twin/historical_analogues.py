@@ -393,7 +393,7 @@ def _rank_matches(
     ).select(
         functions.col("geoid_2020").alias("candidate_geoid_2020"),
         functions.col("forecast_origin_year").alias("candidate_origin_year"),
-        "horizon_years",
+        functions.col("horizon_years").alias("candidate_horizon_years"),
         functions.col("target_end_year").alias("candidate_target_end_year"),
         functions.col("target_cumulative_log_change").alias(
             "candidate_target_cumulative_log_change"
@@ -414,6 +414,7 @@ def _rank_matches(
     pairs = (
         functions.broadcast(query)
         .crossJoin(candidate)
+        .where(functions.col("candidate_horizon_years") == functions.col("horizon_years"))
         .where(functions.col("query_geoid_2020") != functions.col("candidate_geoid_2020"))
         .where(functions.col("candidate_target_end_year") <= functions.col("query_origin_year"))
         .withColumn(
@@ -445,7 +446,7 @@ def _rank_matches(
     return (
         pairs.withColumn("match_rank", functions.row_number().over(ranking))
         .where(functions.col("match_rank") <= top_k)
-        .drop("_query_vector", "_candidate_vector")
+        .drop("candidate_horizon_years", "_query_vector", "_candidate_vector")
     )
 
 
