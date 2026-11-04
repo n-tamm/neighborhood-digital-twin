@@ -927,7 +927,6 @@ def build_historical_analogue_run(
         )
         matches = raw_matches.unionByName(pca_matches).cache()
         match_count = matches.count()
-        representation.unpersist()
         if match_count == 0:
             earliest_query = queries.agg(functions.min("forecast_origin_year")).first()[0]
             raise ValueError(
