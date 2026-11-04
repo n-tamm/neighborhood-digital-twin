@@ -902,6 +902,7 @@ def build_historical_analogue_run(
             horizon_frame,
             pca_components=pca_components,
         )
+        representation = representation.cache()
         horizon_comparator_keys = comparator_keys.where(
             functions.col("horizon_years") == int(horizon)
         )
@@ -924,8 +925,10 @@ def build_historical_analogue_run(
             vector_column="analogue_pca_vector",
             top_k=top_k,
         )
-        matches = raw_matches.unionByName(pca_matches)
-        if matches.limit(1).count() == 0:
+        matches = raw_matches.unionByName(pca_matches).cache()
+        match_count = matches.count()
+        representation.unpersist()
+        if match_count == 0:
             earliest_query = queries.agg(functions.min("forecast_origin_year")).first()[0]
             raise ValueError(
                 "No time-safe analogue candidates were available for "
