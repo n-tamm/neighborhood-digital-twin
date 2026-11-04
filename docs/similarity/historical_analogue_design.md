@@ -15,7 +15,8 @@ selected neighborhood will follow the same path.
 
 ## Implemented development population
 
-The first historical workflow uses validation query rows from `gold_modeling_panel`. It samples
+The first historical workflow uses one- and three-year validation query rows from
+`gold_modeling_panel`. It samples
 queries deterministically within forecast origin, horizon, Census region, and geographic role so
 the review set covers multiple periods and both development and held-out states without creating
 an impractical all-query cross join.
@@ -98,8 +99,11 @@ not replace later-outcome evaluation.
 ## Current boundaries
 
 - The first run uses a deterministic validation sample rather than every tract-year query.
-- The workflow evaluates one-, three-, and five-year outcomes, but five years remains exploratory
-  because the upstream split has only three training origins.
+- The workflow evaluates one- and three-year outcomes. A leakage-safe five-year analogue backtest
+  is not available under the current split: its validation query origin is 2014, model-ready
+  historical features begin in 2011, and an outcome known by 2014 would require a candidate origin
+  no later than 2009. The workflow fails clearly if a requested horizon has no eligible analogue
+  history rather than relaxing the time rule.
 - The feature set remains housing-focused and does not yet include education, employment,
   household composition, commuting, amenities, or environmental context.
 - Historical outcome spread is not a calibrated uncertainty interval.
