@@ -294,8 +294,3 @@ print(f"Published analogue and comparator predictions to {prediction_name}.")
 print(f"Published retrieval diagnostics to {summary_name}.")
 print(f"Published development scorecards to {scorecard_name}.")
 print(f"MLflow run: {result.run_id}")
-
-# Cached feature representations and match frames are intentionally retained until every
-# lazy output has been materialized. Spark Connect invalidates downstream plans when a parent
-# DataFrame is uncached too early, so cleanup belongs at the end of the workflow.
-spark.catalog.clearCache()

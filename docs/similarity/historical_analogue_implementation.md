@@ -113,8 +113,9 @@ workflow:
 - Spark's lazy evaluation initially recomputed the exact query-to-candidate ranking for every
   metric and table write. Match frames are now cached and materialized once per horizon. Under
   Spark Connect, uncaching the parent representation before downstream scorecards were
-  materialized invalidated their plans, so cache cleanup now happens only after all tables are
-  written and validated.
+  materialized invalidated their plans. Serverless compute also does not support a session-wide
+  `CLEAR CACHE` command. The workflow therefore retains these small session caches through final
+  validation and lets Databricks release them when the job session ends.
 
 These corrections change execution reliability and runtime, not the modeling contract.
 
