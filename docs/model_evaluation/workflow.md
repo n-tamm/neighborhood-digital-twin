@@ -52,6 +52,6 @@ must wait for both so its manifest describes one consistent pair of runs.
 
 ## Current boundary
 
-The workflow displays development evidence. It does not include calibrated uncertainty,
-historical-analogue utility, a nonlinear comparison, application evaluation, or locked temporal
-test results.
+The workflow displays development evidence from jobs 500 and 501. It does not yet visualize the
+separate job-502 historical-analogue results, calibrated uncertainty, a nonlinear comparison,
+application evaluation, or locked temporal test results.
