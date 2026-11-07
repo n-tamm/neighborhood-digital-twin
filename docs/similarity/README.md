@@ -130,7 +130,8 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-Two similarity stages are implemented.
+Two similarity stages have completed live runs. A third evaluation workflow is implemented in
+source control and awaiting its first Databricks run.
 
 ### Job 501: Current-state similarity baseline
 
@@ -144,6 +145,19 @@ Two similarity stages are implemented.
 - Supports one- and three-year outcomes.
 - Published 640 individual matches and 224 prediction and comparator rows.
 - Passed self-match, timing, validation-role, and top-ten reconciliation checks.
+
+### Job 601: Historical analogue audit
+
+- Reproduces the job-502 baselines before another result can be published.
+- Selects representative and diagnostic cases without using their later outcomes.
+- Tests small feature-family weight changes, family removal, PCA dimensions, and distinct-tract
+  candidate ranking on the same queries.
+- Separates exact or mathematically certified retrieval from shortlist-based stress tests.
+- Publishes match-level evidence, query-level stability metrics, and feature-level case-review
+  evidence.
+
+The code and local tests are complete, but the first live run is pending. No stability finding or
+representation decision is claimed yet.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 
