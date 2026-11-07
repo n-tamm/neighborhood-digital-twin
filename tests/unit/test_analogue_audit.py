@@ -9,6 +9,7 @@ Model used: GPT-5
 import pytest
 
 from neighborhood_twin.analogue_audit import (
+    AUDIT_MATCH_REQUIRED_COLUMNS,
     BASELINE_FAMILY_FACTORS,
     audit_feature_multipliers,
     audit_feature_weights,
@@ -16,6 +17,7 @@ from neighborhood_twin.analogue_audit import (
     normalized_family_weights,
     ranked_overlap,
     stability_band,
+    validate_audit_match_columns,
     validate_family_factors,
 )
 from neighborhood_twin.historical_analogues import (
@@ -69,6 +71,18 @@ def test_family_factor_validation_rejects_registry_and_numeric_errors() -> None:
         validate_family_factors({**BASELINE_FAMILY_FACTORS, "affordability": -0.1})
     with pytest.raises(ValueError, match="At least one"):
         validate_family_factors({family: 0.0 for family in ANALOGUE_FEATURE_FAMILIES})
+
+
+def test_match_audit_contract_rejects_missing_baseline_fields() -> None:
+    validate_audit_match_columns(AUDIT_MATCH_REQUIRED_COLUMNS)
+    with pytest.raises(ValueError, match="candidate_target_cumulative_log_change"):
+        validate_audit_match_columns(
+            tuple(
+                column
+                for column in AUDIT_MATCH_REQUIRED_COLUMNS
+                if column != "candidate_target_cumulative_log_change"
+            )
+        )
 
 
 def test_default_variants_are_bounded_unique_and_separate_stress_tests() -> None:
