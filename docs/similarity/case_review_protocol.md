@@ -11,6 +11,11 @@ The review is a model-development activity. It does not label a community as goo
 improving, or declining, and it does not treat later FHFA performance as a causal consequence of
 the matched characteristics.
 
+Job 601 implements the deterministic selection and publishes the supporting evidence to
+`historical_analogue_case_review`. It does not generate the team's review judgments. Those notes
+belong after the first validated live run, when the cases can be inspected together with the
+stability results.
+
 ## Case selection
 
 Cases are selected in code rather than chosen from attractive examples. The representative set

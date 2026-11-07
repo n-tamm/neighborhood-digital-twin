@@ -10,6 +10,11 @@ The goal is not to manufacture one invariant list. Some movement is expected, es
 top-ten boundary. The goal is to identify whether the application would tell a broadly consistent
 story and which assumptions control that story.
 
+The implemented job is `601 Evaluation | Historical Analogue Audit`. It reads the published
+job-502 matches and `gold_modeling_panel`, records variant matches in the model schema, and writes
+query-level stability results to the evaluation schema. The first live execution and substantive
+interpretation are still pending.
+
 ## Declared variants
 
 ### Baselines
@@ -65,11 +70,12 @@ query-to-candidate cross join for every perturbation would be unnecessarily expe
 audit will retrieve a large exact shortlist under both baseline representations, take their union
 for each query, and rerank the declared variants inside that union.
 
-Small weighted-distance changes can be certified against the baseline shortlist boundary when the
+Small weighted-distance changes are certified against the baseline shortlist boundary when the
 variant's tenth distance is smaller than the mathematical lower bound for any excluded candidate.
-Family ablations and alternate PCA dimensions do not have the same guarantee and must be labeled
-as shortlist-based stress tests unless an exact spot check supports them. The shortlist size and
-certification result belong in every published row.
+The distinct-tract variants use the same boundary check in their baseline representation. A tie at
+the boundary is deliberately not certified. Family ablations and alternate PCA dimensions do not
+have the same guarantee and are labeled as shortlist-based stress tests. The shortlist size,
+boundary distances, lower bound, and certification result belong in every published row.
 
 This distinction prevents a computational shortcut from being described as exact retrieval.
 
