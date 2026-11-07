@@ -19,6 +19,7 @@ from neighborhood_twin.analogue_audit import (
     stability_band,
     validate_audit_match_columns,
     validate_family_factors,
+    weighted_distance_boundary_multiplier,
 )
 from neighborhood_twin.historical_analogues import (
     ANALOGUE_FEATURE_COLUMNS,
@@ -59,6 +60,10 @@ def test_weight_perturbations_are_renormalized_and_ablations_remain_valid() -> N
         for family in ANALOGUE_FEATURE_FAMILIES
         if family != "market_trajectory"
     )
+
+    assert weighted_distance_boundary_multiplier(BASELINE_FAMILY_FACTORS) == pytest.approx(1.0)
+    assert 0 < weighted_distance_boundary_multiplier(increased) < 1.0
+    assert weighted_distance_boundary_multiplier(ablated) == pytest.approx(0.0)
 
 
 def test_family_factor_validation_rejects_registry_and_numeric_errors() -> None:

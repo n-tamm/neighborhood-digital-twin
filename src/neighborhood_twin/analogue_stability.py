@@ -24,6 +24,7 @@ from neighborhood_twin.analogue_audit import (
     build_case_review,
     default_audit_variants,
     validate_audit_match_columns,
+    weighted_distance_boundary_multiplier,
 )
 from neighborhood_twin.historical_analogues import (
     add_weighted_analogue_vector,
@@ -49,8 +50,8 @@ class AnalogueStabilityRun:
 def validate_stability_settings(*, top_k: int, shortlist_k: int) -> None:
     """Validate bounded retrieval settings before Spark work begins."""
 
-    if top_k <= 0:
-        raise ValueError("top_k must be positive")
+    if top_k < 3:
+        raise ValueError("top_k must be at least three for top-three stability")
     if shortlist_k < top_k:
         raise ValueError("shortlist_k must be greater than or equal to top_k")
 
@@ -97,6 +98,35 @@ def _shortlist_keys(weighted_shortlist: Any, pca_shortlist: Any) -> Any:
     return weighted_shortlist.select(*columns).unionByName(
         pca_shortlist.select(*columns)
     ).distinct()
+
+
+def _shortlist_boundaries(
+    weighted_shortlist: Any,
+    pca_shortlist: Any,
+    *,
+    shortlist_k: int,
+) -> Any:
+    """Record the exact baseline boundary used to certify bounded reranking."""
+
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    combined = weighted_shortlist.select(
+        *AUDIT_QUERY_KEYS,
+        "representation_name",
+        "similarity_distance",
+    ).unionByName(
+        pca_shortlist.select(
+            *AUDIT_QUERY_KEYS,
+            "representation_name",
+            "similarity_distance",
+        )
+    )
+    return combined.groupBy(*AUDIT_QUERY_KEYS, "representation_name").agg(
+        functions.count(functions.lit(1)).alias("baseline_shortlist_count"),
+        functions.max("similarity_distance").alias(
+            "baseline_shortlist_boundary_distance"
+        ),
+    ).withColumn("candidate_shortlist_k", functions.lit(shortlist_k))
 
 
 def _rank_shortlist_matches(
@@ -209,25 +239,98 @@ def _annotate_variant(
     matches: Any,
     variant: AnalogueAuditVariant,
     *,
+    shortlist_boundaries: Any,
+    top_k: int,
     shortlist_k: int,
     source_run_id: str,
     run_id: str,
     built_at_utc: str,
 ) -> Any:
-    """Attach the declared variant, shortlist boundary, and source lineage."""
+    """Attach the variant, query-level exactness evidence, and source lineage."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
-    if variant.perturbation_kind == "baseline":
-        exactness_status = "exact_national_baseline"
-    elif variant.perturbation_kind == "candidate_uniqueness":
-        exactness_status = "exact_if_shortlist_contains_top_k_distinct_tracts"
-    elif variant.perturbation_kind == "small_weight_change":
-        exactness_status = "shortlist_based_pending_boundary_check"
+    annotated = matches.withColumn("variant_name", functions.lit(variant.variant_name))
+    top_k_boundary = annotated.groupBy(*AUDIT_QUERY_KEYS).agg(
+        functions.count(functions.lit(1)).alias("variant_match_count"),
+        functions.max("similarity_distance").alias("variant_top_k_boundary_distance"),
+    )
+    if variant.perturbation_kind in {"small_weight_change", "candidate_uniqueness"}:
+        if variant.representation_name == "weighted_standardized":
+            boundary_multiplier = weighted_distance_boundary_multiplier(
+                variant.family_factor_map()
+            )
+        else:
+            boundary_multiplier = 1.0
     else:
-        exactness_status = "shortlist_based_stress_test"
+        boundary_multiplier = None
+
+    exactness = (
+        top_k_boundary.join(
+            shortlist_boundaries.where(
+                functions.col("representation_name") == variant.representation_name
+            ).drop("representation_name"),
+            list(AUDIT_QUERY_KEYS),
+            "inner",
+        )
+        .withColumn(
+            "excluded_candidate_distance_lower_bound",
+            functions.when(
+                functions.lit(boundary_multiplier is not None),
+                functions.col("baseline_shortlist_boundary_distance")
+                * functions.lit(boundary_multiplier),
+            ),
+        )
+        .withColumn(
+            "exactness_certified",
+            functions.when(
+                functions.lit(variant.perturbation_kind == "baseline"),
+                functions.lit(True),
+            )
+            .when(
+                functions.col("baseline_shortlist_count") < functions.lit(shortlist_k),
+                functions.lit(True),
+            )
+            .when(
+                functions.lit(
+                    variant.perturbation_kind
+                    in {"small_weight_change", "candidate_uniqueness"}
+                )
+                & (functions.col("variant_match_count") == functions.lit(top_k))
+                & (
+                    functions.col("variant_top_k_boundary_distance")
+                    < functions.col("excluded_candidate_distance_lower_bound")
+                ),
+                functions.lit(True),
+            )
+            .otherwise(functions.lit(False)),
+        )
+        .withColumn(
+            "exactness_status",
+            functions.when(
+                functions.lit(variant.perturbation_kind == "baseline"),
+                functions.lit("exact_national_baseline"),
+            )
+            .when(
+                functions.col("baseline_shortlist_count") < functions.lit(shortlist_k),
+                functions.lit("exact_exhaustive_candidate_set"),
+            )
+            .when(
+                functions.col("exactness_certified"),
+                functions.lit("exact_boundary_certified"),
+            )
+            .when(
+                functions.lit(
+                    variant.perturbation_kind
+                    in {"small_weight_change", "candidate_uniqueness"}
+                ),
+                functions.lit("shortlist_based_boundary_not_certified"),
+            )
+            .otherwise(functions.lit("shortlist_based_stress_test")),
+        )
+    )
     return (
-        matches.withColumn("variant_name", functions.lit(variant.variant_name))
+        annotated.join(exactness, list(AUDIT_QUERY_KEYS), "inner")
         .withColumn("perturbation_kind", functions.lit(variant.perturbation_kind))
         .withColumn("perturbed_family", functions.lit(variant.perturbed_family))
         .withColumn("pca_components", functions.lit(variant.pca_components).cast("int"))
@@ -238,8 +341,6 @@ def _annotate_variant(
             "family_factors_json",
             functions.lit(json.dumps(variant.family_factor_map(), sort_keys=True)),
         )
-        .withColumn("candidate_shortlist_k", functions.lit(shortlist_k))
-        .withColumn("exactness_status", functions.lit(exactness_status))
         .withColumn("source_historical_analogue_run_id", functions.lit(source_run_id))
         .withColumn("analogue_audit_schema_version", functions.lit(ANALOGUE_AUDIT_SCHEMA_VERSION))
         .withColumn("analogue_audit_run_id", functions.lit(run_id))
@@ -502,6 +603,12 @@ def build_analogue_stability_run(
         pca_shortlist.count()
         shortlist = _shortlist_keys(weighted_shortlist, pca_shortlist).cache()
         shortlist.count()
+        shortlist_boundaries = _shortlist_boundaries(
+            weighted_shortlist,
+            pca_shortlist,
+            shortlist_k=shortlist_k,
+        ).cache()
+        shortlist_boundaries.count()
 
         pca_frames: dict[int, Any] = {6: pca_baseline}
         for variant in selected_variants:
@@ -549,6 +656,8 @@ def build_analogue_stability_run(
             variant_matches = _annotate_variant(
                 variant_matches,
                 variant,
+                shortlist_boundaries=shortlist_boundaries,
+                top_k=top_k,
                 shortlist_k=shortlist_k,
                 source_run_id=source_run_id,
                 run_id=run_id,

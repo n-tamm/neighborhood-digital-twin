@@ -153,6 +153,28 @@ def audit_feature_multipliers(family_factors: Mapping[str, float]) -> tuple[floa
     return tuple(sqrt(weight) for weight in audit_feature_weights(family_factors))
 
 
+def weighted_distance_boundary_multiplier(
+    family_factors: Mapping[str, float],
+) -> float:
+    """Return the lower-bound multiplier for an excluded baseline-distance candidate.
+
+    If every candidate outside the exact baseline shortlist has baseline distance at least
+    ``d``, its distance under the perturbed positive weights is at least this multiplier times
+    ``d``. A zero multiplier is valid for an ablation but cannot certify a finite shortlist.
+    """
+
+    baseline_weights = audit_feature_weights(BASELINE_FAMILY_FACTORS)
+    variant_weights = audit_feature_weights(family_factors)
+    return sqrt(
+        min(
+            variant_weight / baseline_weight
+            for variant_weight, baseline_weight in zip(
+                variant_weights, baseline_weights, strict=True
+            )
+        )
+    )
+
+
 def _factor_pairs(family_factors: Mapping[str, float]) -> tuple[tuple[str, float], ...]:
     """Return family factors in the governed feature-family order."""
 

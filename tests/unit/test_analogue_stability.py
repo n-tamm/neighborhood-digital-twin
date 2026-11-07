@@ -13,7 +13,7 @@ from neighborhood_twin.analogue_stability import validate_stability_settings
 
 def test_stability_settings_require_a_valid_top_k_and_larger_shortlist() -> None:
     validate_stability_settings(top_k=10, shortlist_k=1000)
-    with pytest.raises(ValueError, match="top_k"):
-        validate_stability_settings(top_k=0, shortlist_k=1000)
+    with pytest.raises(ValueError, match="at least three"):
+        validate_stability_settings(top_k=2, shortlist_k=1000)
     with pytest.raises(ValueError, match="shortlist_k"):
         validate_stability_settings(top_k=10, shortlist_k=9)
