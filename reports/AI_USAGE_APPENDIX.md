@@ -34,6 +34,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Initial forecasting and similarity workflows and expanded EDA, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Model-output governance, evaluation metrics, and diagnostic figures, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -239,6 +240,17 @@ the small validation sample, but none beat the state-trend or regularized-linear
 the two representations shared only about 21% to 27% of their top-ten matches. The documentation
 therefore treats analogues as historical context and a secondary estimate pending case review and
 stability testing, rather than turning a successful pipeline run into an unsupported model claim.
+
+The subsequent analogue audit and stability code was evaluated before deployment through a
+repository diff review, Ruff, mypy, all 96 local unit tests, and known-answer tests for feature
+weight normalization, ranked-list overlap, Jaccard similarity, rank displacement, and review-band
+thresholds. The implementation was also revised so a large candidate shortlist is not silently
+described as exact retrieval. Baselines must reproduce the published match identity, year, rank,
+and distance, while eligible perturbations receive query-level exactness only when their top-ten
+distance is strictly inside a mathematical lower bound for every excluded candidate. Family
+ablations and alternate PCA dimensions remain labeled as shortlist-based stress tests. Live bundle
+validation and execution are still pending because the Databricks OAuth refresh token expired;
+the documentation therefore records no audit findings or samples yet.
 
 ## Maintenance requirements
 
