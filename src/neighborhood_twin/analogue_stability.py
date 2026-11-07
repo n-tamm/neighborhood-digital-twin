@@ -505,7 +505,13 @@ def build_stability_summary(audit_matches: Any, *, top_k: int) -> Any:
             "variant_name",
             "reference_variant_name",
         ],
-        "inner",
+        "left",
+    ).fillna(
+        {
+            "top_k_overlap_count": 0,
+            "top_three_retention_count": 0,
+            "mean_shared_rank_displacement": float(top_k),
+        }
     )
     return (
         summary.withColumn(

@@ -200,6 +200,20 @@ def validate_outputs(result, *, expected_variant_count: int) -> None:
     )
     if repeated_unique.limit(1).count():
         raise RuntimeError("A unique-candidate variant contains a repeated physical tract")
+
+    stability_variant_counts = (
+        stability.groupBy(*AUDIT_QUERY_KEYS)
+        .agg(functions.countDistinct("variant_name").alias("variant_count"))
+        .where(functions.col("variant_count") != expected_variant_count)
+    )
+    if stability_variant_counts.limit(1).count():
+        raise RuntimeError("Stability summary dropped one or more query and variant combinations")
+    expected_stability_rows = (
+        audit_matches.select(*AUDIT_QUERY_KEYS).distinct().count()
+        * expected_variant_count
+    )
+    if stability.count() != expected_stability_rows:
+        raise RuntimeError("Stability summary row count does not reconcile to queries and variants")
     if stability.where(
         (functions.col("match_count") != top_k)
         | functions.col("top_k_overlap_share").isNull()
