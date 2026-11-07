@@ -564,16 +564,16 @@ def build_case_review(matches: Any, modeling_panel: Any) -> Any:
             "strongest_shared_feature",
             functions.expr(
                 "element_at(analogue_feature_order, "
-                "array_position(standardized_absolute_feature_differences, "
-                "array_min(standardized_absolute_feature_differences)))"
+                "cast(array_position(standardized_absolute_feature_differences, "
+                "array_min(standardized_absolute_feature_differences)) as int))"
             ),
         )
         .withColumn(
             "largest_difference_feature",
             functions.expr(
                 "element_at(analogue_feature_order, "
-                "array_position(standardized_absolute_feature_differences, "
-                "array_max(standardized_absolute_feature_differences)))"
+                "cast(array_position(standardized_absolute_feature_differences, "
+                "array_max(standardized_absolute_feature_differences)) as int))"
             ),
         )
         .withColumn(
