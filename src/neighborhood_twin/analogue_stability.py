@@ -576,7 +576,7 @@ def build_analogue_stability_run(
         int(row[0])
         for row in baseline_matches.select("horizon_years").distinct().collect()
     ]
-    all_variant_matches = []
+    horizon_variant_matches = []
     for horizon in sorted(horizon_values):
         horizon_panel = modeling_panel.where(functions.col("horizon_years") == horizon)
         horizon_baseline = baseline_matches.where(functions.col("horizon_years") == horizon)
@@ -619,6 +619,7 @@ def build_analogue_stability_run(
         shortlist_boundaries.count()
 
         pca_frames: dict[int, Any] = {6: pca_baseline}
+        current_horizon_matches = []
         for variant in selected_variants:
             if variant.representation_name == "weighted_standardized":
                 if variant.perturbation_kind in {"baseline", "candidate_uniqueness"}:
@@ -670,12 +671,18 @@ def build_analogue_stability_run(
                 source_run_id=source_run_id,
                 run_id=run_id,
                 built_at_utc=built_at_utc,
-            ).cache()
-            variant_matches.count()
-            all_variant_matches.append(variant_matches)
+            )
+            current_horizon_matches.append(variant_matches)
 
-    audit_matches = all_variant_matches[0]
-    for variant_matches in all_variant_matches[1:]:
+        combined_horizon_matches = current_horizon_matches[0]
+        for variant_matches in current_horizon_matches[1:]:
+            combined_horizon_matches = combined_horizon_matches.unionByName(variant_matches)
+        combined_horizon_matches = combined_horizon_matches.cache()
+        combined_horizon_matches.count()
+        horizon_variant_matches.append(combined_horizon_matches)
+
+    audit_matches = horizon_variant_matches[0]
+    for variant_matches in horizon_variant_matches[1:]:
         audit_matches = audit_matches.unionByName(variant_matches)
     stability_summary = build_stability_summary(audit_matches, top_k=top_k)
     baseline_audit = build_baseline_match_audit(baseline_matches)
