@@ -183,3 +183,7 @@ application will eventually apply the approved representation to a neighborhood 
    query sample, retrieval sequence, Databricks job, published tables, and operational checks.
 7. [Historical analogue results](historical_analogue_results.md) records the completed development
    run, the diagnostic and outcome findings, and the resulting interpretation.
+8. [Case review protocol](case_review_protocol.md) defines deterministic representative and
+   diagnostic cases, the evidence reviewers inspect, and the repeated-community decision.
+9. [Stability evaluation](stability_evaluation.md) defines the bounded weight, ablation, PCA, and
+   candidate-uniqueness tests and the metrics used to interpret them.
