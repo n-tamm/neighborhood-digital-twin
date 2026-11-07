@@ -264,6 +264,21 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "historical analogue estimates and matched forecast comparators.",
         "One row per prediction method, horizon, evaluation slice, and slice value.",
     ),
+    "historical_analogue_audit_match": TableMetadata(
+        "Ranked historical analogue matches under declared feature-weight, PCA, and "
+        "candidate-uniqueness variants, with query-level retrieval exactness evidence.",
+        "One row per validation query, audit variant, and match rank.",
+    ),
+    "historical_analogue_stability_summary": TableMetadata(
+        "Query-level overlap, rank movement, outcome-estimate sensitivity, retrieval "
+        "exactness, age, and geography diagnostics for historical analogue variants.",
+        "One row per validation query and audit variant.",
+    ),
+    "historical_analogue_case_review": TableMetadata(
+        "Deterministically selected historical analogue cases with the feature-level evidence "
+        "needed for substantive human review.",
+        "One row per selected validation query, baseline representation, and match rank.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -276,6 +291,7 @@ MODEL_TABLES = {
     "similarity_baseline_match",
     "historical_analogue_match",
     "historical_analogue_prediction",
+    "historical_analogue_audit_match",
 }
 
 EVALUATION_TABLES = {
@@ -283,6 +299,8 @@ EVALUATION_TABLES = {
     "similarity_baseline_summary",
     "historical_analogue_summary",
     "historical_analogue_scorecard",
+    "historical_analogue_stability_summary",
+    "historical_analogue_case_review",
     "model_evaluation_figure_manifest",
 }
 
@@ -510,7 +528,8 @@ COMMON_COLUMN_COMMENTS = {
     "mae_log_change": "Mean absolute error on the cumulative FHFA HPI log-change target.",
     "rmse_log_change": "Root mean squared error on the cumulative FHFA HPI log-change target.",
     "median_absolute_error_log_change": (
-        "Median absolute error on the cumulative FHFA HPI log-change target."
+        "Absolute error for a median analogue estimate, or the median absolute error across a "
+        "declared evaluation slice."
     ),
     "p90_absolute_error_log_change": (
         "Ninetieth percentile absolute error on the cumulative FHFA HPI log-change target."
@@ -603,6 +622,108 @@ COMMON_COLUMN_COMMENTS = {
     "mean_raw_pca_top_k_overlap_share": (
         "Mean raw-versus-PCA neighbor overlap divided by the requested top-k count."
     ),
+    "variant_name": "Stable name of the declared historical analogue audit variant.",
+    "perturbation_kind": (
+        "Variant category: baseline, small weight change, family ablation, PCA component "
+        "count, or candidate uniqueness."
+    ),
+    "perturbed_family": "Feature family changed or removed by the audit variant, when applicable.",
+    "family_factors_json": (
+        "Ordered audit family factors serialized as JSON before per-feature weighting."
+    ),
+    "pca_components": "Number of PCA components used by the variant, when applicable.",
+    "unique_candidate_tract": (
+        "Whether the variant permits only one historical state per physical candidate tract."
+    ),
+    "candidate_shortlist_k": (
+        "Maximum exact baseline candidates retained per query and representation before reranking."
+    ),
+    "baseline_shortlist_count": (
+        "Actual number of exact baseline candidates retained for the query and representation."
+    ),
+    "baseline_shortlist_boundary_distance": (
+        "Distance of the farthest retained exact baseline candidate for boundary certification."
+    ),
+    "variant_match_count": "Number of matches returned for the query and audit variant.",
+    "variant_top_k_boundary_distance": (
+        "Distance of the farthest returned top-k match under the audit variant."
+    ),
+    "excluded_candidate_distance_lower_bound": (
+        "Mathematical lower bound on variant distance for candidates outside the exact baseline "
+        "shortlist, when available."
+    ),
+    "exactness_certified": (
+        "Whether the query-level retrieval is exact rather than only shortlist-based."
+    ),
+    "exactness_status": (
+        "Readable classification of exact baseline, certified, exhaustive, or shortlist-based "
+        "retrieval."
+    ),
+    "source_historical_analogue_run_id": (
+        "MLflow run ID of the published historical analogue baseline used by the audit."
+    ),
+    "analogue_audit_run_id": "MLflow run ID of the analogue case-review and stability build.",
+    "top_k_overlap_count": (
+        "Number of candidate tract-year states shared with the representation baseline top-k."
+    ),
+    "top_k_overlap_share": "Top-k overlap count divided by the declared top-k size.",
+    "top_k_jaccard_similarity": (
+        "Intersection divided by union for variant and representation-baseline top-k sets."
+    ),
+    "top_three_retention_count": (
+        "Number of candidate tract-year states appearing in both baseline and variant top three."
+    ),
+    "top_three_retention_share": "Top-three retention count divided by three.",
+    "mean_shared_rank_displacement": (
+        "Mean absolute rank movement among candidate states shared by both top-k lists."
+    ),
+    "stability_band": (
+        "Project review band based on top-k overlap: high, moderate, or low."
+    ),
+    "reference_variant_name": (
+        "Baseline variant used as the query-level reference for stability comparisons."
+    ),
+    "distinct_candidate_tract_count": (
+        "Number of distinct physical candidate tract GEOIDs represented in the returned matches."
+    ),
+    "analogue_median_log_change": (
+        "Median observed cumulative FHFA HPI log change among the variant matches."
+    ),
+    "analogue_inverse_distance_log_change": (
+        "Inverse-distance weighted observed cumulative FHFA HPI log change among variant matches."
+    ),
+    "inverse_distance_absolute_error_log_change": (
+        "Absolute query outcome error for the variant inverse-distance analogue estimate."
+    ),
+    "median_estimate_change_log_change": (
+        "Variant median analogue estimate minus its representation-baseline estimate."
+    ),
+    "inverse_distance_estimate_change_log_change": (
+        "Variant inverse-distance estimate minus its representation-baseline estimate."
+    ),
+    "median_absolute_error_change_log_change": (
+        "Variant median-estimate absolute error minus its representation-baseline error."
+    ),
+    "inverse_distance_absolute_error_change_log_change": (
+        "Variant inverse-distance absolute error minus its representation-baseline error."
+    ),
+    "case_selection_reasons": (
+        "Deterministic representative or diagnostic rules that selected the query for review."
+    ),
+    "analogue_feature_order": "Governed feature order corresponding to the case-review arrays.",
+    "query_feature_values": "Unscaled governed analogue feature values for the query state.",
+    "candidate_feature_values": (
+        "Unscaled governed analogue feature values for the candidate historical state."
+    ),
+    "standardized_absolute_feature_differences": (
+        "Absolute query-to-candidate gaps after training-only imputation and standardization."
+    ),
+    "strongest_shared_feature": (
+        "Governed feature with the smallest absolute standardized query-to-candidate gap."
+    ),
+    "largest_difference_feature": (
+        "Governed feature with the largest absolute standardized query-to-candidate gap."
+    ),
     "same_county_match_share": (
         "Share of returned matches in the same state and county as the query tract."
     ),
@@ -637,6 +758,10 @@ def column_comment(column: str) -> str:
         return "Published ACS 90 percent margin of error for the associated estimate."
     if column.endswith("_moe"):
         return "Published ACS 90 percent margin of error paired with the named estimate."
+    if column.endswith("_mean_absolute_standardized_gap"):
+        return (
+            "Mean absolute standardized query-to-candidate gap across the named feature family."
+        )
     if column.endswith("_rate") or column.endswith("_share"):
         return (
             "Derived proportion on a zero-to-one scale unless the table description says otherwise."

@@ -48,6 +48,9 @@ def test_table_layers_separate_pipeline_products_from_quality_results() -> None:
     assert TABLE_LAYERS["historical_analogue_prediction"] == "model"
     assert TABLE_LAYERS["historical_analogue_summary"] == "evaluation"
     assert TABLE_LAYERS["historical_analogue_scorecard"] == "evaluation"
+    assert TABLE_LAYERS["historical_analogue_audit_match"] == "model"
+    assert TABLE_LAYERS["historical_analogue_stability_summary"] == "evaluation"
+    assert TABLE_LAYERS["historical_analogue_case_review"] == "evaluation"
 
 
 def test_metadata_application_skips_matching_column_comments() -> None:

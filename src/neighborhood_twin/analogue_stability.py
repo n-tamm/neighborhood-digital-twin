@@ -264,6 +264,12 @@ def _annotate_variant(
             boundary_multiplier = 1.0
     else:
         boundary_multiplier = None
+    excluded_distance_lower_bound = (
+        functions.col("baseline_shortlist_boundary_distance")
+        * functions.lit(boundary_multiplier)
+        if boundary_multiplier is not None
+        else functions.lit(None).cast("double")
+    )
 
     exactness = (
         top_k_boundary.join(
@@ -275,11 +281,7 @@ def _annotate_variant(
         )
         .withColumn(
             "excluded_candidate_distance_lower_bound",
-            functions.when(
-                functions.lit(boundary_multiplier is not None),
-                functions.col("baseline_shortlist_boundary_distance")
-                * functions.lit(boundary_multiplier),
-            ),
+            excluded_distance_lower_bound,
         )
         .withColumn(
             "exactness_certified",
@@ -364,6 +366,12 @@ def build_stability_summary(audit_matches: Any, *, top_k: int) -> Any:
         "pca_components",
         "unique_candidate_tract",
         "candidate_shortlist_k",
+        "baseline_shortlist_count",
+        "baseline_shortlist_boundary_distance",
+        "variant_match_count",
+        "variant_top_k_boundary_distance",
+        "excluded_candidate_distance_lower_bound",
+        "exactness_certified",
         "exactness_status",
         "source_historical_analogue_run_id",
         "analogue_audit_schema_version",
