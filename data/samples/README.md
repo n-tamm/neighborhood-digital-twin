@@ -13,8 +13,9 @@ geometry is omitted because even a few encoded polygons would make the repositor
 large; those samples include the geometry's byte length instead.
 
 The extracts were refreshed from the `workspace.neighborhood_twin_bronze`,
-`neighborhood_twin_silver`, `neighborhood_twin_gold`, and `neighborhood_twin_quality` schemas
-through the October 30, 2026 baseline-modeling and expanded visual-EDA runs and the preceding
-model-readiness build. Table counts, quality
+`neighborhood_twin_silver`, `neighborhood_twin_gold`, `neighborhood_twin_model`,
+`neighborhood_twin_evaluation`, and `neighborhood_twin_quality` schemas through the November 3,
+2026 historical-analogue run and the preceding model-readiness, baseline-modeling, and visual-EDA
+builds. Table counts, quality
 histories, and source snapshots will continue to change as the pipeline is rerun, so Databricks
 remains the authoritative source.
