@@ -130,8 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-Two similarity stages have completed live runs. A third evaluation workflow is implemented in
-source control and awaiting its first Databricks run.
+All three similarity-development stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -156,8 +155,17 @@ source control and awaiting its first Databricks run.
 - Publishes match-level evidence, query-level stability metrics, and feature-level case-review
   evidence.
 
-The code and local tests are complete, but the first live run is pending. No stability finding or
-representation decision is claimed yet.
+The validated run published 6,720 variant matches, 672 complete query-variant stability rows, and
+600 case-review rows. Small feature-family weight changes retained 93.4% of the weighted top ten
+on average and were exactness-certified. Alternate PCA dimensions retained 50.9% of the baseline
+PCA list, while family removal retained 37.6% of weighted matches and confirmed that market
+trajectory has the strongest influence on the current match definition.
+
+Weighted standardized distance is now the provisional application default. It is more stable
+under reasonable local changes, easier to explain, and does not sacrifice a clear accuracy
+advantage to PCA. The application should return distinct physical communities: this policy
+retained 93.1% of baseline matches while removing repeat years from the same tract. Both decisions
+remain subject to the expanded or justified evaluation sample.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 

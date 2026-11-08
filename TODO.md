@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 3, 2026. The broader design remains in the
+This is the working handoff as of November 8, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -15,9 +15,10 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, analogue case review and stability testing, serving tables, and the interactive
-application still need to be built. New source families should not be added until a baseline
-result or required app view shows a specific gap.
+uncertainty, expanded historical-analogue evaluation, current-neighborhood retrieval, serving
+tables, and the interactive application still need to be built. Analogue case review and bounded
+stability testing are now complete for the development sample. New source families should not be
+added until a model result or required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -39,8 +40,8 @@ result or required app view shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 22 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-502`, `600`, and `900`), grouping tags, and the maintained
+- The 23 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-502`, `600-601`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -85,6 +86,18 @@ result or required app view shows a specific gap.
 - The expanded visual EDA run published twelve checked PNGs. It adds tract-vintage coverage,
   feature completeness, split-origin evidence, improved tract maps, dissolved county displays,
   and a national state-coverage view. Display geometry remains prohibited for spatial modeling.
+- Job `601 Evaluation | Historical Analogue Audit` published 6,720 variant matches, 672 complete
+  query-variant stability rows, and 600 deterministic case-review rows. It reproduces job 502,
+  contains no future or self matches, and retains all 21 variants for each of the 32 queries.
+- Small feature-family weight changes retain 93.4% of the weighted top ten on average and are
+  exactness-certified. Full family removals retain 37.6%; removing market trajectory is most
+  disruptive at 16.6%, showing that it strongly controls the present match definition.
+- Five- and seven-component PCA variants retain 50.9% of the six-component list on average and
+  sometimes hide a large original-family gap. Weighted standardized retrieval is therefore the
+  provisional application default; PCA remains an internal comparison lens.
+- Seventeen of 32 baseline query lists repeat a physical tract at multiple years. The certified
+  distinct-tract variants retain 93.1% of neighbors and restore ten distinct communities, so the
+  application should use a distinct-community policy.
 
 ## Important interpretation limits
 
@@ -186,23 +199,23 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: development baselines implemented
+### 2. Similarity and historical analogues: audit complete, production retrieval next
 
-- Freeze a small, interpretable feature registry and feature-family weights.
-- Review the implemented standardized Euclidean and PCA matches for the six initial query tracts.
-- Review representative weighted-standardized and PCA cases and document important differences as
-  well as shared strengths.
-- Add a bounded perturbation test for feature-family weights or feature removal. Report how much
-  of the top ten remains rather than selecting a representation from PCA variance alone.
-- Decide whether to retain both historical views, freeze one default, or present one as an
-  alternate lens. The current query sample is too small to make that choice from MAE alone.
-- Evaluate retrieval stability, distance separation, geographic diversity, coverage, reviewed
-  cases, and later-outcome utility without making FHFA availability the definition of similarity.
+- Treat weighted standardized distance and distinct physical communities as the provisional
+  production choices. Keep PCA and tract-year matches available for development audit.
+- Expand or justify the current 16-query-per-horizon sample before freezing the representation or
+  making a final performance claim. Do not open the locked temporal test for this decision.
+- Preserve the implemented stability, case-review, distance, geography, coverage, and
+  later-outcome evidence as the baseline for future changes.
 - Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even
   when later-outcome evaluation is unavailable.
-- Build the current-neighborhood serving lookup only after the representation review. Publish rank,
-  distance, representation version, shared strengths, important differences, candidate outcome,
-  and descriptive outcome range so the application can explain each match.
+- Build current-neighborhood retrieval under a frozen preprocessing/version contract. Decide
+  whether an approximate-neighbor index or bounded on-demand calculation provides acceptable
+  latency without changing the match definition.
+- Generate explanations containing shared strengths, important differences, candidate year and
+  location, later outcome, coverage warnings, and the descriptive outcome range.
+- Publish compact, versioned serving tables rather than querying `gold_modeling_panel` or the
+  wide audit tables from the application.
 
 ### 3. Descriptive application shell
 

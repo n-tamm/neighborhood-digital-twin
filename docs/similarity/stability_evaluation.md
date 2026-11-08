@@ -12,8 +12,8 @@ story and which assumptions control that story.
 
 The implemented job is `601 Evaluation | Historical Analogue Audit`. It reads the published
 job-502 matches and `gold_modeling_panel`, records variant matches in the model schema, and writes
-query-level stability results to the evaluation schema. The first live execution and substantive
-interpretation are still pending.
+query-level stability results to the evaluation schema. The validated November 7 run uses the
+same 32 development queries as job 502 and preserves all 21 variants for every query.
 
 ## Declared variants
 
@@ -101,3 +101,48 @@ This analysis can recommend that a representation is too unstable or that a part
 dominates unexpectedly. It cannot permanently select the application representation by itself.
 The final choice also requires the expanded or justified evaluation sample planned for the next
 modeling branch, along with substantive case review and later-outcome performance.
+
+## First audit results
+
+The published audit contains 6,720 individual matches and 672 query-level stability rows. The
+weighted and PCA baselines reproduce job 502 exactly. All 320 small-weight query variants and all
+64 distinct-tract query variants passed the mathematical shortlist-boundary test. Family
+ablations and alternate PCA dimensions remain clearly labeled as shortlist-based stress tests.
+
+The local-weight result is reassuring. Moving one family at a time to 80% or 120% of its baseline
+factor retained 93.4% of the weighted top ten on average. The tenth-percentile query retained 90%,
+the worst query retained 80%, and 95% of baseline top-three positions remained in the perturbed
+top three. The median analogue outcome changed by about 0.006 cumulative log-change units on
+average. The current equal-family design is therefore not balanced on a knife edge.
+
+Removing a whole family produces a different result and should not be mixed with that local
+stability claim. Ablations retained only 37.6% of neighbors on average. Market trajectory had the
+largest effect: removing it retained 16.6% on average and produced some zero-overlap top tens.
+This does not prove that market trajectory is the correct or most important real-world concept;
+it shows that the current match definition depends strongly on it.
+
+PCA component count is also consequential. Five- and seven-component PCA variants retained 50.9%
+of the six-component top ten on average, with zero overlap for the most sensitive queries. Because
+these are shortlist-based stress tests, the exact percentages describe the evaluated candidate
+union rather than a certified national reranking. They still reinforce that explained variance
+alone is not a sound representation-selection rule.
+
+Seventeen of 32 baseline query lists repeated a physical candidate tract at more than one year in
+both representations. The baseline averaged 9.31 distinct communities per top ten. Enforcing one
+historical state per physical tract retained 93.1% of matches on average, was boundary-certified
+for every query, and restored ten distinct communities. The application should therefore use the
+distinct-community rule by default while retaining tract-year candidates internally for audit.
+
+## Provisional representation decision
+
+Later-outcome accuracy does not clearly separate the representations on this small sample.
+Weighted median is the strongest analogue estimate at one year, while PCA inverse-distance is the
+strongest at three years; neither beats the primary state-trend or regularized-linear forecast.
+Weighted standardized retrieval is the provisional application default because it is stable under
+reasonable weight changes, easier to explain feature by feature, and less likely to hide a large
+family-level difference. PCA remains a development comparison, not a second user-facing lens.
+
+This is a provisional product decision, not a final performance claim. The 16 queries per horizon
+are enough to reject fragile designs and choose the next implementation path, but the evaluation
+sample must be expanded or more strongly justified before freezing the representation or opening
+the locked temporal test.

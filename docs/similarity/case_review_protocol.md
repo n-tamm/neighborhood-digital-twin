@@ -12,9 +12,8 @@ improving, or declining, and it does not treat later FHFA performance as a causa
 the matched characteristics.
 
 Job 601 implements the deterministic selection and publishes the supporting evidence to
-`historical_analogue_case_review`. It does not generate the team's review judgments. Those notes
-belong after the first validated live run, when the cases can be inspected together with the
-stability results.
+`historical_analogue_case_review`. It does not generate the team's review judgments. The first
+validated run published 600 match rows for 30 selected queries and both baseline representations.
 
 ## Case selection
 
@@ -87,3 +86,34 @@ Case review is complete when representative and diagnostic cases have recorded e
 mismatches are explained or corrected, repeat-community behavior is resolved or explicitly
 accepted, and the findings are consistent with the quantitative stability results. Human review
 supports the representation decision; it does not replace reproducible evaluation.
+
+## First review findings
+
+The review supports national matching rather than a same-region rule. Representative queries in
+all four Census regions returned plausible cross-state candidates with small gaps in several
+housing, affordability, tenure, scale, and trajectory dimensions. A cross-state result is still
+only a comparison on the governed features; it does not imply that local institutions, amenities,
+or lived experience are equivalent.
+
+Weighted-standardized matches were generally easier to defend because every family contributes
+directly to distance. For a held-out New Mexico query with the lowest representation overlap, the
+top weighted matches had family gaps that were mostly below 0.3 standardized units. The PCA list
+included candidates with larger housing-structure or affordability gaps even though they were
+close in compressed space. Similar behavior appeared in representative Maine and Washington
+cases, where some PCA candidates had market-trajectory gaps around 0.8 to 1.5 standardized units.
+
+This does not make every weighted match substantively complete. The feature set remains narrowly
+housing-focused, and some weighted candidates still contain one material difference that the app
+must show rather than conceal. Match explanations should therefore display the strongest shared
+families and largest differences, not only an overall distance or a reassuring label.
+
+Later outcomes also varied widely among close matches. In the reviewed examples, candidates for
+the same query sometimes moved in opposite directions or differed by more than ten annualized HPI
+percentage points. This is useful evidence for a historical range, but it argues against presenting
+one analogue as the neighborhood's likely future.
+
+The repeated-community audit resolves one application policy. Because 17 of 32 baseline query
+lists contained a repeated physical tract and the distinct-tract variant retained 93.1% of the
+baseline neighbors, the application should return distinct communities by default. The internal
+audit table can retain tract-year states so the team can still examine whether a place passed
+through a similar state more than once.

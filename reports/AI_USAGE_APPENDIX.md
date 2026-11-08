@@ -249,8 +249,25 @@ described as exact retrieval. Baselines must reproduce the published match ident
 and distance, while eligible perturbations receive query-level exactness only when their top-ten
 distance is strictly inside a mathematical lower bound for every excluded candidate. Family
 ablations and alternate PCA dimensions remain labeled as shortlist-based stress tests. Live bundle
-validation and execution are still pending because the Databricks OAuth refresh token expired;
-the documentation therefore records no audit findings or samples yet.
+validation and execution began after the Databricks profile was reauthenticated.
+
+The live audit required three corrections that local tests did not expose. The first run hit the
+serverless limit of 50 active cached DataFrames because every variant had been cached separately;
+the plan was changed to materialize one combined result per horizon. The second run reached case
+review but showed that serverless Spark returns `array_position` as `BIGINT` while `element_at`
+requires an `INT`, so both feature-label indexes received explicit casts. A later run finished
+successfully, but the required SQL review found only 663 of 672 expected stability rows. Nine
+zero-overlap cases had been removed by an inner join. The join was changed to preserve those cases
+with explicit zero counts, and the notebook gained a hard 32-query by 21-variant reconciliation
+check.
+
+The corrected run published 6,720 audit matches, 672 stability rows, and 600 case-review rows.
+Read-only SQL checks confirmed one audit and source run, complete top tens and variant sets, and
+zero future outcomes, self-matches, nonvalidation cases, invalid overlap values, or uncertified
+baselines. Review of the actual matches and metrics then supported weighted standardized distance
+and distinct physical communities as provisional application choices. This evaluation illustrates
+why a green job status was not treated as sufficient evidence: the most important correction came
+from reconciling the analytical output after a technically successful run.
 
 ## Maintenance requirements
 

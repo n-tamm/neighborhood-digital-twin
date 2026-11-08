@@ -84,17 +84,20 @@ rather than the main forecast.
 
 ## Decision after review
 
-The first run narrows the next decision rather than settling it. The team should:
+Job 601 completed the planned case review and bounded stability test. Its corrected publication
+contains 6,720 variant matches, 672 query-level stability rows, and 600 rows of feature-level case
+evidence. Small family-weight changes retain 93.4% of weighted neighbors on average and are exact
+under the shortlist-boundary proof. Weighted-standardized retrieval is therefore the provisional
+application default. PCA remains an internal comparison because alternate component counts retain
+only 50.9% of the six-component list on average and reviewed examples sometimes hide a large
+original-family gap.
 
-- review matched examples from both representations and document shared strengths and important
-  differences;
-- run a small perturbation test to see whether modest feature or weight changes replace most of
-  the top ten;
-- expand or justify the query sample before making a broad accuracy claim; and
-- keep the state trend or selected supervised model as the primary forecast unless a frozen
-  analogue revision earns a validation improvement.
+The application should also return distinct physical communities rather than multiple years from
+one tract. Seventeen of 32 baseline query lists contain a repeated tract; enforcing uniqueness
+retains 93.1% of neighbors, is exactness-certified, and restores ten distinct communities.
 
-An application-serving current-neighborhood lookup can proceed after the representation review.
-It should expose the individual historical examples and descriptive outcome range even if the
-analogue point estimate remains secondary. The locked temporal test remains unopened until the
-representation and prediction rule are frozen.
+The next modeling step is to expand or more strongly justify the 16-query-per-horizon evaluation
+sample before freezing these choices. The following branch can then build current-neighborhood
+retrieval, explanations, and compact serving tables. The state trend or selected supervised model
+remains the primary forecast, analogue outcomes remain secondary historical context, and the
+locked temporal test stays unopened until the representation and prediction rules are frozen.
