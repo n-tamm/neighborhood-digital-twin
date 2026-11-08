@@ -361,8 +361,9 @@ def _select_queries(
     *,
     queries_per_group: int,
     comparator_keys: Any,
+    required_coverage_columns: tuple[str, ...] = (),
 ) -> Any:
-    """Choose a deterministic validation sample across time, region, and transfer role."""
+    """Choose a balanced sample plus deterministic supplements for missing coverage groups."""
 
     from pyspark.sql import Window, functions  # type: ignore[import-not-found]
 
@@ -390,6 +391,31 @@ def _select_queries(
     )
     queries = eligible.where(functions.col("_query_rank") <= queries_per_group).drop(
         "_query_rank"
+    )
+    eligible_without_rank = eligible.drop("_query_rank")
+    for column_name in required_coverage_columns:
+        if column_name not in frame.columns:
+            raise ValueError(
+                f"Required query coverage column is missing from the modeling panel: {column_name}"
+            )
+        supplement = (
+            eligible_without_rank.where(functions.col(column_name).isNotNull())
+            .withColumn(
+                "_coverage_rank",
+                functions.row_number().over(
+                    Window.partitionBy("horizon_years", column_name).orderBy(
+                        functions.xxhash64("geoid_2020", "forecast_origin_year"),
+                        "geoid_2020",
+                        "forecast_origin_year",
+                    )
+                ),
+            )
+            .where(functions.col("_coverage_rank") == 1)
+            .drop("_coverage_rank")
+        )
+        queries = queries.unionByName(supplement)
+    queries = queries.dropDuplicates(
+        ["geoid_2020", "forecast_origin_year", "horizon_years"]
     )
     if queries.limit(1).count() == 0:
         raise ValueError("No validation queries satisfied the analogue and comparator contract")
@@ -946,6 +972,7 @@ def build_historical_analogue_run(
     top_k: int = 10,
     pca_components: int = DEFAULT_PCA_COMPONENTS,
     unique_candidate_tract: bool = False,
+    required_query_coverage_columns: tuple[str, ...] = (),
     comparator_models: tuple[str, ...] = DEFAULT_COMPARATOR_MODELS,
     run_id: str | None = None,
     built_at_utc: str | None = None,
@@ -990,6 +1017,7 @@ def build_historical_analogue_run(
             representation,
             queries_per_group=queries_per_group,
             comparator_keys=horizon_comparator_keys,
+            required_coverage_columns=required_query_coverage_columns,
         )
         raw_matches = rank_analogue_matches(
             representation,

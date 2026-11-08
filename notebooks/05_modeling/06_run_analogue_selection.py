@@ -48,6 +48,7 @@ from neighborhood_twin.analogue_selection import (
     ANALOGUE_SELECTION_SCORECARD_TABLE,
     ANALOGUE_SELECTION_SUMMARY_TABLE,
     DEFAULT_SELECTION_QUERIES_PER_GROUP,
+    REQUIRED_SELECTION_COVERAGE_COLUMNS,
     build_analogue_selection_run,
     eligible_selection_queries,
     incomplete_sampling_strata,
@@ -226,6 +227,14 @@ def validate_outputs(result, eligible_queries, selected_queries) -> None:
         | functions.col("selected_query_share").isNull()
     ).limit(1).count():
         raise RuntimeError("Expanded query coverage contains an undefined distribution share")
+    required_dimensions = [
+        column.removeprefix("query_") for column in REQUIRED_SELECTION_COVERAGE_COLUMNS
+    ]
+    if coverage.where(
+        functions.col("dimension_name").isin(*required_dimensions)
+        & (functions.col("coverage_status") != "covered")
+    ).limit(1).count():
+        raise RuntimeError("A required housing, size, or uncertainty group lacks a query")
     if coverage.select("analogue_selection_run_id").distinct().count() != 1:
         raise RuntimeError("Expanded coverage contains more than one selection run")
 
@@ -248,6 +257,9 @@ with mlflow.start_run(run_name="expanded-historical-analogue-selection") as acti
             "horizons": ",".join(str(value) for value in horizons),
             "queries_per_group": queries_per_group,
             "sampling_strata": "origin_year,census_region,geographic_role",
+            "required_coverage_supplements": ",".join(
+                REQUIRED_SELECTION_COVERAGE_COLUMNS
+            ),
             "top_k": top_k,
             "pca_components": pca_components,
             "comparator_models": ",".join(comparator_models),

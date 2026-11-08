@@ -25,10 +25,13 @@ selects up to five queries from every available group, compared with one in job 
 a larger, geographically and temporally balanced sample without choosing examples based on their
 later outcomes.
 
-The selection is also compared with the full eligible validation population across housing
-composition, community size, modeling cohort, and ACS uncertainty. These dimensions are not added
-to the sampling partition because doing so would multiply a modest evaluation into a very large
-exact-search workload. Instead, the coverage table makes any underrepresented group visible.
+The first live coverage review showed that this balanced core could still miss a rare but relevant
+category, including tracts below 25% single-family housing at one year. The workflow therefore
+adds one deterministic query for any housing-composition, community-size, or ACS-uncertainty
+category not already represented. The supplement is selected without looking at later outcomes
+and adds only a few queries rather than multiplying every category into every sampling stratum.
+The full sample is then compared with the eligible validation population so disproportionate
+groups remain visible.
 
 ## Retrieval policy
 
@@ -72,6 +75,7 @@ Job 602 stops before writing tables if:
 - weighted and PCA results do not cover identical queries;
 - forecast comparators are incomplete;
 - an available sampling group receives fewer than the requested number of queries; or
+- an eligible housing-composition, community-size, or ACS-uncertainty category has no query; or
 - coverage shares or run lineage do not reconcile.
 
 ## Databricks outputs

@@ -30,6 +30,12 @@ ANALOGUE_SELECTION_COVERAGE_TABLE = "historical_analogue_selection_coverage"
 
 DEFAULT_SELECTION_QUERIES_PER_GROUP = 5
 
+REQUIRED_SELECTION_COVERAGE_COLUMNS = (
+    "query_housing_composition_band",
+    "query_community_size_band",
+    "query_acs_uncertainty_band",
+)
+
 SELECTION_SCORECARD_SLICES = (
     ("housing_composition_band", "query_housing_composition_band"),
     ("community_size_band", "query_community_size_band"),
@@ -246,7 +252,7 @@ def incomplete_sampling_strata(
         )
         .where(
             functions.col("selected_query_count")
-            != functions.col("expected_selected_query_count")
+            < functions.col("expected_selected_query_count")
         )
     )
 
@@ -374,20 +380,22 @@ def build_analogue_selection_run(
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     validate_selection_settings(queries_per_group=queries_per_group, top_k=top_k)
+    selection_panel = _add_query_dimensions(modeling_panel)
     historical = build_historical_analogue_run(
-        modeling_panel,
+        selection_panel,
         forecast_predictions,
         horizons=horizons,
         queries_per_group=queries_per_group,
         top_k=top_k,
         pca_components=pca_components,
         unique_candidate_tract=True,
+        required_query_coverage_columns=REQUIRED_SELECTION_COVERAGE_COLUMNS,
         comparator_models=comparator_models,
         run_id=run_id,
         built_at_utc=built_at_utc,
     )
     eligible = eligible_selection_queries(
-        modeling_panel,
+        selection_panel,
         forecast_predictions,
         horizons=horizons,
         comparator_models=comparator_models,

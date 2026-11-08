@@ -155,10 +155,11 @@ rerankings are distinguished from shortlist-based stress tests in every row; the
 the locked temporal tests or select the application representation automatically.
 Job 602 follows the audit evidence but does not overwrite jobs 502 or 601. It expands the
 deterministic validation sample from one to five queries per available origin, Census region, and
-geographic-role stratum, requires ten distinct candidate tracts, and compares weighted and PCA
-retrieval on identical queries. Its coverage table compares the selected sample with all eligible
-validation queries across time, geography, cohort, housing mix, community size, and ACS
-uncertainty. The locked temporal tests remain unavailable to this workflow.
+geographic-role stratum, then adds an outcome-blind supplement for any missing housing-mix,
+community-size, or ACS-uncertainty category. It requires ten distinct candidate tracts and compares
+weighted and PCA retrieval on identical queries. Its coverage table compares the selected sample
+with all eligible validation queries across time, geography, cohort, housing mix, community size,
+and ACS uncertainty. The locked temporal tests remain unavailable to this workflow.
 
 ### Find the MLflow experiments
 
