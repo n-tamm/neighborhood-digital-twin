@@ -5,6 +5,7 @@
 - **Layer:** Model evaluation
 - **Databricks table:**
   `workspace.neighborhood_twin_evaluation.historical_analogue_case_review`
+- **Sample:** [historical_analogue_case_review.jsonl](../../data/samples/historical_analogue_case_review.jsonl)
 - **Grain and key:** one selected validation query, baseline representation, and match rank.
 - **Purpose:** provides the feature-level evidence needed to decide whether retrieved historical
   matches make substantive sense.
@@ -20,5 +21,8 @@ difference. These fields explain the data used by retrieval; they should not be 
 evidence about amenities or lived experience that the model does not contain. Human review notes
 remain a later analytical step and are not generated automatically by this table.
 
-The first live job-601 publication is pending. A repository sample and recorded review findings
-should be added after the table exists and the cases have been inspected by the team.
+The validated November 7 table contains 600 match rows for 30 selected queries and both baseline
+representations. Representative review found that weighted-standardized matches usually keep the
+five family-level gaps visible and balanced. Several PCA examples looked close in compressed
+space while retaining a large market-trajectory or housing-structure gap, which is one reason PCA
+is not the provisional application default.

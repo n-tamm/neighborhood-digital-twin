@@ -4,6 +4,7 @@
 
 - **Layer:** Model outputs
 - **Databricks table:** `workspace.neighborhood_twin_model.historical_analogue_audit_match`
+- **Sample:** [historical_analogue_audit_match.jsonl](../../data/samples/historical_analogue_audit_match.jsonl)
 - **Grain and key:** one validation query tract, origin, horizon, audit variant, and match rank.
 - **Purpose:** preserves the individual historical matches returned under every declared stability
   and candidate-policy variant.
@@ -20,5 +21,6 @@ mathematical lower bound for every candidate excluded from the baseline shortlis
 alternate PCA dimensions are bounded stress tests and should not be described as exact national
 retrieval.
 
-The first live job-601 publication is pending. A repository sample and observed row counts should
-be added only after that run passes baseline reconciliation and table validation.
+The validated November 7 audit contains 6,720 rows: 32 queries, 21 variants, and ten matches per
+query and variant. It has one audit run ID and one source job-502 run ID. Read-only reconciliation
+found no self-matches, future outcomes, nonvalidation queries, or incomplete top-ten groups.
