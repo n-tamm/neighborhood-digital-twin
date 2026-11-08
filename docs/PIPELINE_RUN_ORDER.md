@@ -112,8 +112,13 @@ databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t tea
 ```powershell
 databricks bundle run gold_historical_products --profile neighborhood-twin -t team
 databricks bundle run gold_model_readiness --profile neighborhood-twin -t team
+databricks bundle run forecast_baselines --profile neighborhood-twin -t team
+databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
+
+The forecast step is required when the historical-target or model-readiness contract changes, so
+published development results reflect the rebuilt target eligibility and split origins.
 
 Run jobs 400 and 401 afterward only when the change affects an EDA input, documented finding, or
 figure. A documentation-only change requires no Databricks job.

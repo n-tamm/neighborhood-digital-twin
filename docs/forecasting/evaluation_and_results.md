@@ -15,26 +15,34 @@
 | Directional lift | Directional accuracy minus an always-majority-direction rule |
 
 These metrics answer different questions. A method can improve MAE relative to zero change while
-having negative R-squared and systematic bias. Selection therefore cannot use one number.
+having negative R-squared or systematic bias. Selection therefore cannot use one number.
 
-## Current overall validation results
+## Current decade-safe validation results
 
-| Horizon | Lowest MAE | Current interpretation |
-|---|---|---|
-| 1 year | Regularized linear: 0.0724 | Best current average absolute error; state trend is close at 0.0757 |
-| 3 years | State trend: 0.0666 | Simple state context narrowly beats linear at 0.0679 |
-| 5 years | Regularized linear: 0.0952 | Exploratory because only three training origins support the fit |
+The November 7, 2026 run (`a53368b80ebc4cbaa05992d5a3356500`) evaluates only target windows whose
+origin and endpoint are in the same calendar decade. Validation origins are 2021-2022 (one year),
+2014-2015 (three years), and 2013 (five years).
 
-The one-year linear model improves MAE by about 39% over zero change, but its R-squared is negative
-and its mean signed annualized error shows underprediction of about 2.74 percentage points. It is
-the strongest current MAE baseline, not a frozen champion.
+| Horizon | Lowest MAE | RMSE | Observations | Interpretation |
+|---|---|---:|---:|---|
+| 1 year | Gradient-boosted trees: 0.0707 | 0.0902 | 101,703 | Best validation MAE and RMSE; nine training origins |
+| 3 years | Gradient-boosted trees: 0.0721 | 0.0933 | 83,254 | Best validation MAE and RMSE; only three training origins |
+| 5 years | Regularized linear: 0.1033 | 0.1332 | 42,274 | Exploratory; only two training origins and one validation origin |
+
+Gradient-boosted trees improve over zero-change MAE by 40.4%, 56.3%, and 52.5% for the one-,
+three-, and five-year horizons. At five years, regularized linear is better than the tree (MAE
+0.1033 versus 0.1286). The tree is therefore not a universal winner.
+
+Signed annualized error for the tree is +3.77 percentage points at one year, -0.59 at three years,
+and -1.67 at five years. Positive values mean underprediction. These are validation findings, not
+a champion decision or an estimate from the locked temporal test.
 
 ## Directional accuracy
 
-Approximately 90.2% of one-year validation outcomes are positive. The positive share is roughly
-97.8% and 98.1% at three and five years. Raw directional accuracy above 90% can therefore be
-achieved without distinguishing tracts. The implemented methods add almost no directional lift
-over that majority rule, so raw direction accuracy is not evidence of useful classification.
+Approximately 90.2% of one-year validation outcomes are positive, 94.6% at three years, and 97.3%
+at five years. Raw directional accuracy is consequently high for the active methods, while lift
+over the majority-direction rule is near zero. Direction accuracy alone is not evidence that the
+model distinguishes which tracts will appreciate.
 
 ## Required interpretation slices
 
@@ -53,15 +61,16 @@ diagnostic separately.
 
 ## What the current run establishes
 
-- A modest linear model improves one-year MAE over fixed baselines.
-- State trend remains a strong comparator and is best at three years.
-- Average error alone hides one-year underprediction and weak squared-error fit.
-- Directional accuracy is dominated by the positive target base rate.
-- Five-year evidence is too temporally thin for a strong product claim.
+- The tree has the lowest validation MAE and RMSE at one and three years.
+- Regularized linear is better at five years, where evidence is especially temporally thin.
+- All compared target windows remain within a calendar decade; cross-decade targets are censored
+  and excluded from fitting and validation.
+- Directional accuracy has little lift over the majority-direction baseline.
+- Results do not justify promoting a champion or opening the locked temporal test.
 
 ## What it does not establish
 
-- No nonlinear candidate or feature-family ablation has been evaluated.
+- No feature-family ablation has been evaluated.
 - No prediction interval has been calibrated.
 - No champion has been frozen.
 - No locked temporal test has been opened.

@@ -16,6 +16,7 @@ from neighborhood_twin.forecasting import (
     annualized_rate_from_cumulative_log,
     cumulative_log_from_annual_rate,
     validate_feature_registry,
+    validate_gradient_boosted_tree_parameters,
 )
 
 
@@ -38,6 +39,36 @@ def test_forecast_feature_registry_names_missing_fields() -> None:
     validate_feature_registry(LINEAR_FEATURE_COLUMNS)
     with pytest.raises(ValueError, match="origin_annual_change_pct"):
         validate_feature_registry(LINEAR_FEATURE_COLUMNS[1:])
+
+
+def test_gradient_boosted_tree_parameters_validate_domain() -> None:
+    validate_gradient_boosted_tree_parameters(
+        max_depth=4,
+        max_iter=50,
+        step_size=0.05,
+        subsampling_rate=0.8,
+    )
+    with pytest.raises(ValueError, match="max_depth must be positive"):
+        validate_gradient_boosted_tree_parameters(
+            max_depth=0,
+            max_iter=50,
+            step_size=0.05,
+            subsampling_rate=0.8,
+        )
+    with pytest.raises(ValueError, match="step_size"):
+        validate_gradient_boosted_tree_parameters(
+            max_depth=4,
+            max_iter=50,
+            step_size=0.0,
+            subsampling_rate=0.8,
+        )
+    with pytest.raises(ValueError, match="subsampling_rate"):
+        validate_gradient_boosted_tree_parameters(
+            max_depth=4,
+            max_iter=50,
+            step_size=0.05,
+            subsampling_rate=1.1,
+        )
 
 
 def test_acs_uncertainty_band_is_publicly_importable() -> None:

@@ -167,17 +167,15 @@ retain roughly 84,400 supported tracts, so this table is longitudinal but not a 
 panel unless downstream work explicitly restricts it to the stable cohort. The latest historical
 gold validation contains no hard failures.
 
-The first model-readiness build was published on October 29, 2026. Its point-in-time feature table
-contains 696,886 rows across 63,367 tracts and origins from 2011 through 2025. The split and joined
-modeling tables each contain 2,090,658 horizon-specific rows and reconcile exactly. Frozen tests
-use the latest complete origin for each horizon, while Maine, North Dakota, West Virginia, and New
-Mexico are held out for geographic transfer checks. All hard leakage, timing, key, and
-reconciliation checks passed. The only warning is substantive rather than a pipeline error: the
-five-year horizon has three independent training origins and must remain exploratory.
+The November 7, 2026 model-readiness rebuild retains 696,886 point-in-time feature rows across
+63,367 tracts. The split and joined modeling tables each contain 2,090,658 horizon-specific rows
+and reconcile exactly. Cross-decade target windows are censored with
+`target_censor_reason = 'crosses_decade_boundary'`; their split rows are assigned `ineligible_target`.
+The rebuilt panel has zero observed cross-decade targets. Training has nine, three, and two
+independent origins at one, three, and five years respectively, so longer-horizon results require
+especially restrained claims.
 
-The first model-development outputs were published on October 30, 2026. The dedicated model
-schema contains 1,369,401 validation forecast predictions and 120 current-state similarity
-matches. The evaluation schema contains 1,248 sliced forecast scorecard rows, two similarity
-representation summaries, and a seven-row figure manifest. These are development products rather
-than final claims: interval calibration, time-safe retrospective similarity evaluation, and the
-locked temporal tests remain outstanding.
+The November 7, 2026 forecast-development outputs contain 1,588,340 validation predictions and
+1,463 sliced forecast scorecard rows. Similarity outputs are unchanged by this forecast refresh.
+These are development products rather than final claims: interval calibration, time-safe
+retrospective similarity evaluation, and the locked temporal tests remain outstanding.

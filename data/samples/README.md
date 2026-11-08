@@ -15,6 +15,8 @@ large; those samples include the geometry's byte length instead.
 The extracts were refreshed from the `workspace.neighborhood_twin_bronze`,
 `neighborhood_twin_silver`, `neighborhood_twin_gold`, and `neighborhood_twin_quality` schemas
 through the October 30, 2026 baseline-modeling and expanded visual-EDA runs and the preceding
-model-readiness build. Table counts, quality
-histories, and source snapshots will continue to change as the pipeline is rerun, so Databricks
-remains the authoritative source.
+model-readiness build. The November 7 forecast-target, model-readiness, and forecast refresh did
+not regenerate these extracts. Treat forecast-target, split-assignment, modeling-panel, forecast,
+and scorecard samples as dated illustrations; use their table documentation and the current
+Databricks tables for the latest contracts and results. Table counts, quality histories, and source
+snapshots will continue to change as the pipeline is rerun, so Databricks remains authoritative.

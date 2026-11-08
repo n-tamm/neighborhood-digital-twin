@@ -21,7 +21,7 @@ from neighborhood_twin.geography import TRACT_RELATIONSHIP_SILVER_TABLE
 from neighborhood_twin.products import ACS_PROFILE_COLUMNS
 from neighborhood_twin.validate import QualityMetric, hard_failures, new_quality_run_id
 
-HISTORICAL_SCHEMA_VERSION = "1.0.0"
+HISTORICAL_SCHEMA_VERSION = "1.1.0"
 HISTORICAL_COVERAGE_TABLE = "gold_historical_tract_coverage"
 HISTORICAL_STATE_TABLE = "gold_neighborhood_state_historical"
 HISTORICAL_TARGET_TABLE = "gold_forecast_target_historical"
@@ -398,6 +398,12 @@ def _align_fhfa_geography(fhfa: Any, connecticut_bridge: Any, hierarchy: Any) ->
     )
 
 
+def forecast_target_within_decade(forecast_origin_year: int, target_end_year: int) -> bool:
+    """Return whether a forecast's origin and endpoint fall in the same calendar decade."""
+
+    return forecast_origin_year // 10 == target_end_year // 10
+
+
 def _one_horizon_target(fhfa: Any, horizon: int) -> Any:
     """Construct observed and censored FHFA outcomes for one forecast horizon."""
 
@@ -440,10 +446,15 @@ def _one_horizon_target(fhfa: Any, horizon: int) -> Any:
         ),
         "left",
     )
+    target_within_decade = functions.floor(
+        functions.col("forecast_origin_year") / 10
+    ) == functions.floor(
+        (functions.col("forecast_origin_year") + functions.lit(horizon)) / 10
+    )
     target_observed = functions.coalesce(
         functions.col("target_end_hpi_available") & (functions.col("target_end_hpi") > 0),
         functions.lit(False),
-    )
+    ) & target_within_decade
     cumulative_log_change = functions.when(
         target_observed,
         functions.log(functions.col("target_end_hpi") / functions.col("origin_hpi")),
@@ -475,6 +486,10 @@ def _one_horizon_target(fhfa: Any, horizon: int) -> Any:
         ).alias("target_annualized_change_pct"),
         target_observed.alias("target_is_observed"),
         functions.when(
+            ~target_within_decade,
+            functions.lit("crosses_decade_boundary"),
+        )
+        .when(
             functions.col("endpoint_observation_year").isNull(),
             functions.lit("missing_target_year_row"),
         )
@@ -593,6 +608,13 @@ def _quality_metrics(
         (~functions.col("target_is_observed"))
         & functions.col("target_censor_reason").isNull()
     ).count()
+    invalid_decade_crossing_target_count = targets.where(
+        functions.col("target_is_observed")
+        & (
+            functions.floor(functions.col("forecast_origin_year") / 10)
+            != functions.floor(functions.col("target_end_year") / 10)
+        )
+    ).count()
     checks = (
         (
             HISTORICAL_COVERAGE_TABLE,
@@ -649,6 +671,13 @@ def _quality_metrics(
             invalid_censored_target_count,
             invalid_censored_target_count == 0,
             "= 0 censored targets without an explicit reason",
+        ),
+        (
+            HISTORICAL_TARGET_TABLE,
+            "observed_decade_crossing_target_count",
+            invalid_decade_crossing_target_count,
+            invalid_decade_crossing_target_count == 0,
+            "= 0 observed targets crossing a calendar-decade boundary",
         ),
     )
     for table, metric_name, value, passed, expectation in checks:

@@ -13,6 +13,11 @@ In plain language, the model predicts how much the tract's measured single-famil
 the next one, three, or five years. It does not predict an individual home price or the value of
 all housing in the tract.
 
+The origin and target endpoint must be in the same calendar decade (for example, both in
+2010-2019 or both in 2020-2029). Targets that cross a decade boundary are censored and cannot be
+used for fitting or evaluation. Thus, a 2019-to-2022 three-year target is excluded, even when both
+HPI observations exist.
+
 Log change is used because multi-year changes combine consistently and because prediction errors
 have a clear signed interpretation. For display, predictions are converted to annualized percent
 change:
@@ -32,9 +37,9 @@ every origin:
 
 | Horizon | Observed targets | Locked-test rows |
 |---|---:|---:|
-| 1 year | 614,217 | 42,082 |
-| 3 years | 506,147 | 45,887 |
-| 5 years | 398,725 | 34,644 |
+| 1 year | 571,237 | 42,082 |
+| 3 years | 380,562 | 45,887 |
+| 5 years | 203,694 | 34,644 |
 
 ## Point-in-time feature rule
 
@@ -62,13 +67,15 @@ share conditions, and adjacent ACS releases overlap. Assignments are frozen in
 
 | Horizon | Training origins | Validation origins | Calibration | Locked test |
 |---|---:|---|---:|---:|
-| 1 year | 10 | 2021-2022 | 2023 | 2024 |
-| 3 years | 6 | 2017-2018 | 2019 | 2022 |
-| 5 years | 3 | 2014 | 2015 | 2020 |
+| 1 year | 9 | 2021-2022 | 2023 | 2024 |
+| 3 years | 3 | 2014-2015 | 2016 | 2022 |
+| 5 years | 2 | 2013 | 2014 | 2020 |
 
 Labels that would end after the applicable locked-test origin are purged from development. The
 one-year horizon is primary, three years is secondary, and five years is exploratory because only
-three independent training origins support it.
+two independent training origins support it. Calibration and validation origins are selected
+backward from the locked-test origin, skipping any origin whose horizon crosses a calendar-decade
+boundary.
 
 ## Geographic transfer role
 

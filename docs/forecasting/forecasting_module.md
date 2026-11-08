@@ -2,20 +2,22 @@
 
 **Code file:** [`src/neighborhood_twin/forecasting.py`](../../src/neighborhood_twin/forecasting.py)
 
-**Current schema version:** `1.2.0`
+**Current schema version:** `1.4.0`
 
 ## Responsibility
 
 The module contains reusable forecast logic. It validates the input contract, builds the five
-fixed baselines, fits the horizon-specific regularized linear pipelines, adds readable prediction
-and residual fields, and builds sliced evaluation scorecards. It does not read or write a
-Databricks table directly; orchestration and publication belong to the notebook.
+fixed baselines, fits horizon-specific regularized-linear and gradient-boosted-tree pipelines,
+filters decade-crossing targets from fitting and validation, adds readable prediction and residual
+fields, and builds sliced evaluation scorecards. It does not read or write a Databricks table
+directly; orchestration and publication belong to the notebook.
 
 ## Feature contract
 
-`LINEAR_FEATURE_COLUMNS` is the authoritative ordered registry of 26 linear-model inputs.
-`validate_feature_registry()` fails before fitting when the modeling panel does not contain every
-required column. This prevents a silently changed feature set.
+`LINEAR_FEATURE_COLUMNS` is the authoritative ordered registry of 26 inputs used by the regularized
+linear and gradient-boosted-tree candidates. `validate_feature_registry()` fails before fitting
+when the modeling panel does not contain every required column. This prevents a silently changed
+feature set.
 
 ## Main functions
 
@@ -27,6 +29,7 @@ required column. This prevents a silently changed feature set.
 | `acs_uncertainty_band` | Bands the largest available relative MOE among income, value, and rent |
 | `baseline_predictions` | Produces the five fixed-rule predictions on observed validation rows |
 | `_linear_model_predictions` | Fits one training-only Spark ML pipeline per horizon and scores validation rows |
+| `_gradient_boosted_tree_predictions` | Fits one training-only boosted-tree pipeline per horizon and scores validation rows |
 | `_add_prediction_fields` | Adds annualized values, residuals, slices, schema version, run ID, and build time |
 | `build_forecast_scorecard` | Aggregates overall and subgroup metrics and joins zero-change skill references |
 | `build_forecast_baseline_run` | Reconciles the complete run and returns prediction and scorecard DataFrames |
@@ -77,6 +80,7 @@ forecast-origin years.
 - A negative regularization parameter is rejected.
 - Locked-evaluation flags must agree with the frozen split contract.
 - Published predictions are rejected if any non-validation temporal role appears.
+- Targets spanning two calendar decades are censored and cannot be fitted or scored.
 - A run fails if no horizon can be fit.
 
 ## Testing boundary

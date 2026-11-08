@@ -6,9 +6,10 @@
 
 ## Inputs
 
-The notebook reads `workspace.neighborhood_twin_gold.gold_modeling_panel` by default. Its widgets
-allow catalog, schema, input table, output table, regularization, and MLflow experiment paths to be
-changed explicitly. The default regularization is `0.05`.
+The notebook reads `workspace.neighborhood_twin_gold.gold_modeling_panel` by default. That panel
+must be rebuilt from decade-safe historical targets and split assignments before fitting. Its
+widgets allow catalog, schema, input table, output table, regularization, and MLflow experiment
+paths to be changed explicitly. The default regularization is `0.05`.
 
 ## Execution sequence
 
@@ -16,7 +17,7 @@ changed explicitly. The default regularization is `0.05`.
 2. Resolve widget values and read the governed modeling panel.
 3. Create the parent Workspace folder for the shared MLflow experiment if it does not exist.
 4. Start a run in `/Shared/neighborhood-digital-twin/forecast-baselines`.
-5. Log the target, validation-only role, locked-test prohibition, regularization value, feature
+5. Log the target, validation-only role, locked-test prohibition, model configuration, feature
    count, and exact feature registry.
 6. Call `build_forecast_baseline_run()`.
 7. Log overall model-and-horizon metrics to MLflow.
@@ -31,8 +32,9 @@ changed explicitly. The default regularization is `0.05`.
 | [`forecast_baseline_scorecard`](../data/48_evaluation_forecast_baseline_scorecard.md) | `neighborhood_twin_evaluation` | One model, horizon, slice, and slice-value summary |
 | MLflow run | Shared experiment | Parameters, aggregate metrics, run ID, and comparison lineage |
 
-The initial prediction table contains 1,369,401 validation predictions across 59,562 tracts and
-six methods. The scorecard contains 1,248 sliced rows.
+The November 7, 2026 forecast run contains 1,588,340 validation predictions across 59,179 tracts
+and seven methods. The scorecard contains 1,463 sliced rows. All target windows are decade-safe;
+crossing targets are censored before fitting and validation.
 
 ## Reproduction
 
@@ -49,7 +51,7 @@ job should follow because the model job overwrites current Delta schemas.
 
 ## Operational boundaries
 
-- The job is independent of the similarity job once both upstream inputs exist.
+- - The job is independent of the similarity job once both upstream inputs exist.
 - It does not run source acquisition or rebuild the gold modeling panel.
 - It does not serialize or register an application model.
 - It does not publish predictions for calibration or locked-test roles.

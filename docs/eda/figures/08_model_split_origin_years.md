@@ -14,9 +14,10 @@ role. It intentionally counts years rather than tract rows.
 
 ## Interpretation
 
-The one-year model has ten training origins and is the primary result. Three years has six and is
-secondary. Five years has only three and remains exploratory. Millions of repeated tract rows
-provide cross-sectional detail but do not create additional independent market periods.
+The decade-safe split has nine one-year training origins, three three-year origins, and only two
+five-year origins. One year is primary; five years remains especially exploratory. Millions of
+repeated tract rows provide cross-sectional detail but do not create additional independent market
+periods.
 
 Calibration and locked-test cells show reserved data. Their presence in the assignment contract
 does not mean those outcomes have been used for model choice.

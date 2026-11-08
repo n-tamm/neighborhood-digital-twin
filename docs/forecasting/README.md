@@ -8,7 +8,7 @@ so a model change can update the affected document without rewriting one large o
 
 1. [Target and split design](target_and_split_design.md) defines the outcome, horizons, analytical
    cohorts, temporal roles, geographic holdouts, and leakage controls.
-2. [Baseline model design](baseline_model_design.md) explains why each of the six implemented
+2. [Baseline model design](baseline_model_design.md) explains why each of the seven implemented
    methods exists and what comparison it provides.
 3. [Forecasting module](forecasting_module.md) documents
    [`src/neighborhood_twin/forecasting.py`](../../src/neighborhood_twin/forecasting.py), including
@@ -18,5 +18,5 @@ so a model change can update the affected document without rewriting one large o
 5. [Evaluation and current results](evaluation_and_results.md) defines each metric and records what
    the current validation run does and does not establish.
 
-The current implementation is a development baseline. Calibration, prediction intervals, a
-nonlinear candidate, final model selection, and locked-test evaluation are not yet implemented.
+The current implementation is for development only. Calibration, prediction intervals, final model
+selection, and locked-test evaluation are not yet implemented.

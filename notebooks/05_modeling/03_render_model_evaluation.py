@@ -109,6 +109,7 @@ MODEL_COLORS = {
     "county_current_trend": "#5E35B1",
     "state_current_trend": "#00897B",
     "regularized_linear": "#1565C0",
+    "gradient_boosted_trees": "#D81B60",
 }
 MODEL_LABELS = {
     "zero_change": "Zero change",
@@ -117,6 +118,7 @@ MODEL_LABELS = {
     "county_current_trend": "County trend",
     "state_current_trend": "State trend",
     "regularized_linear": "Regularized linear",
+    "gradient_boosted_trees": "Gradient-boosted trees",
 }
 
 plt.rcParams.update(
@@ -285,7 +287,8 @@ save_figure(
 selected_rows = [
     row
     for row in overall_rows
-    if row["model_name"] in {"state_current_trend", "regularized_linear"}
+    if row["model_name"]
+    in {"state_current_trend", "regularized_linear", "gradient_boosted_trees"}
 ]
 figure, axes = plt.subplots(1, 2, figsize=(13, 5.8))
 for axis, metric, ylabel, subtitle in (
@@ -304,7 +307,13 @@ for axis, metric, ylabel, subtitle in (
 ):
     horizons = [1, 3, 5]
     x_positions = np.arange(len(horizons))
-    for index, model in enumerate(("state_current_trend", "regularized_linear")):
+    comparison_models = (
+        "state_current_trend",
+        "regularized_linear",
+        "gradient_boosted_trees",
+    )
+    bar_width = 0.72 / len(comparison_models)
+    for index, model in enumerate(comparison_models):
         values = [
             float(
                 next(
@@ -316,9 +325,9 @@ for axis, metric, ylabel, subtitle in (
             for horizon in horizons
         ]
         axis.bar(
-            x_positions + (-0.18 if index == 0 else 0.18),
+            x_positions + (index - (len(comparison_models) - 1) / 2) * bar_width,
             values,
-            width=0.36,
+            width=bar_width,
             label=MODEL_LABELS[model],
             color=MODEL_COLORS[model],
         )
@@ -332,8 +341,8 @@ axes[0].legend(frameon=False)
 figure.suptitle("Average accuracy can hide systematic bias and large misses", fontsize=15, y=0.98)
 add_source_note(
     figure,
-    "The state-trend baseline is shown beside the regularized linear model because it is the "
-    "strongest simple multi-horizon comparator in the first validation run.",
+    "The state-trend baseline and regularized linear model provide transparent comparators for the "
+    "gradient-boosted-tree challenger. Validation results do not open the locked temporal test.",
 )
 save_figure(
     3,
@@ -353,7 +362,11 @@ geography_rows = rows_as_dicts(
 row_labels = []
 matrix_rows = []
 for horizon in (1, 3, 5):
-    for model in ("state_current_trend", "regularized_linear"):
+    for model in (
+        "state_current_trend",
+        "regularized_linear",
+        "gradient_boosted_trees",
+    ):
         current = [
             row
             for row in geography_rows
@@ -401,7 +414,8 @@ save_figure(
 housing_rows = rows_as_dicts(
     scorecard.where(
         "slice_name = 'housing_composition_band' AND horizon_years = 1 "
-        "AND model_name IN ('state_current_trend', 'regularized_linear')"
+        "AND model_name IN "
+        "('state_current_trend', 'regularized_linear', 'gradient_boosted_trees')"
     )
 )
 housing_order = [
@@ -416,7 +430,13 @@ available_bands = [
 ]
 figure, axis = plt.subplots(figsize=(11, 6.2))
 x_positions = np.arange(len(available_bands))
-for index, model in enumerate(("state_current_trend", "regularized_linear")):
+comparison_models = (
+    "state_current_trend",
+    "regularized_linear",
+    "gradient_boosted_trees",
+)
+bar_width = 0.72 / len(comparison_models)
+for index, model in enumerate(comparison_models):
     values = [
         float(
             next(
@@ -428,9 +448,9 @@ for index, model in enumerate(("state_current_trend", "regularized_linear")):
         for band in available_bands
     ]
     axis.bar(
-        x_positions + (-0.19 if index == 0 else 0.19),
+        x_positions + (index - (len(comparison_models) - 1) / 2) * bar_width,
         values,
-        width=0.38,
+        width=bar_width,
         label=MODEL_LABELS[model],
         color=MODEL_COLORS[model],
     )
@@ -528,13 +548,18 @@ save_figure(
 temporal_rows = rows_as_dicts(
     scorecard.where(
         "slice_name = 'forecast_origin_year' "
-        "AND model_name IN ('state_current_trend', 'regularized_linear')"
+        "AND model_name IN "
+        "('state_current_trend', 'regularized_linear', 'gradient_boosted_trees')"
     ).orderBy("horizon_years", "slice_value", "model_name")
 )
 figure, axes = plt.subplots(1, 3, figsize=(15, 5.5), sharey=True)
 for axis, horizon in zip(axes, (1, 3, 5), strict=True):
     horizon_rows = [row for row in temporal_rows if int(row["horizon_years"]) == horizon]
-    for model in ("state_current_trend", "regularized_linear"):
+    for model in (
+        "state_current_trend",
+        "regularized_linear",
+        "gradient_boosted_trees",
+    ):
         model_rows = sorted(
             (row for row in horizon_rows if row["model_name"] == model),
             key=lambda row: int(str(row["slice_value"])),

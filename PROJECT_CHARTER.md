@@ -29,6 +29,8 @@ The intended analytical unit is a census tract represented on a canonical 2020 t
 
 The initial prediction target is future change in the FHFA tract-level House Price Index. This is an annual appreciation measure for a filtered set of single-family homes financed with conforming conventional mortgages; it excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments. One-year forecasting is the primary evaluation target. Three-year and five-year targets are added only if the feasibility audit leaves enough independent forecast origins and acceptable coverage.
 
+Each direct forecast target must begin and end in the same calendar decade. A target that crosses a decade boundary is censored and is not eligible for model fitting, calibration, validation, or testing; for example, a 2019-to-2022 three-year target is excluded even when both HPI observations exist.
+
 The HPI is a market indicator, not a price index for every home or a complete description of a community. ACS units-in-structure estimates will be used to calculate single-family, multifamily, and mobile/other housing shares. The application will place the forecast beside that housing mix, affordability, housing burden, vacancy, renting, population, income, and other contextual measures. Evaluation will show how coverage and errors change with housing-stock composition so heavily multifamily tracts are not presented as though the target represents their full market.
 
 ## Required minimum product

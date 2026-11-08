@@ -1,23 +1,24 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of October 30, 2026. The broader design remains in the
+This is the working handoff as of November 7, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
 
-The approved source and feature-preparation pipeline is complete, and the first forecasting and
-current-state similarity baselines now run in Databricks. The project has reproducible public-source
-acquisition, bronze and silver transformations, governed geography, current and historical gold
-products, point-in-time model features, fixed evaluation assignments, and a joined modeling
-panel, tracked experiments, validation-only forecast scorecards, reviewable neighborhood matches,
-and seven versioned model-evaluation figures. Model outputs and diagnostics now live outside gold
-in dedicated model and evaluation schemas. There is no unresolved data-integrity or leakage
-failure blocking the next model stage.
+The approved source and feature-preparation pipeline is complete, and the forecasting and
+current-state similarity baselines now run in Databricks. The forecast workflow includes a
+gradient-boosted-tree challenger, but no champion has been selected. The project has reproducible
+public-source acquisition, bronze and silver transformations, governed geography, current and
+historical gold products, point-in-time model features, fixed evaluation assignments, and a joined
+modeling panel, tracked experiments, validation-only forecast scorecards, reviewable neighborhood
+matches, and seven versioned model-evaluation figures. Model outputs and diagnostics now live
+outside gold in dedicated model and evaluation schemas. There is no unresolved data-integrity or
+leakage failure blocking the next model stage.
 
-This does not mean the whole project is complete. Forecast model selection, time-safe historical
-analogue evaluation, calibrated uncertainty, serving tables, and the interactive application still
-need to be built. New source families should not be added until a baseline result or required app
-view shows a specific gap.
+This does not mean the whole project is complete. Forecast model selection and feature ablations,
+calibrated uncertainty, time-safe historical analogue evaluation, serving tables, and the
+interactive application still need to be completed. New source families should not be added until
+an evaluation result or required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -35,8 +36,15 @@ view shows a specific gap.
   uncertainty, housing-mix, and split summaries.
 - Maine, North Dakota, West Virginia, and New Mexico are the deterministic held-out states, one per
   Census region.
-- All hard key, timing, availability, leakage, split, and reconciliation checks passed. The only
-  current warning is that the five-year horizon has three independent training origins.
+- All hard key, timing, availability, leakage, split, and reconciliation checks passed. Forecast
+  targets crossing a calendar-decade boundary are censored with
+  `target_censor_reason = 'crosses_decade_boundary'`; their split rows are marked
+  `ineligible_target` and excluded from fitting and evaluation. The rebuilt panel has zero
+  observed cross-decade targets.
+- The decade-safe split has nine one-year, three three-year, and two five-year independent training
+  origins. Validation origins are 2021-2022, 2014-2015, and 2013 for the one-, three-, and
+  five-year horizons; calibration origins are 2023, 2016, and 2014. Locked test origins remain
+  2024, 2022, and 2020.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
 - The 21 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
@@ -45,14 +53,14 @@ view shows a specific gap.
 
 ## Baseline modeling checkpoint
 
-- Job `500 Modeling | Forecast Baselines` completed on October 30 and published 1,369,401
-  validation predictions across 59,562 tracts and six methods, plus 1,248 sliced scorecard rows.
-- The regularized linear model has the best overall one-year validation MAE at 0.0724. The state
-  trend is close at 0.0757, which sets a strong and interpretable baseline.
-- At three years, the state trend is narrowly best at 0.0666, compared with 0.0679 for the linear
-  model. More model complexity has not yet earned a clear win at this horizon.
-- The five-year linear MAE is 0.0952, but it remains exploratory because the training contract has
-  only three independent origins. It must not drive broad claims or extensive tuning.
+- Job `500 Modeling | Forecast Baselines` completed on November 7 and published 1,588,340
+  validation predictions across 59,179 tracts and seven methods, plus 1,463 sliced scorecard rows.
+- Gradient-boosted trees has the lowest validation MAE/RMSE at one year (0.0707/0.0902) and three
+  years (0.0721/0.0933). Regularized linear is better at five years (0.1033/0.1332 versus
+  0.1286/0.1603 for the tree).
+- Five-year evidence is especially exploratory: only two training origins and one validation
+  origin support it. These validation results do not select a champion or justify opening the
+  locked temporal test.
 - Job `501 Modeling | Similarity Baselines` published 120 matches for six review queries under
   standardized raw and six-component PCA representations. PCA retains 95.5% of standardized
   variance.
@@ -81,8 +89,8 @@ view shows a specific gap.
 - The 59,607 source tracts in the stable geography cohort become 45,967 stable tracts in the
   model-feature table after requiring a usable FHFA origin and an ACS release available by that
   date. This is model-sample attrition, not a failed geography mapping.
-- The one-year horizon has ten training origins and is the primary result. Three years has six and
-  is secondary. Five years has three and should remain exploratory with simple models.
+- The one-year horizon has nine training origins and is the primary result. Three years has three
+  and is secondary. Five years has two and should remain exploratory with simple models.
 - The broad post-2020 cohort appears only in later origins. Report stable-cohort performance
   separately so geographic expansion is not mistaken for temporal model deterioration or gain.
 - County and state trend features are implemented. True tract adjacency is not: the current
@@ -94,8 +102,8 @@ view shows a specific gap.
 
 ## Decisions to freeze before the next model iteration
 
-The first baseline has made these choices concrete. The team should review them before nonlinear
-modeling, calibration, or retrospective analogue work:
+The baseline and nonlinear challenger have made these choices concrete. The team should review
+them before model selection, calibration, or retrospective analogue work:
 
 1. **Forecast horizons:** keep one year as the primary result, three years as secondary, and
    either retain five years as explicitly exploratory or remove it from the MVP.
@@ -110,8 +118,9 @@ modeling, calibration, or retrospective analogue work:
    changing the locked contract.
 5. **Feature registry:** mark every field as forecasting, similarity, display, quality, scenario,
    or evaluation-only. Freeze units and missingness rules before building preprocessing pipelines.
-6. **Model selection rule:** use validation evidence to decide whether one nonlinear model earns
-   further work. Do not search many model families or use the locked tests for selection.
+6. **Model selection rule:** review the current gradient-boosted-tree comparison and relevant
+   origin and subgroup evidence before deciding whether it merits further work. Do not search many
+   model families or use the locked tests for selection.
 
 Changing one of the frozen target or split definitions later should create a new contract version
 rather than silently replacing the meaning of an existing result.
@@ -149,13 +158,13 @@ dimension of lived experience are already represented.
 - Record any revision through a new schema or contract version before fitting models.
 - Leave the locked temporal tests unopened during all following development work.
 
-### 1. Forecasting baseline pass: implemented, now review
+### 1. Forecasting comparison: baseline and GBT challenger implemented
 
 - Profile feature missingness and eligible-row attrition by horizon, origin year, region, held-out
   state, housing mix, ACS uncertainty, and stable versus broad cohort.
 - Review the implemented zero-change, persistence, recent-history, county/state, and regularized
   linear results rather than adding another baseline family immediately.
-- Confirm the regularized linear preprocessing and feature registry before nonlinear comparison.
+- Review the regularized-linear and gradient-boosted-tree preprocessing and feature registry.
 - Use cumulative log HPI change as the modeling target and transform predictions only for
   reporting.
 - Compare every model on identical published validation rows; do not inspect the locked tests for
@@ -166,8 +175,9 @@ dimension of lived experience are already represented.
   uncertainty slices.
 - Keep recording source, feature, target, split, parameters, metrics, environment, and artifacts
   in MLflow; the first shared experiment is now established.
-- After the baseline scorecard, compare at most one focused gradient-boosted-tree candidate and
-  run feature-family ablations before selecting a champion.
+- The gradient-boosted-tree challenger is already compared on the published validation rows. Run
+  feature-family ablations and inspect origin-level and subgroup results before selecting a
+  champion.
 - Use the reserved calibration origins for prediction intervals, then open the locked tests only
   after point-model and uncertainty choices are final.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
@@ -205,8 +215,8 @@ dimension of lived experience are already represented.
 
 ### 4. Model and product decisions
 
-- After the baseline scorecards, decide whether one gradient-boosted tree earns a focused
-  comparison with the regularized linear model.
+- Decide whether the current gradient-boosted-tree results justify further development or whether
+  the simpler regularized-linear model is preferable for supported horizons.
 - Decide whether analytical adjacency, CBSA membership, or macroeconomic data would answer a
   demonstrated gap. None is required before the baseline checkpoint.
 - Select and calibrate one uncertainty method using the reserved calibration origins.
@@ -254,5 +264,7 @@ The next checkpoint is complete when:
 - the team has an evidence-based decision on nonlinear forecasting, analytical adjacency, and any
   additional source family.
 
-At that point, the work moves from data preparation into model selection, calibrated outputs, and
-application integration rather than further general-purpose ETL expansion.
+The baseline and first nonlinear comparison are complete. The next checkpoint is feature-family
+ablation, validation-origin and subgroup review, a documented model-selection decision, and
+calibration using only the reserved calibration origins. The locked temporal tests must remain
+unopened until those choices are frozen.

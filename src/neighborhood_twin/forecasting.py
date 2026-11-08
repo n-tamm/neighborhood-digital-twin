@@ -5,7 +5,7 @@ and code methodological brainstorming. All final modeling, implementation,
 validation, commentary, and interpretation were performed and verified by the authors.
 Model used: GPT-5
 
-Leakage-safe baseline forecasting and validation scorecard utilities.
+Leakage-safe forecasting candidates and validation scorecard utilities.
 """
 
 from __future__ import annotations
@@ -16,9 +16,14 @@ from datetime import UTC, datetime
 from math import exp, log1p
 from typing import Any
 
-FORECAST_MODEL_SCHEMA_VERSION = "1.2.0"
+FORECAST_MODEL_SCHEMA_VERSION = "1.4.0"
 FORECAST_PREDICTION_TABLE = "forecast_baseline_prediction"
 FORECAST_SCORECARD_TABLE = "forecast_baseline_scorecard"
+GBT_MAX_DEPTH = 4
+GBT_MAX_ITER = 50
+GBT_STEP_SIZE = 0.05
+GBT_SUBSAMPLING_RATE = 0.8
+GBT_SEED = 699
 
 BASELINE_MODELS = (
     "zero_change",
@@ -60,7 +65,7 @@ LINEAR_FEATURE_COLUMNS = (
 
 @dataclass(frozen=True)
 class ForecastRun:
-    """Published prediction and scorecard frames for one baseline run."""
+    """Published prediction and scorecard frames for one forecast-development run."""
 
     run_id: str
     built_at_utc: str
@@ -98,6 +103,25 @@ def validate_feature_registry(
     missing = sorted(set(feature_columns) - available)
     if missing:
         raise ValueError(f"Modeling panel is missing required features: {', '.join(missing)}")
+
+
+def validate_gradient_boosted_tree_parameters(
+    *,
+    max_depth: int,
+    max_iter: int,
+    step_size: float,
+    subsampling_rate: float,
+) -> None:
+    """Validate the fixed-parameter gradient-boosted-tree candidate configuration."""
+
+    if max_depth <= 0:
+        raise ValueError("max_depth must be positive")
+    if max_iter <= 0:
+        raise ValueError("max_iter must be positive")
+    if not 0 < step_size <= 1:
+        raise ValueError("step_size must be greater than 0 and at most 1")
+    if not 0 < subsampling_rate <= 1:
+        raise ValueError("subsampling_rate must be greater than 0 and at most 1")
 
 
 def housing_composition_band(column: Any, functions: Any) -> Any:
@@ -239,6 +263,84 @@ def _linear_model_predictions(frame: Any, *, reg_param: float) -> Any:
             "prediction_cumulative_log_change",
         )
         outputs.append(output.withColumn("model_name", functions.lit("regularized_linear")))
+    if not outputs:
+        raise ValueError("No forecast horizons were available to fit")
+    combined = outputs[0]
+    for output in outputs[1:]:
+        combined = combined.unionByName(output)
+    return combined
+
+
+def _gradient_boosted_tree_predictions(
+    frame: Any,
+    *,
+    max_depth: int = GBT_MAX_DEPTH,
+    max_iter: int = GBT_MAX_ITER,
+    step_size: float = GBT_STEP_SIZE,
+    subsampling_rate: float = GBT_SUBSAMPLING_RATE,
+    seed: int = GBT_SEED,
+) -> Any:
+    """Fit one fixed-parameter gradient-boosted-tree candidate per horizon."""
+
+    validate_gradient_boosted_tree_parameters(
+        max_depth=max_depth,
+        max_iter=max_iter,
+        step_size=step_size,
+        subsampling_rate=subsampling_rate,
+    )
+    from pyspark.ml import Pipeline  # type: ignore[import-not-found]
+    from pyspark.ml.feature import Imputer, VectorAssembler  # type: ignore[import-not-found]
+    from pyspark.ml.regression import GBTRegressor  # type: ignore[import-not-found]
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    validate_feature_registry(frame.columns)
+    outputs = []
+    imputed = tuple(f"{column}__tree_imputed" for column in LINEAR_FEATURE_COLUMNS)
+    for horizon in sorted(row[0] for row in frame.select("horizon_years").distinct().collect()):
+        horizon_frame = frame.where(functions.col("horizon_years") == int(horizon))
+        training = horizon_frame.where(
+            functions.col("eligible_for_point_model_fit")
+            & functions.col("target_is_observed")
+        )
+        validation = horizon_frame.where(
+            (functions.col("temporal_role") == "validation")
+            & functions.col("target_is_observed")
+        )
+        if not training.limit(1).count():
+            raise ValueError(f"No eligible training observations for {horizon}-year horizon")
+        if not validation.limit(1).count():
+            raise ValueError(f"No observed validation targets for {horizon}-year horizon")
+        pipeline = Pipeline(
+            stages=[
+                Imputer(
+                    strategy="median",
+                    inputCols=list(LINEAR_FEATURE_COLUMNS),
+                    outputCols=list(imputed),
+                ),
+                VectorAssembler(
+                    inputCols=list(imputed),
+                    outputCol="_tree_features",
+                    handleInvalid="error",
+                ),
+                GBTRegressor(
+                    featuresCol="_tree_features",
+                    labelCol="target_cumulative_log_change",
+                    predictionCol="prediction_cumulative_log_change",
+                    maxDepth=max_depth,
+                    maxIter=max_iter,
+                    stepSize=step_size,
+                    subsamplingRate=subsampling_rate,
+                    seed=seed,
+                ),
+            ]
+        )
+        output = pipeline.fit(training).transform(validation).select(
+            *frame.columns,
+            "prediction_cumulative_log_change",
+        )
+        outputs.append(
+            output.withColumn("model_name", functions.lit("gradient_boosted_trees"))
+        )
     if not outputs:
         raise ValueError("No forecast horizons were available to fit")
     combined = outputs[0]
@@ -477,8 +579,11 @@ def build_forecast_baseline_run(
     built_at_utc = built_at_utc or datetime.now(UTC).isoformat()
     fixed = baseline_predictions(frame)
     linear = _linear_model_predictions(frame, reg_param=reg_param)
+    tree = _gradient_boosted_tree_predictions(frame)
     predictions = _add_prediction_fields(
-        fixed.unionByName(linear, allowMissingColumns=True),
+        fixed.unionByName(linear, allowMissingColumns=True).unionByName(
+            tree, allowMissingColumns=True
+        ),
         run_id=run_id,
         built_at_utc=built_at_utc,
     )

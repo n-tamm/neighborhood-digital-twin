@@ -18,7 +18,7 @@ target timing, split reconciliation, and holdout-region count remain in
 `workspace.neighborhood_twin_quality.gold_quality_metrics`.
 
 The summary makes the main limitation visible: the five-year horizon has many tract rows but only
-three independent training origins. Row volume should never be mistaken for independent temporal
+two independent training origins. Row volume should never be mistaken for independent temporal
 evidence when repeated tract observations and overlapping ACS releases are involved.
 
 It also profiles 34 raw features, housing-mix bands, and housing-unit relative-MOE bands. Core ACS

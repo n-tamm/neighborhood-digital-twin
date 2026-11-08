@@ -16,19 +16,19 @@ Freeze split definitions before tuning:
 
 Use expanding-window or rolling-origin evaluation. Do not randomly split tract-year rows. Adjacent observations from the same tract share history, and ACS releases overlap.
 
-The first split contract is now frozen in `gold_model_split_assignment`. The locked test origins
-are 2024, 2022, and 2020 for the one-, three-, and five-year horizons. Calibration uses 2023, 2019,
-and 2015; validation uses 2021-2022, 2017-2018, and 2014. Labels that end after the applicable
+The split contract is frozen in `gold_model_split_assignment`. Every forecast target must begin and
+end in the same calendar decade; crossing targets are explicitly censored. The locked test origins
+are 2024, 2022, and 2020 for the one-, three-, and five-year horizons. Calibration uses 2023, 2016,
+and 2014; validation uses 2021-2022, 2014-2015, and 2013. Labels that end after the applicable
 locked test origin are purged. Maine, North Dakota, West Virginia, and New Mexico are held out as
 the deterministic geographic transfer sample. If the team changes this contract, it should create
 a new split version rather than overwrite the meaning of the existing evaluation.
 
-The independent-year count is the binding limitation. One-year modeling has ten training origins
-and three-year modeling has six; five-year modeling has only three. Repeated tract rows provide
-cross-sectional information but do not turn three time origins into a large temporal sample. The
-one-year horizon is therefore primary, three years is secondary, and five years should remain a
-simple, exploratory comparison unless a revised design creates more defensible independent
-periods.
+The independent-year count is the binding limitation. The decade-safe panel has nine one-year
+training origins, three three-year origins, and only two five-year origins. Repeated tract rows
+provide cross-sectional information but do not turn two time origins into a large temporal sample.
+The one-year horizon is therefore primary, three years is secondary, and five years remains
+exploratory.
 
 The broader post-2020-only tract cohort first appears in validation and later periods because it
 does not have stable pre-2020 geography. Report it separately from the stable longitudinal cohort.
@@ -50,10 +50,11 @@ Baselines use the same rows, split, and metrics as the candidate model. A baseli
 
 ### Implemented development scaffold
 
-Job `500 Modeling | Forecast Baselines` now implements the first comparison checkpoint. It reads
+Job `500 Modeling | Forecast Baselines` implements the comparison workflow. It reads
 `gold_modeling_panel`, fits no preprocessing outside the published training rows, and publishes
 validation predictions from zero change, latest-change persistence, recent three-year mean,
-county trend, state trend, and one L2-regularized linear model. The output scorecard uses MAE,
+county trend, state trend, one L2-regularized linear model, and a fixed-parameter Spark
+gradient-boosted-tree candidate. The output scorecard uses MAE,
 RMSE, median and 90th-percentile absolute error, signed bias, annualized percentage-point error,
 R-squared, directional accuracy, skill over zero change, coverage, cohort, geography, housing
 mix, and state slices. MLflow records the feature list, target, regularization, and aggregate
@@ -61,33 +62,32 @@ validation metrics.
 
 The workflow is intentionally not a final model. It does not use calibration rows, does not open
 the locked temporal tests, and does not serialize an application model yet. Its purpose is to
-establish honest difficulty, expose weak slices, and show whether more complex modeling is worth
-the added work. The five-year linear result should be interpreted cautiously because its training
-sample contains only three independent origin years.
+establish honest difficulty, expose weak slices, and compare a nonlinear candidate with simpler
+methods. Five-year results should be interpreted cautiously because its training sample contains
+only two independent origin years.
 
-The first shared run completed on October 30, 2026 and published 1,369,401 validation predictions
-and 1,248 scorecard rows. Regularized linear regression has the best overall one-year validation
-MAE at 0.0724, compared with 0.0757 for the state-trend baseline. At three years, the state trend
-is narrowly better at 0.0666 than the linear model at 0.0679. This is a useful warning against
-assuming that the more elaborate model is automatically better. The five-year linear MAE is
-0.0952, but that horizon remains exploratory because the fitted sample has only three independent
-training origins.
+The November 7, 2026 decade-safe run published 1,588,340 validation predictions across seven
+methods. Gradient-boosted trees has the best MAE at one and three years (0.0707 and 0.0721), while
+regularized linear is better at five years (0.1033 versus 0.1286). This is a useful warning against
+assuming that the more elaborate model is automatically better.
 
 Directional accuracy is also checked against the majority direction, not interpreted alone.
-Positive outcomes account for about 90.2% of one-year validation targets and more than 97% at the
-longer horizons. The strongest models currently add almost no directional lift over that base
+Positive outcomes account for about 90.2%, 94.6%, and 97.3% of one-, three-, and five-year
+validation targets. The strongest models currently add almost no directional lift over that base
 rate, despite apparently high raw accuracy. This makes MAE skill, signed bias, tail error, and
 origin-level stability more informative than the unadjusted direction percentage.
 
-The next forecast iteration should inspect subgroup scorecards and residual maps before adding
-complexity. If the linear improvement is consistent enough across time, geography, housing mix,
-cohort, and ACS uncertainty, compare one gradient-boosted model and a small feature-family
-ablation. If not, improve the feature or target contract before broad model search. Calibration
-rows and locked tests remain untouched until the point-model choice is frozen.
+The next forecast iteration should inspect subgroup scorecards and residual maps, then run a small
+feature-family ablation. If results are not consistent across geography, housing mix, cohort, ACS
+uncertainty, and time, improve the feature or target contract before broad model search.
+Calibration rows and locked tests remain untouched until the point-model choice is frozen.
 
 ## Candidate nonlinear model
 
-Select one gradient-boosted tree implementation based on missing-value support, training time, reproducibility, interpretability, Databricks compatibility, and team familiarity. HistGradientBoosting, XGBoost, LightGBM, or CatBoost can all be reasonable; the decision belongs in an ADR after a small comparison.
+The first nonlinear candidate is Spark ML `GBTRegressor` with depth 4, 50 iterations, step size
+0.05, subsampling 0.8, and seed 699. It is trained separately by horizon on `eligible_for_point_model_fit` rows, using median imputation fitted only on that horizon's training rows. The
+gradient-boosted-tree candidate document records the current validation comparison. It is not a
+frozen champion.
 
 Fit a separate direct model for each horizon. Do not recursively feed one-year forecasts into later years for the MVP. Each horizon can have its own eligible population, preprocessing, parameters, calibration, and limitation statement.
 

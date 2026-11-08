@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, model, evaluation, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current and historical analytical products, twelve versioned EDA figures, and seven model-evaluation figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe model features, frozen temporal and geographic assignments, and a joined modeling panel are live for 63,367 tracts. Forecast and current-state similarity baselines now run as tracked MLflow experiments; the next work is focused nonlinear comparison, uncertainty calibration, time-safe analogue evaluation, and a descriptive application shell. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines populate separate bronze, silver, gold, model, evaluation, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current and historical analytical products, twelve versioned EDA figures, and seven model-evaluation figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe features, frozen temporal and geographic assignments, and the joined modeling panel cover 63,367 tracts. The November 7, 2026 forecast run published 1,588,340 validation predictions across 59,179 tracts and seven methods. Its gradient-boosted-tree challenger had the lowest validation error at one and three years; regularized linear performed better at five years. No champion has been selected, the locked temporal test remains unopened, and cross-decade targets are censored. Similarity outputs were not changed by the forecast refresh. Next steps are forecast ablations and calibration, time-safe analogue evaluation, and a descriptive application shell. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -73,7 +73,7 @@ flowchart TB
     GR -.->|quality checks| QM
     EV -.->|evaluation checks| QM
 
-    GR -.->|next| NF["Focused nonlinear forecast<br/>and calibrated uncertainty"]
+    EV -.->|next| NF["Forecast ablations<br/>and uncertainty calibration"]
     GH -.->|next| NA["Time-safe historical<br/>analogue evaluation"]
     EV -.->|model-selection evidence| NF
     GC -.->|planned input| SV["Versioned serving tables"]
@@ -94,8 +94,11 @@ flowchart TB
 Teal nodes are implemented; gold nodes with dashed borders are the next planned delivery stages.
 The diagram reflects the current operational split: current and historical gold products are built
 separately, forecast and similarity baselines publish to dedicated model and evaluation schemas,
-and EDA and model figures are versioned Databricks outputs. Quality checks run throughout the
-pipeline, while job 900 reapplies table and column metadata after schema-overwriting jobs.
+and EDA and model figures are versioned Databricks outputs. The forecast workflow includes a
+gradient-boosted-tree challenger, but validation results have not selected a champion. Forecast
+targets that cross a calendar-decade boundary are censored; the locked temporal test remains
+unopened. Quality checks run throughout the pipeline, while job 900 reapplies table and column
+metadata after schema-overwriting jobs.
 
 Databricks Free Edition is the shared environment for source snapshots, Delta tables,
 transformations, MLflow experiments, figures, and the planned primary Streamlit application.
@@ -355,8 +358,8 @@ source comment, but the dependency must be declared in the correct environment f
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
 forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
-initial forecast and similarity outputs in a dedicated model schema and governed diagnostics in
-a separate evaluation schema. These are development baselines, not final models: model selection,
+forecast and similarity outputs in a dedicated model schema and governed diagnostics in a separate
+evaluation schema. These remain development results, not final models: forecast model selection,
 calibrated uncertainty, retrospective analogue evaluation, serving products, and the interactive
 application remain. Current figure locations and reproduction steps are documented in the
 [EDA figure guide](reports/EDA_FIGURES.md) and

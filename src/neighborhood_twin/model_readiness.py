@@ -24,7 +24,7 @@ from neighborhood_twin.historical import (
 )
 from neighborhood_twin.validate import QualityMetric, hard_failures, new_quality_run_id
 
-MODEL_READINESS_SCHEMA_VERSION = "1.0.0"
+MODEL_READINESS_SCHEMA_VERSION = "1.1.0"
 MODEL_FEATURE_TABLE = "gold_model_feature_historical"
 MODEL_SPLIT_TABLE = "gold_model_split_assignment"
 MODELING_PANEL_TABLE = "gold_modeling_panel"
@@ -151,8 +151,29 @@ def build_split_rules(
         if validation_count <= 0:
             raise ValueError("Every horizon needs at least one validation origin")
         calibration_origin = locked_origin - horizon
+        while (
+            calibration_origin > 0
+            and calibration_origin // 10 != (calibration_origin + horizon) // 10
+        ):
+            calibration_origin -= 1
+        if calibration_origin <= 0:
+            raise ValueError(f"No within-decade calibration origin for horizon {horizon}")
         validation_end = calibration_origin - 1
-        validation_start = validation_end - validation_count + 1
+        validation_origins = []
+        candidate_origin = validation_end
+        while len(validation_origins) < validation_count and candidate_origin > 0:
+            target_end = candidate_origin + horizon
+            if (
+                candidate_origin // 10 == target_end // 10
+                and target_end <= locked_origin
+            ):
+                validation_origins.append(candidate_origin)
+            candidate_origin -= 1
+        if len(validation_origins) < validation_count:
+            raise ValueError(
+                f"Not enough within-decade validation origins for horizon {horizon}"
+            )
+        validation_start = min(validation_origins)
         rules.append(
             SplitRule(
                 horizon_years=horizon,
@@ -174,6 +195,8 @@ def temporal_split_role(
 ) -> str:
     """Classify one target row under a frozen horizon-specific temporal contract."""
 
+    if forecast_origin_year // 10 != target_end_year // 10:
+        return "ineligible_target"
     if forecast_origin_year == rule.locked_test_origin_year and target_is_observed:
         return "locked_temporal_test"
     if forecast_origin_year > rule.locked_test_origin_year:
@@ -609,6 +632,11 @@ def _build_split_assignments(
     )
     temporal_role = (
         functions.when(
+            functions.floor(functions.col("forecast_origin_year") / 10)
+            != functions.floor(functions.col("target_end_year") / 10),
+            functions.lit("ineligible_target"),
+        )
+        .when(
             (functions.col("forecast_origin_year") == functions.col("locked_test_origin_year"))
             & functions.col("target_is_observed"),
             functions.lit("locked_temporal_test"),
@@ -1052,6 +1080,13 @@ def _quality_metrics(
         functions.col("target_end_year")
         != functions.col("forecast_origin_year") + functions.col("horizon_years")
     ).count()
+    observed_decade_crossing_targets = panel.where(
+        functions.col("target_is_observed")
+        & (
+            functions.floor(functions.col("forecast_origin_year") / 10)
+            != functions.floor(functions.col("target_end_year") / 10)
+        )
+    ).count()
     checks = (
         (
             MODEL_FEATURE_TABLE,
@@ -1118,6 +1153,12 @@ def _quality_metrics(
             "invalid_target_timing_count",
             invalid_panel_target_timing,
             "= 0",
+        ),
+        (
+            MODELING_PANEL_TABLE,
+            "observed_decade_crossing_target_count",
+            observed_decade_crossing_targets,
+            "= 0; observed target windows must remain within one calendar decade",
         ),
     )
     for table, metric_name, value, expectation in checks:

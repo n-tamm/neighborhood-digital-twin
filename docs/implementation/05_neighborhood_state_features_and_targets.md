@@ -47,7 +47,8 @@ The longitudinal state and target contracts are now implemented as three additio
   rows across one-, three-, and five-year horizons.
 
 All three were published and passed their hard validation checks on October 26, 2026. Four
-separate model-readiness products were then published on October 29:
+separate model-readiness products were first published on October 29 and rebuilt on November 7
+after the forecast target and split contracts were made decade-safe:
 
 - `gold_model_feature_historical` selects the latest ACS state available at each FHFA origin and
   adds point-in-time HPI history, county/state context, uncertainty, and cohort fields;
@@ -57,11 +58,12 @@ separate model-readiness products were then published on October 29:
   preprocessing on the full dataset; and
 - `gold_model_readiness_summary` reports cohort and split coverage.
 
-The feature table contains 696,886 rows across 63,367 tracts and 2011-2025 origins. The split and
-panel tables each contain 2,090,658 tract-origin-horizon rows and reconcile exactly. All hard
-availability, timing, uniqueness, and leakage checks passed. The five-year split has only three
-independent training origins, so it remains an exploratory secondary result even though it has
-many repeated tract rows.
+The feature table contains 696,886 rows across 63,367 tracts and 2011-2025 origins. The split and panel tables each contain 2,090,658 tract-origin-horizon rows and reconcile exactly.
+Cross-decade targets have `target_censor_reason = 'crosses_decade_boundary'`; their split
+assignments carry `ineligible_target`. The rebuilt panel contains zero observed cross-decade
+targets. All hard availability, timing, uniqueness, leakage, and reconciliation checks passed.
+The decade-safe split has nine one-year, three three-year, and two five-year independent training
+origins, so the five-year horizon remains exploratory despite its many repeated tract rows.
 
 ## Neighborhood-state contract
 
@@ -164,6 +166,10 @@ Use direct horizon-specific targets. The proposed target is cumulative log chang
 - horizon and annualization rule, if any;
 - right-censoring reason;
 - target-definition version.
+
+The origin and target endpoint must also fall in the same calendar decade. Censor crossing windows
+with an explicit reason rather than treating an available endpoint as an eligible outcome; for
+example, exclude a 2019-to-2022 three-year target.
 
 The primary result is the one-year target. Longer horizons are retained only when their training and test samples remain credible.
 

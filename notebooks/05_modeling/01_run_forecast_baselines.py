@@ -9,12 +9,12 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC # Forecasting baseline workflow
+# MAGIC # Forecasting model development workflow
 # MAGIC
-# MAGIC This development workflow fits five fixed forecasting baselines and one regularized linear
-# MAGIC model against the governed split contract. It publishes validation predictions and sliced
-# MAGIC scorecards only. Locked temporal test rows remain closed, and calibration rows are reserved
-# MAGIC for later interval work.
+# MAGIC This development workflow fits five fixed forecasting baselines, a regularized linear model,
+# MAGIC and a fixed-parameter gradient-boosted-tree challenger against the governed split contract.
+# MAGIC It publishes validation predictions and sliced scorecards only. Locked temporal test rows
+# MAGIC remain closed, and calibration rows are reserved for later interval work.
 
 # COMMAND ----------
 
@@ -44,6 +44,11 @@ from neighborhood_twin.data.databricks import qualified_name
 from neighborhood_twin.forecasting import (
     FORECAST_PREDICTION_TABLE,
     FORECAST_SCORECARD_TABLE,
+    GBT_MAX_DEPTH,
+    GBT_MAX_ITER,
+    GBT_SEED,
+    GBT_STEP_SIZE,
+    GBT_SUBSAMPLING_RATE,
     LINEAR_FEATURE_COLUMNS,
     build_forecast_baseline_run,
 )
@@ -96,6 +101,12 @@ with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run
             "reg_param": reg_param,
             "linear_feature_count": len(LINEAR_FEATURE_COLUMNS),
             "linear_features": ",".join(LINEAR_FEATURE_COLUMNS),
+            "tree_model": "pyspark.ml.regression.GBTRegressor",
+            "tree_max_depth": GBT_MAX_DEPTH,
+            "tree_max_iter": GBT_MAX_ITER,
+            "tree_step_size": GBT_STEP_SIZE,
+            "tree_subsampling_rate": GBT_SUBSAMPLING_RATE,
+            "tree_seed": GBT_SEED,
         }
     )
     result = build_forecast_baseline_run(

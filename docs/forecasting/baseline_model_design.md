@@ -4,8 +4,8 @@
 
 The first forecast workflow is designed to establish honest difficulty, not to search many
 algorithms. Every method predicts the same cumulative log-change target on the same validation
-population. A fitted model only earns further development if it improves on transparent rules in
-a consistent and interpretable way.
+population, restricted to windows that remain within a calendar decade. A fitted model only earns
+further development if it improves on transparent rules in a consistent and interpretable way.
 
 ## Fixed prediction rules
 
@@ -62,8 +62,10 @@ causal variables, or eliminate the need for error slices.
 
 ## Design boundaries
 
-- No nonlinear candidate is implemented yet.
+- The gradient-boosted-tree candidate has fixed parameters; a feature-family ablation and
+  hyperparameter search have not been run.
 - No feature-family ablation has been run.
 - No tract adjacency or distance feature is present because current geometry is display-only.
+- Forecast windows that cross a calendar-decade boundary are censored before fitting and scoring.
 - The linear model produces point predictions only; uncertainty is not calibrated.
 - Coefficients should not be described as causal effects.
