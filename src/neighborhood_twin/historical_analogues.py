@@ -507,6 +507,10 @@ def rank_analogue_matches(
     return (
         pairs.withColumn("match_rank", functions.row_number().over(ranking))
         .where(functions.col("match_rank") <= top_k)
+        .withColumn(
+            "unique_candidate_tract",
+            functions.lit(unique_candidate_tract),
+        )
         .drop("candidate_horizon_years", "_query_vector", "_candidate_vector")
     )
 
@@ -688,7 +692,11 @@ def _add_prediction_fields(
     )
 
 
-def build_historical_analogue_scorecard(predictions: Any) -> Any:
+def build_historical_analogue_scorecard(
+    predictions: Any,
+    *,
+    additional_slices: tuple[tuple[str, str], ...] = (),
+) -> Any:
     """Summarize analogue and forecast-comparator errors on identical sampled queries."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
@@ -718,6 +726,16 @@ def build_historical_analogue_scorecard(predictions: Any) -> Any:
             "slice_value", functions.col("query_modeling_cohort")
         ),
     ]
+    for slice_name, column_name in additional_slices:
+        if column_name not in predictions.columns:
+            raise ValueError(
+                f"Scorecard slice {slice_name!r} requires missing column {column_name!r}"
+            )
+        slices.append(
+            predictions.withColumn("slice_name", functions.lit(slice_name)).withColumn(
+                "slice_value", functions.col(column_name).cast("string")
+            )
+        )
     sliced = slices[0]
     for current in slices[1:]:
         sliced = sliced.unionByName(current)
@@ -927,6 +945,7 @@ def build_historical_analogue_run(
     queries_per_group: int = 1,
     top_k: int = 10,
     pca_components: int = DEFAULT_PCA_COMPONENTS,
+    unique_candidate_tract: bool = False,
     comparator_models: tuple[str, ...] = DEFAULT_COMPARATOR_MODELS,
     run_id: str | None = None,
     built_at_utc: str | None = None,
@@ -978,6 +997,7 @@ def build_historical_analogue_run(
             representation_name="weighted_standardized",
             vector_column="analogue_weighted_vector",
             top_k=top_k,
+            unique_candidate_tract=unique_candidate_tract,
         )
         pca_matches = rank_analogue_matches(
             representation,
@@ -985,6 +1005,7 @@ def build_historical_analogue_run(
             representation_name="pca",
             vector_column="analogue_pca_vector",
             top_k=top_k,
+            unique_candidate_tract=unique_candidate_tract,
         )
         matches = raw_matches.unionByName(pca_matches).cache()
         match_count = matches.count()
