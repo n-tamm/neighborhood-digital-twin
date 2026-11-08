@@ -35,6 +35,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Model-output governance, evaluation metrics, and diagnostic figures, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Expanded analogue selection and coverage safeguards, November 8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -268,6 +269,24 @@ baselines. Review of the actual matches and metrics then supported weighted stan
 and distinct physical communities as provisional application choices. This evaluation illustrates
 why a green job status was not treated as sufficient evidence: the most important correction came
 from reconciling the analytical output after a technically successful run.
+
+The expanded analogue-selection workflow was checked with all 98 local tests, Ruff, mypy, bundle
+validation, two successful live job-602 runs, the metadata job, and direct SQL reconciliation.
+The first live run passed every leakage and top-ten check and expanded the evaluation to 80 queries
+per horizon. Its coverage table nevertheless showed that the sample missed the under-25%
+single-family group at one year, along with a few very rare size or uncertainty categories. The
+selection logic was revised to add one deterministic, outcome-blind query for each otherwise
+missing required category. The corrected run covered every category and still preserved the
+balanced time, region, and geographic-transfer core.
+
+The final tables contain 3,560 matches, 1,246 predictions, four retrieval summaries, 322 scorecard
+rows, and 78 coverage rows. SQL checks found zero future outcomes, self-matches, nonvalidation
+queries, incomplete or duplicate top tens, or uncovered required categories. Weighted matching
+had lower overall analogue MAE than PCA at both horizons, but the primary regularized-linear
+forecast remained more accurate. The result therefore froze weighted, distinct-community
+retrieval for application development without promoting analogue outcomes to the primary
+forecast. This is another case where post-run data review changed the generated implementation
+rather than merely confirming that it executed.
 
 ## Maintenance requirements
 

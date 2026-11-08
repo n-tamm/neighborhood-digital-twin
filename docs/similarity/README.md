@@ -130,7 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-All three similarity-development stages have completed validated live runs.
+All four similarity-development stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -161,11 +161,23 @@ on average and were exactness-certified. Alternate PCA dimensions retained 50.9%
 PCA list, while family removal retained 37.6% of weighted matches and confirmed that market
 trajectory has the strongest influence on the current match definition.
 
-Weighted standardized distance is now the provisional application default. It is more stable
-under reasonable local changes, easier to explain, and does not sacrifice a clear accuracy
-advantage to PCA. The application should return distinct physical communities: this policy
-retained 93.1% of baseline matches while removing repeat years from the same tract. Both decisions
-remain subject to the expanded or justified evaluation sample.
+Weighted standardized distance was the provisional application default after job 601. It was more
+stable under reasonable local changes, easier to explain, and did not sacrifice a clear accuracy
+advantage to PCA. The audit also supported distinct physical communities: that policy retained
+93.1% of baseline matches while removing repeat years from the same tract.
+
+### Job 602: Expanded historical analogue selection
+
+- Expands the sample to 88 one-year and 90 three-year validation query tract-years.
+- Requires ten distinct physical candidate tracts for both representations.
+- Covers every eligible housing-composition, community-size, and ACS-uncertainty category, while
+  labeling rare categories that have too few examples for subgroup claims.
+- Finds lower overall analogue MAE for weighted matching than PCA at both horizons.
+- Confirms that the regularized-linear forecast remains the stronger primary numerical estimate.
+
+Weighted standardized distance and distinct physical candidates are now the selected application
+policy. PCA remains an internal audit lens. The next similarity stage is current-neighborhood
+retrieval using this frozen, versioned definition.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 

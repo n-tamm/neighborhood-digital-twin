@@ -90,6 +90,29 @@ Job 602 stops before writing tables if:
 
 ## Current status
 
-The workflow code and bundle definition are implemented. Live row counts, coverage findings,
-method comparisons, and the final representation decision will be recorded here only after the
-Databricks run and post-publication reconciliation succeed.
+The corrected job-602 run succeeded on November 8, 2026. It published 3,560 matches, 1,246
+predictions, four retrieval summaries, 322 scorecard rows, and 78 coverage rows. The sample
+contains 88 one-year and 90 three-year query tract-years. The MLflow run ID is
+`f161ff3938b34032afe3634ef3de38df`.
+
+All hard checks passed: no nonvalidation queries, future candidate outcomes, self-matches,
+incomplete top tens, duplicate physical candidates, or uncovered required categories were found.
+All five tables have governed table descriptions and comments on every column.
+
+Weighted retrieval produced the better overall analogue MAE at both horizons. Its median estimate
+reached 0.0788 at one year versus PCA inverse distance at 0.0823. At three years, weighted inverse
+distance reached 0.1022 versus PCA inverse distance at 0.1098. Subgroup results are mixed and rare
+categories have very small counts, so this is supporting evidence rather than proof that weighted
+distance is universally more accurate.
+
+The primary forecasts remain stronger. Regularized-linear MAE is 0.0682 at one year and 0.0801 at
+three years. This confirms the intended product design: forecasts provide the main numerical
+estimate, while analogues provide interpretable historical examples and an outcome range.
+
+Weighted standardized distance is now the selected application representation. This decision is
+based on the combined evidence: local weight stability, feature-level interpretability, PCA's
+sensitivity and hidden family gaps, and the expanded outcome comparison. PCA remains an internal
+audit method. The application policy is also frozen at ten distinct physical candidate tracts.
+
+The next branch should build current-neighborhood retrieval under this versioned representation.
+The locked temporal tests remain unopened.
