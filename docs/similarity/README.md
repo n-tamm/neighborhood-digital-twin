@@ -209,3 +209,6 @@ application will eventually apply the approved representation to a neighborhood 
    diagnostic cases, the evidence reviewers inspect, and the repeated-community decision.
 9. [Stability evaluation](stability_evaluation.md) defines the bounded weight, ablation, PCA, and
    candidate-uniqueness tests and the metrics used to interpret them.
+10. [Expanded historical analogue evaluation](expanded_evaluation.md) explains the larger
+    validation sample, distinct-community policy, sample-coverage evidence, publication gates,
+    and representation-selection boundary.
