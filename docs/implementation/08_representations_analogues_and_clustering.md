@@ -60,6 +60,20 @@ The resulting match, prediction, retrieval-summary, and scorecard tables live in
 evaluation schemas. The [similarity documentation](../similarity/README.md) records the exact
 feature registry, runtime behavior, current results, and interpretation limits.
 
+Job `601 Evaluation | Historical Analogue Audit` now reproduces the published job-502 baselines,
+selects deterministic review cases, and evaluates 21 feature-weight, family-ablation, PCA, and
+candidate-policy variants on every development query. Its validated output contains 6,720 match
+rows, 672 complete query-variant summaries, and 600 case-review rows. Small family-weight changes
+retain 93.4% of weighted neighbors on average, while alternate PCA dimensions retain 50.9% of the
+six-component list. Reviewed PCA matches can be close in compressed space while retaining a large
+gap in an original feature family.
+
+Weighted standardized distance is consequently the provisional application representation, and
+the application should return one historical state per physical candidate tract. The latter rule
+retains 93.1% of baseline neighbors while removing repeated-community results. PCA and the
+tract-year rule remain available for model audit. These are development decisions rather than
+final performance claims until the 16-query-per-horizon sample is expanded or justified.
+
 For a query tract at forecast origin `t`:
 
 - search only tract-years whose later outcome is already known at `t`;

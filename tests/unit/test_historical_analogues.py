@@ -12,8 +12,10 @@ from neighborhood_twin.historical_analogues import (
     ANALOGUE_FEATURE_COLUMNS,
     ANALOGUE_FEATURE_FAMILIES,
     ANALOGUE_REQUIRED_COLUMNS,
+    add_weighted_analogue_vector,
     analogue_feature_multipliers,
     analogue_feature_weights,
+    fit_analogue_pca,
     latest_candidate_origin_year,
     validate_analogue_columns,
     validate_analogue_settings,
@@ -70,3 +72,10 @@ def test_historical_analogue_contract_rejects_missing_columns_and_invalid_settin
             top_k=0,
             pca_components=6,
         )
+
+
+def test_reusable_representation_helpers_validate_before_spark_execution() -> None:
+    with pytest.raises(ValueError, match="feature count"):
+        add_weighted_analogue_vector(object(), multipliers=(1.0,))
+    with pytest.raises(ValueError, match="between one"):
+        fit_analogue_pca(object(), pca_components=0)

@@ -162,7 +162,7 @@ def validate_analogue_settings(
         raise ValueError("pca_components must be between one and the feature count")
 
 
-def _prepare_features(frame: Any) -> Any:
+def prepare_analogue_features(frame: Any) -> Any:
     """Derive time-comparable analogue inputs without discarding their source columns."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
@@ -239,21 +239,18 @@ def _prepare_features(frame: Any) -> Any:
     )
 
 
-def _fit_representation(frame: Any, *, pca_components: int) -> tuple[Any, float]:
-    """Fit horizon-specific imputation, scaling, family weighting, and PCA on training rows."""
+def fit_analogue_preprocessing(frame: Any) -> Any:
+    """Fit training-only imputation and standardization and transform the full horizon frame."""
 
     from pyspark.ml import Pipeline  # type: ignore[import-not-found]
     from pyspark.ml.feature import (  # type: ignore[import-not-found]
-        PCA,
-        ElementwiseProduct,
         Imputer,
         StandardScaler,
         VectorAssembler,
     )
-    from pyspark.ml.linalg import Vectors  # type: ignore[import-not-found]
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
-    prepared = _prepare_features(frame)
+    prepared = prepare_analogue_features(frame)
     training = prepared.where(
         functions.col("eligible_for_point_model_fit") & functions.col("target_is_observed")
     )
@@ -278,23 +275,67 @@ def _fit_representation(frame: Any, *, pca_components: int) -> tuple[Any, float]
                 withMean=True,
                 withStd=True,
             ),
-            ElementwiseProduct(
-                scalingVec=Vectors.dense(analogue_feature_multipliers()),
-                inputCol="_analogue_standardized_vector",
-                outputCol="analogue_weighted_vector",
-            ),
-            PCA(
-                k=pca_components,
-                inputCol="analogue_weighted_vector",
-                outputCol="analogue_pca_vector",
-            ),
         ]
     )
-    model = pipeline.fit(training)
-    transformed = model.transform(prepared)
-    pca_model = model.stages[-1]
+    return pipeline.fit(training).transform(prepared)
+
+
+def add_weighted_analogue_vector(
+    frame: Any,
+    *,
+    multipliers: tuple[float, ...] | None = None,
+    output_column: str = "analogue_weighted_vector",
+) -> Any:
+    """Apply declared feature multipliers to a standardized analogue feature vector."""
+
+    resolved_multipliers = multipliers or analogue_feature_multipliers()
+    if len(resolved_multipliers) != len(ANALOGUE_FEATURE_COLUMNS):
+        raise ValueError("Analogue multipliers must match the governed feature count")
+
+    from pyspark.ml.feature import ElementwiseProduct  # type: ignore[import-not-found]
+    from pyspark.ml.linalg import Vectors  # type: ignore[import-not-found]
+
+    return ElementwiseProduct(
+        scalingVec=Vectors.dense(resolved_multipliers),
+        inputCol="_analogue_standardized_vector",
+        outputCol=output_column,
+    ).transform(frame)
+
+
+def fit_analogue_pca(
+    frame: Any,
+    *,
+    pca_components: int,
+    input_column: str = "analogue_weighted_vector",
+    output_column: str = "analogue_pca_vector",
+) -> tuple[Any, float]:
+    """Fit PCA on eligible training vectors and transform the full horizon frame."""
+
+    if pca_components <= 0 or pca_components > len(ANALOGUE_FEATURE_COLUMNS):
+        raise ValueError("pca_components must be between one and the feature count")
+
+    from pyspark.ml.feature import PCA  # type: ignore[import-not-found]
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    training = frame.where(
+        functions.col("eligible_for_point_model_fit") & functions.col("target_is_observed")
+    )
+    pca_model = PCA(
+        k=pca_components,
+        inputCol=input_column,
+        outputCol=output_column,
+    ).fit(training)
+    transformed = pca_model.transform(frame)
     explained_variance = sum(float(value) for value in pca_model.explainedVariance)
     return transformed, explained_variance
+
+
+def _fit_representation(frame: Any, *, pca_components: int) -> tuple[Any, float]:
+    """Fit horizon-specific imputation, scaling, family weighting, and PCA on training rows."""
+
+    standardized = fit_analogue_preprocessing(frame)
+    weighted = add_weighted_analogue_vector(standardized)
+    return fit_analogue_pca(weighted, pca_components=pca_components)
 
 
 def _comparator_complete_keys(
@@ -355,15 +396,16 @@ def _select_queries(
     return queries
 
 
-def _rank_matches(
+def rank_analogue_matches(
     representation: Any,
     queries: Any,
     *,
     representation_name: str,
     vector_column: str,
     top_k: int,
+    unique_candidate_tract: bool = False,
 ) -> Any:
-    """Retrieve exact time-safe historical neighbors for the small validation query sample."""
+    """Retrieve exact time-safe neighbors with an optional unique-candidate-tract rule."""
 
     from pyspark.ml.functions import vector_to_array  # type: ignore[import-not-found]
     from pyspark.sql import Window, functions  # type: ignore[import-not-found]
@@ -433,6 +475,25 @@ def _rank_matches(
             functions.col("query_origin_year") - functions.col("candidate_origin_year"),
         )
     )
+    if unique_candidate_tract:
+        candidate_ranking = Window.partitionBy(
+            "query_geoid_2020",
+            "query_origin_year",
+            "horizon_years",
+            "representation_name",
+            "candidate_geoid_2020",
+        ).orderBy(
+            "similarity_distance",
+            functions.col("candidate_origin_year").desc(),
+        )
+        pairs = (
+            pairs.withColumn(
+                "_candidate_tract_rank",
+                functions.row_number().over(candidate_ranking),
+            )
+            .where(functions.col("_candidate_tract_rank") == 1)
+            .drop("_candidate_tract_rank")
+        )
     ranking = Window.partitionBy(
         "query_geoid_2020",
         "query_origin_year",
@@ -911,14 +972,14 @@ def build_historical_analogue_run(
             queries_per_group=queries_per_group,
             comparator_keys=horizon_comparator_keys,
         )
-        raw_matches = _rank_matches(
+        raw_matches = rank_analogue_matches(
             representation,
             queries,
             representation_name="weighted_standardized",
             vector_column="analogue_weighted_vector",
             top_k=top_k,
         )
-        pca_matches = _rank_matches(
+        pca_matches = rank_analogue_matches(
             representation,
             queries,
             representation_name="pca",

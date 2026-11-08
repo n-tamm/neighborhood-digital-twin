@@ -99,6 +99,9 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 53. [`historical_analogue_prediction`](53_model_historical_analogue_prediction.md)
 54. [`historical_analogue_summary`](54_evaluation_historical_analogue_summary.md)
 55. [`historical_analogue_scorecard`](55_evaluation_historical_analogue_scorecard.md)
+56. [`historical_analogue_audit_match`](56_model_historical_analogue_audit_match.md)
+57. [`historical_analogue_stability_summary`](57_evaluation_historical_analogue_stability_summary.md)
+58. [`historical_analogue_case_review`](58_evaluation_historical_analogue_case_review.md)
 
 ### Gold exploration and readiness
 

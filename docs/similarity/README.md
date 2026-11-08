@@ -130,7 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-Two similarity stages are implemented.
+All three similarity-development stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -144,6 +144,28 @@ Two similarity stages are implemented.
 - Supports one- and three-year outcomes.
 - Published 640 individual matches and 224 prediction and comparator rows.
 - Passed self-match, timing, validation-role, and top-ten reconciliation checks.
+
+### Job 601: Historical analogue audit
+
+- Reproduces the job-502 baselines before another result can be published.
+- Selects representative and diagnostic cases without using their later outcomes.
+- Tests small feature-family weight changes, family removal, PCA dimensions, and distinct-tract
+  candidate ranking on the same queries.
+- Separates exact or mathematically certified retrieval from shortlist-based stress tests.
+- Publishes match-level evidence, query-level stability metrics, and feature-level case-review
+  evidence.
+
+The validated run published 6,720 variant matches, 672 complete query-variant stability rows, and
+600 case-review rows. Small feature-family weight changes retained 93.4% of the weighted top ten
+on average and were exactness-certified. Alternate PCA dimensions retained 50.9% of the baseline
+PCA list, while family removal retained 37.6% of weighted matches and confirmed that market
+trajectory has the strongest influence on the current match definition.
+
+Weighted standardized distance is now the provisional application default. It is more stable
+under reasonable local changes, easier to explain, and does not sacrifice a clear accuracy
+advantage to PCA. The application should return distinct physical communities: this policy
+retained 93.1% of baseline matches while removing repeat years from the same tract. Both decisions
+remain subject to the expanded or justified evaluation sample.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 
@@ -183,3 +205,7 @@ application will eventually apply the approved representation to a neighborhood 
    query sample, retrieval sequence, Databricks job, published tables, and operational checks.
 7. [Historical analogue results](historical_analogue_results.md) records the completed development
    run, the diagnostic and outcome findings, and the resulting interpretation.
+8. [Case review protocol](case_review_protocol.md) defines deterministic representative and
+   diagnostic cases, the evidence reviewers inspect, and the repeated-community decision.
+9. [Stability evaluation](stability_evaluation.md) defines the bounded weight, ablation, PCA, and
+   candidate-uniqueness tests and the metrics used to interpret them.

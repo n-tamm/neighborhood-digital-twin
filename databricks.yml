@@ -158,6 +158,9 @@ variables:
   historical_analogue_mlflow_experiment:
     description: Shared MLflow experiment for time-safe historical analogue development
     default: /Shared/neighborhood-digital-twin/historical-analogues
+  analogue_audit_mlflow_experiment:
+    description: Shared MLflow experiment for analogue case review and stability evaluation
+    default: /Shared/neighborhood-digital-twin/analogue-audit-stability
 
 resources:
   jobs:
@@ -774,6 +777,34 @@ resources:
             environment_version: "2"
             dependencies:
               - matplotlib==3.9.2
+    historical_analogue_audit:
+      name: Neighborhood Digital Twin | 601 Evaluation | Historical Analogue Audit
+      description: Reviews baseline matches and measures stability under bounded model variants.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: evaluation
+        run_order: "601"
+        lifecycle: model_diagnostic
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_historical_analogue_audit
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/05_run_analogue_audit_stability.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              modeling_panel_table: gold_modeling_panel
+              baseline_match_table: historical_analogue_match
+              audit_match_table: historical_analogue_audit_match
+              stability_summary_table: historical_analogue_stability_summary
+              case_review_table: historical_analogue_case_review
+              top_k: "10"
+              shortlist_k: "1000"
+              mlflow_experiment: ${var.analogue_audit_mlflow_experiment}
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.

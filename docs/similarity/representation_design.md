@@ -70,3 +70,24 @@ serving strategy.
 - No geographic distance is used.
 - No future outcome is used to select a match.
 - No similarity explanation yet identifies the strongest shared traits and differences.
+
+## Historical analogue application choice
+
+The current-state job-501 comparison above remains an exploratory baseline. For retrospective
+historical analogues, jobs 502 and 601 use five explicit feature families with equal total family
+weight and include recent housing-market trajectory. The first stability audit supports weighted
+standardized distance as the provisional application representation:
+
+- small family-weight changes retain 93.4% of the top ten on average and are
+  exactness-certified;
+- five- and seven-component PCA lists retain 50.9% of the six-component list on average and can
+  hide a large gap in an original feature family;
+- outcome accuracy is mixed across horizons and does not provide a clear reason to prefer PCA;
+  and
+- direct weighted features support the shared-strength and important-difference explanations the
+  application needs.
+
+The application should also keep one historical state per physical candidate tract. This rule
+produces ten distinct communities while retaining 93.1% of baseline matches on average. Both
+choices remain provisional until the evaluation sample is expanded or justified; PCA and the
+tract-year baseline stay available for model audit rather than becoming user-facing defaults.
