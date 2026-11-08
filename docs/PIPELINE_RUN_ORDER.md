@@ -16,7 +16,7 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-501 Modeling`, `600 Evaluation`, and `900 Metadata`. Jobs increment by one inside each
+`400-401 Analysis`, `500-502 Modeling`, `600-601 Evaluation`, and `900 Metadata`. Jobs increment by one inside each
 three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
@@ -48,7 +48,9 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 401 | Analysis | `visual_eda` | After 400 or visual-analysis code changes | Rebuilds visual summaries and versioned EDA figures |
 | 500 | Modeling | `forecast_baselines` | After 302 or forecast-development code changes | Publishes validation-only baseline predictions and scorecards; does not open locked tests |
 | 501 | Modeling | `similarity_baselines` | After 300 or similarity-development code changes | Publishes a small reviewable current-state baseline, not the final retrospective analogue product |
+| 502 | Modeling | `historical_analogue_baseline` | After current successful runs of 302 and 500 | Retrieves time-safe historical matches for sampled validation queries and compares their later outcomes with forecast baselines |
 | 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
+| 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -71,7 +73,9 @@ The bundle job keys remain stable even if a display label is clarified later.
 200/300 Gold -----------------------------------> 400 Readiness EDA --> 401 Visual EDA
 302 Model readiness ----------------------------> 500 Forecast baselines
 300 Current gold -------------------------------> 501 Similarity baselines
+302 Model readiness + 500 Forecast -------------> 502 Historical analogue baseline
 500 Forecast + 501 Similarity ------------------> 600 Model evaluation figures
+502 Historical analogue baseline --------------> 601 Analogue review and stability
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -131,16 +135,26 @@ run them in parallel during an agreed deployment window:
 ```powershell
 databricks bundle run forecast_baselines --profile neighborhood-twin -t team
 databricks bundle run similarity_baselines --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_baseline --profile neighborhood-twin -t team
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
 Job 500 may read training and validation assignments but publishes validation predictions only.
 It must not be changed to inspect the locked temporal tests during model development. Job 501 is
-a current-state representation check; historical analogue evaluation will be a later numbered
-workflow once its time-safe retrieval contract is implemented.
+a current-state representation check. Job 502 uses validation queries only, requires every
+candidate outcome to end by the query origin, and compares analogue estimates with selected
+job-500 forecasts on the same deterministic query set. Its first contract supports one- and
+three-year horizons. The five-year validation origin does not have enough earlier model-ready
+history for a leakage-safe candidate outcome.
 Job 600 reads the governed evaluation summaries, writes versioned PNGs to the evaluation volume,
 and records both source MLflow run IDs in its manifest.
+Job 601 must follow job 502. It first requires the rerun weighted-standardized and PCA baselines to
+reproduce the published candidate identities, years, ranks, and distances. It then evaluates 21
+declared variants on the same validation queries. The exact baselines and certifiable bounded
+rerankings are distinguished from shortlist-based stress tests in every row; the job does not use
+the locked temporal tests or select the application representation automatically.
 
 ### Find the MLflow experiments
 
@@ -149,7 +163,9 @@ left navigation, open **Workspace**, then **Shared**, then `neighborhood-digital
 experiments are:
 
 - `/Shared/neighborhood-digital-twin/forecast-baselines` (experiment ID `3001817840578297`);
-- `/Shared/neighborhood-digital-twin/similarity-baselines` (experiment ID `3001817840578298`).
+- `/Shared/neighborhood-digital-twin/similarity-baselines` (experiment ID `3001817840578298`);
+- `/Shared/neighborhood-digital-twin/historical-analogues` (created by the first job-502 run).
+- `/Shared/neighborhood-digital-twin/analogue-audit-stability` (created by the first job-601 run).
 
 They can also be found from **Machine Learning** or **Experiments** by searching for
 `forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
@@ -168,8 +184,12 @@ IDs used by each figure build, so figures should not be associated with experime
 5. Run 300, 301, and 302 in order.
 6. Run 400 and 401 when analytical summaries or figures need refreshing.
 7. Run 500 and 501 when the source change should be reflected in model-development outputs.
-8. Run 600 when reviewed evaluation figures should reflect those model runs.
-9. Finish with 900.
+8. Run 502 after 500 when the historical analogue evaluation should be refreshed.
+9. Run 600 when reviewed evaluation figures should reflect the forecast and current-state
+   similarity runs.
+10. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
+    run.
+11. Finish with 900.
 
 ### New FHFA release
 
@@ -177,7 +197,9 @@ IDs used by each figure build, so figures should not be associated with experime
 2. Run 200, then 300, 301, and 302.
 3. Refresh 400 and 401 if the added year changes coverage or reported figures.
 4. Refresh 500 and 501 after the upstream contracts pass.
-5. Finish with 900.
+5. Refresh 502 after 500 when analogue results should reflect the new FHFA history.
+6. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
+7. Finish with 900.
 
 ### Geography-source change
 
@@ -219,9 +241,14 @@ Do not continue merely because a job is green. Before advancing:
   geographic-holdout failure exists.
 - Analysis: figures and manifests point to the current analytical build.
 - Modeling: MLflow records the input contract and parameters; forecast outputs contain only
-  validation roles; similarity outputs exclude self-matches and reconcile to the query count.
+  validation roles; current-state similarity outputs exclude self-matches; historical analogues
+  use validation queries, exclude the query tract, obey the outcome-known-by-query cutoff, and
+  reconcile every query to the declared top-k count.
 - Evaluation: every expected figure exists, exceeds the publication size guard, links to current
   source run IDs, and has been visually reviewed for readable labels and valid interpretation.
+  Historical analogue audit baselines must reproduce job 502, every variant must cover the same
+  query set with top-k results, future and self matches must remain absent, and every result must
+  state whether retrieval exactness was certified or only shortlist-based.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule

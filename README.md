@@ -4,7 +4,7 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Shared Databricks pipelines populate separate bronze, silver, gold, model, evaluation, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current and historical analytical products, twelve versioned EDA figures, and seven model-evaluation figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe features, frozen temporal and geographic assignments, and the joined modeling panel cover 63,367 tracts. The November 7, 2026 forecast run published 1,588,340 validation predictions across 59,179 tracts and seven methods. Its gradient-boosted-tree challenger had the lowest validation error at one and three years; regularized linear performed better at five years. No champion has been selected, the locked temporal test remains unopened, and cross-decade targets are censored. Similarity outputs were not changed by the forecast refresh. Next steps are forecast ablations and calibration, time-safe analogue evaluation, and a descriptive application shell. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, model, evaluation, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current and historical analytical products, twelve versioned EDA figures, and seven model-evaluation figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe model features, frozen temporal and geographic assignments, and a joined modeling panel are live for 63,367 tracts. Forecast, current-state similarity, and time-safe historical-analogue baselines now run as tracked MLflow experiments. The analogue workflow published 640 matches and showed that later match outcomes beat zero change on its small validation sample but did not beat the state-trend or regularized-linear forecasts. The next work is case review and stability testing, focused nonlinear forecasting, uncertainty calibration, compact serving tables, and the descriptive application shell. Features described below are planned unless explicitly marked complete.
 
 ## What the finished product should do
 
@@ -60,10 +60,14 @@ flowchart TB
 
     GR --> FM["500 Forecast baseline workflow"]
     GC --> SM["501 Similarity baseline workflow"]
+    FM --> HA["502 Historical analogue baseline<br/>time-safe retrieval and outcome comparison"]
+    GR --> HA
     FM --> MO["Model schema<br/>validation predictions and ranked matches"]
     SM --> MO
+    HA --> MO
     FM --> MLF["Shared MLflow experiments"]
     SM --> MLF
+    HA --> MLF
     MO --> EV["Evaluation schema and 600 workflow<br/>scorecards, diagnostics, and 7 versioned figures"]
     MLF --> EV
 
@@ -78,7 +82,7 @@ flowchart TB
     EV -.->|model-selection evidence| NF
     GC -.->|planned input| SV["Versioned serving tables"]
     NF -.->|planned output| SV
-    NA -.->|planned output| SV
+    HA -.->|reviewed output| SV
     SV -.-> APP["Interactive Databricks<br/>Streamlit application"]
 
     classDef control fill:#EEF2F7,stroke:#455A64,color:#263238,stroke-width:1.4px;
@@ -87,8 +91,8 @@ flowchart TB
     classDef planned fill:#FFF4DD,stroke:#D99035,color:#263238,stroke-width:1.5px,stroke-dasharray:5 4;
     class GIT,DAB,JOBS control;
     class SRC source;
-    class B,SS,SG,GC,GH,GR,EDA,FM,SM,MO,MLF,EV,QM implemented;
-    class NF,NA,SV,APP planned;
+    class B,SS,SG,GC,GH,GR,EDA,FM,SM,HA,MO,MLF,EV,QM implemented;
+    class NF,SV,APP planned;
 ```
 
 Teal nodes are implemented; gold nodes with dashed borders are the next planned delivery stages.
@@ -175,9 +179,9 @@ The repository has two execution environments:
 - **Databricks serverless jobs** run acquisition, ETL, validation, modeling, MLflow tracking, and
   figure generation against the shared Unity Catalog tables.
 
-The interactive application, calibrated uncertainty workflow, final time-safe analogue workflow,
-and locked-test release have not been implemented yet. There is currently no application-start
-command to run.
+The interactive application, calibrated uncertainty workflow, application-serving analogue
+lookup, and locked-test release have not been implemented yet. There is currently no
+application-start command to run.
 
 ### Prerequisites
 
@@ -264,6 +268,7 @@ databricks bundle run visual_eda --profile neighborhood-twin -t team
 # Refit the development baselines and publish validation-only outputs.
 databricks bundle run forecast_baselines --profile neighborhood-twin -t team
 databricks bundle run similarity_baselines --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_baseline --profile neighborhood-twin -t team
 
 # Render the 7 model-evaluation figures from the two completed model runs.
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
@@ -272,9 +277,10 @@ databricks bundle run model_evaluation_figures --profile neighborhood-twin -t te
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
-The forecast and similarity jobs are independent after their upstream tables exist; the evaluation
-job must wait for both. These are development runs. They do not open or score the locked temporal
-test outcomes.
+The forecast and current-state similarity jobs are independent after their upstream tables exist.
+The historical analogue job waits for model readiness and the forecast comparators. The evaluation
+figure job currently waits for forecast and current-state similarity. These are development runs;
+they do not open or score the locked temporal test outcomes.
 
 ### 4. Run only the stage affected by a change
 
@@ -286,7 +292,8 @@ pipeline:
 | Documentation or local unit-test change | No Databricks job |
 | EDA summary or figure code | `data_readiness_eda`, `visual_eda`, then `table_metadata_pipeline` |
 | Forecast code | `forecast_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
-| Similarity code | `similarity_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
+| Current-state similarity code | `similarity_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
+| Historical analogue code | `historical_analogue_baseline`, then `table_metadata_pipeline` |
 | Point-in-time features or split rules | `gold_model_readiness`, affected analysis/modeling jobs, then `table_metadata_pipeline` |
 | Historical gold logic | `gold_historical_products`, `gold_model_readiness`, affected downstream jobs, then `table_metadata_pipeline` |
 | Source or geography data | Follow the reviewed refresh path in `docs/PIPELINE_RUN_ORDER.md` |
@@ -307,6 +314,7 @@ scope, and stage-by-stage validation described in [the acquisition guide](docs/i
 | Readiness summaries and 12 EDA figures | `notebooks/04_exploration/01_build_data_readiness.py`, `02_build_visual_eda.py`, and `03_render_eda_figures.py` | `workspace.neighborhood_twin_gold` tables and the `eda_figures` volume |
 | Forecast predictions and scorecards | `notebooks/05_modeling/01_run_forecast_baselines.py` | `workspace.neighborhood_twin_model.forecast_baseline_prediction`, `workspace.neighborhood_twin_evaluation.forecast_baseline_scorecard`, and the shared forecast MLflow experiment |
 | Similarity matches and diagnostics | `notebooks/05_modeling/02_run_similarity_baselines.py` | `workspace.neighborhood_twin_model.similarity_baseline_match`, `workspace.neighborhood_twin_evaluation.similarity_baseline_summary`, and the shared similarity MLflow experiment |
+| Historical matches, estimates, and evaluation | `notebooks/05_modeling/04_run_historical_analogue_baseline.py` | `historical_analogue_match` and `historical_analogue_prediction` in `workspace.neighborhood_twin_model`; `historical_analogue_summary` and `historical_analogue_scorecard` in `workspace.neighborhood_twin_evaluation`; and the shared historical-analogue MLflow experiment |
 | Seven model-evaluation figures | `notebooks/05_modeling/03_render_model_evaluation.py` | `workspace.neighborhood_twin_evaluation.model_evaluation_figures` and its manifest table |
 
 The current build IDs, filenames, and export commands are maintained in the
@@ -358,10 +366,11 @@ source comment, but the dependency must be declared in the correct environment f
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
 forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
-forecast and similarity outputs in a dedicated model schema and governed diagnostics in a separate
-evaluation schema. These remain development results, not final models: forecast model selection,
-calibrated uncertainty, retrospective analogue evaluation, serving products, and the interactive
-application remain. Current figure locations and reproduction steps are documented in the
+initial forecast, current-state similarity, and time-safe historical-analogue outputs in a
+dedicated model schema and governed diagnostics in a separate evaluation schema. These are
+development baselines, not final models: model selection, calibrated uncertainty, analogue case
+review and stability testing, serving products, and the interactive application remain. Current
+figure locations and reproduction steps are documented in the
 [EDA figure guide](reports/EDA_FIGURES.md) and
 [model evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md).
 

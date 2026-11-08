@@ -40,5 +40,14 @@ scorecards and records the run in MLflow; it does not score the locked temporal 
 `05_modeling/02_run_similarity_baselines.py` compares standardized raw and PCA current-state
 matches for a small deterministic review set. That output is an inspection baseline, not yet the
 time-safe historical analogue product used for final evaluation or serving.
+`05_modeling/04_run_historical_analogue_baseline.py` retrieves earlier tract-year states for a
+deterministic validation sample, requires each candidate's later outcome to be known by the query
+year, and compares analogue-based estimates with forecast baselines on identical queries. The
+first contract covers one- and three-year outcomes and does not open locked temporal tests.
+`05_modeling/05_run_analogue_audit_stability.py` refuses to publish unless it reproduces those
+baseline matches. It then creates deterministic review cases and measures top-ten stability under
+small family-weight changes, family ablations, alternate PCA dimensions, and a distinct-tract
+candidate policy. Exact and boundary-certified results remain visibly separate from bounded
+shortlist stress tests.
 
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.

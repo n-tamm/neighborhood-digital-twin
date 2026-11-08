@@ -57,8 +57,9 @@ show housing-composition limitations in the application.
 For similarity, the six-component PCA representation retains 95.5% of standardized variance, but
 the raw and PCA top-10 lists overlap by only 55% on average. Both methods retrieve mostly
 cross-state matches, yet the moderate overlap shows that representation choice materially changes
-which communities are called similar. Visual diagnostics are useful here, but retrospective
-outcome tests and human review of concrete matches are still required.
+which communities are called similar. The separate job-502 retrospective test now evaluates later
+outcomes; human review and perturbation stability are still required before selecting the
+application representation.
 
 ## Reproduce the figures
 
@@ -83,8 +84,8 @@ needed. Local report copies belong under ignored `reports/generated/`, not `pers
 - estimate uncertainty across forecast origins or geographic blocks rather than treating tract
   rows as independent replicates;
 - calibrate prediction intervals and report empirical coverage, width, and subgroup coverage;
-- run time-safe retrospective analogue evaluation, retrieval perturbation tests, and human case
-  review;
+- expand or justify the first time-safe analogue query sample, then run retrieval perturbation
+  tests and human case review;
 - freeze the champion and calibration method before opening the locked temporal tests; and
 - evaluate application comprehension, usability, latency, and unavailable-result behavior after
   serving tables and the interactive application exist.

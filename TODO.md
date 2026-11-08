@@ -1,24 +1,24 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 7, 2026. The broader design remains in the
+This is the working handoff as of November 8, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
 
-The approved source and feature-preparation pipeline is complete, and the forecasting and
-current-state similarity baselines now run in Databricks. The forecast workflow includes a
-gradient-boosted-tree challenger, but no champion has been selected. The project has reproducible
-public-source acquisition, bronze and silver transformations, governed geography, current and
-historical gold products, point-in-time model features, fixed evaluation assignments, and a joined
-modeling panel, tracked experiments, validation-only forecast scorecards, reviewable neighborhood
-matches, and seven versioned model-evaluation figures. Model outputs and diagnostics now live
-outside gold in dedicated model and evaluation schemas. There is no unresolved data-integrity or
-leakage failure blocking the next model stage.
+The approved source and feature-preparation pipeline is complete, and the first forecasting,
+current-state similarity, and historical-analogue baselines now run in Databricks. The project has
+reproducible public-source acquisition, bronze and silver transformations, governed geography,
+current and historical gold products, point-in-time model features, fixed evaluation assignments,
+a joined modeling panel, tracked experiments, validation-only forecast scorecards, reviewable
+neighborhood matches, seven versioned model-evaluation figures, and retrospective analogue
+evaluation. Model outputs and diagnostics now live outside gold in dedicated model and evaluation
+schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
-This does not mean the whole project is complete. Forecast model selection and feature ablations,
-calibrated uncertainty, time-safe historical analogue evaluation, serving tables, and the
-interactive application still need to be completed. New source families should not be added until
-an evaluation result or required app view shows a specific gap.
+This does not mean the whole project is complete. Forecast model selection, calibrated
+uncertainty, expanded historical-analogue evaluation, current-neighborhood retrieval, serving
+tables, and the interactive application still need to be built. Analogue case review and bounded
+stability testing are now complete for the development sample. New source families should not be
+added until a model result or required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -47,8 +47,8 @@ an evaluation result or required app view shows a specific gap.
   2024, 2022, and 2020.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 21 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-501`, `600`, and `900`), grouping tags, and the maintained
+- The 23 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-502`, `600-601`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -67,6 +67,19 @@ an evaluation result or required app view shows a specific gap.
 - The raw and PCA top-10 lists overlap by 5.5 matches on average. Both search nationally rather
   than collapsing to same-state results, but the moderate overlap means representation choice is
   consequential and still needs case review and time-safe retrospective evaluation.
+- Job `502 Modeling | Historical Analogue Baseline` now evaluates earlier tract-year matches whose
+  later outcomes were known by each query date. It published 640 matches, 224 analogue and
+  comparator predictions, four retrieval summaries, and 147 sliced scorecard rows for 16 queries
+  at each of the one- and three-year horizons.
+- Historical retrieval is nationally broad: 95.0% to 97.5% of matches cross a state boundary.
+  Weighted-standardized and PCA top-ten results overlap by only 20.8% at one year and 27.1% at
+  three years, so individual case review and stability testing are required before either becomes
+  the application default.
+- Every analogue estimate beat zero change on the sampled queries, but none beat the state-trend
+  or regularized-linear comparators. The strongest analogue MAE is 0.0839 at one year and 0.0919
+  at three years, compared with state-trend MAE of 0.0758 and 0.0587. The current evidence supports
+  historical analogues as interpretable context and a secondary estimate, not the primary
+  forecast.
 - Directional accuracy is not currently informative by itself. Positive outcomes make up about
   90.2% of one-year validation rows and more than 97% at longer horizons, and the strongest models
   add essentially no directional lift over always predicting that majority direction.
@@ -80,6 +93,18 @@ an evaluation result or required app view shows a specific gap.
 - The expanded visual EDA run published twelve checked PNGs. It adds tract-vintage coverage,
   feature completeness, split-origin evidence, improved tract maps, dissolved county displays,
   and a national state-coverage view. Display geometry remains prohibited for spatial modeling.
+- Job `601 Evaluation | Historical Analogue Audit` published 6,720 variant matches, 672 complete
+  query-variant stability rows, and 600 deterministic case-review rows. It reproduces job 502,
+  contains no future or self matches, and retains all 21 variants for each of the 32 queries.
+- Small feature-family weight changes retain 93.4% of the weighted top ten on average and are
+  exactness-certified. Full family removals retain 37.6%; removing market trajectory is most
+  disruptive at 16.6%, showing that it strongly controls the present match definition.
+- Five- and seven-component PCA variants retain 50.9% of the six-component list on average and
+  sometimes hide a large original-family gap. Weighted standardized retrieval is therefore the
+  provisional application default; PCA remains an internal comparison lens.
+- Seventeen of 32 baseline query lists repeat a physical tract at multiple years. The certified
+  distinct-tract variants retain 93.1% of neighbors and restore ten distinct communities, so the
+  application should use a distinct-community policy.
 
 ## Important interpretation limits
 
@@ -183,20 +208,23 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity baseline pass: current-state scaffold implemented
+### 2. Similarity and historical analogues: audit complete, production retrieval next
 
-- Freeze a small, interpretable feature registry and feature-family weights.
-- Review the implemented standardized Euclidean and PCA matches for the six initial query tracts.
-- Use `gold_model_feature_historical` next for time-safe retrospective analogue evaluation with
-  transforms fitted only on the appropriate development period.
-- Exclude the same tract and future candidate states; report important differences as well as
-  shared strengths.
-- Evaluate retrieval stability, distance separation, geographic diversity, coverage, reviewed
-  cases, and later-outcome utility without making FHFA availability the definition of similarity.
+- Treat weighted standardized distance and distinct physical communities as the provisional
+  production choices. Keep PCA and tract-year matches available for development audit.
+- Expand or justify the current 16-query-per-horizon sample before freezing the representation or
+  making a final performance claim. Do not open the locked temporal test for this decision.
+- Preserve the implemented stability, case-review, distance, geography, coverage, and
+  later-outcome evidence as the baseline for future changes.
 - Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even
   when later-outcome evaluation is unavailable.
-- Publish rank, distance, representation version, shared strengths, and important differences so
-  the application can explain each match.
+- Build current-neighborhood retrieval under a frozen preprocessing/version contract. Decide
+  whether an approximate-neighbor index or bounded on-demand calculation provides acceptable
+  latency without changing the match definition.
+- Generate explanations containing shared strengths, important differences, candidate year and
+  location, later outcome, coverage warnings, and the descriptive outcome range.
+- Publish compact, versioned serving tables rather than querying `gold_modeling_panel` or the
+  wide audit tables from the application.
 
 ### 3. Descriptive application shell
 
@@ -257,7 +285,8 @@ The next checkpoint is complete when:
   majority-direction comparison rather than only the most favorable metric;
 - the locked temporal tests remain untouched during model selection;
 - the current-state similarity baseline has stability results and reviewed examples;
-- retrospective analogue evaluation uses only information available at each query date;
+- retrospective analogue evaluation uses only information available at each query date and its
+  representation choice is reviewed for case quality and stability;
 - a descriptive application shell reads a documented serving interface;
 - the application clearly separates observed ACS, observed FHFA history, model forecasts,
   historical analogues, and scenario sensitivity; and
