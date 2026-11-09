@@ -86,8 +86,8 @@ needed. Local report copies belong under ignored `reports/generated/`, not `pers
 - estimate uncertainty across forecast origins or geographic blocks rather than treating tract
   rows as independent replicates;
 - calibrate prediction intervals and report empirical coverage, width, and subgroup coverage;
-- expand or justify the first time-safe analogue query sample, then run retrieval perturbation
-  tests and human case review;
+- carry the completed expanded analogue selection, perturbation tests, and case-review findings
+  into current-neighborhood retrieval and application explanations;
 - freeze the champion and calibration method before opening the locked temporal tests; and
 - evaluate application comprehension, usability, latency, and unavailable-result behavior after
   serving tables and the interactive application exist.

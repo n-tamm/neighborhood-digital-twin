@@ -279,6 +279,31 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "needed for substantive human review.",
         "One row per selected validation query, baseline representation, and match rank.",
     ),
+    "historical_analogue_selection_match": TableMetadata(
+        "Expanded validation matches under weighted-standardized and PCA representations with "
+        "one historical state retained per physical candidate tract.",
+        "One row per expanded validation query, representation, and match rank.",
+    ),
+    "historical_analogue_selection_prediction": TableMetadata(
+        "Analogue outcome estimates and forecast comparators evaluated on the same expanded "
+        "validation query sample.",
+        "One row per expanded validation query, horizon, and prediction method.",
+    ),
+    "historical_analogue_selection_summary": TableMetadata(
+        "Retrieval distance, geography, candidate-age, overlap, and PCA diagnostics for the "
+        "expanded historical analogue sample.",
+        "One row per horizon, representation, and analogue selection run.",
+    ),
+    "historical_analogue_selection_scorecard": TableMetadata(
+        "Expanded validation error, bias, tail, skill, housing-composition, community-size, and "
+        "ACS-uncertainty evidence for analogue and forecast methods.",
+        "One row per prediction method, horizon, evaluation slice, and slice value.",
+    ),
+    "historical_analogue_selection_coverage": TableMetadata(
+        "Selected-versus-eligible validation query coverage across the declared sampling and "
+        "interpretation dimensions.",
+        "One row per horizon, coverage dimension, and dimension value.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -292,6 +317,8 @@ MODEL_TABLES = {
     "historical_analogue_match",
     "historical_analogue_prediction",
     "historical_analogue_audit_match",
+    "historical_analogue_selection_match",
+    "historical_analogue_selection_prediction",
 }
 
 EVALUATION_TABLES = {
@@ -301,6 +328,9 @@ EVALUATION_TABLES = {
     "historical_analogue_scorecard",
     "historical_analogue_stability_summary",
     "historical_analogue_case_review",
+    "historical_analogue_selection_summary",
+    "historical_analogue_selection_scorecard",
+    "historical_analogue_selection_coverage",
     "model_evaluation_figure_manifest",
 }
 
@@ -422,8 +452,8 @@ COMMON_COLUMN_COMMENTS = {
     "hpi_change_3_year_pct": "Point-in-time cumulative three-year FHFA HPI percentage change.",
     "hpi_change_5_year_pct": "Point-in-time cumulative five-year FHFA HPI percentage change.",
     "summary_group": "Governed category of model-readiness summary rows.",
-    "dimension_name": "Field summarized by the model-readiness row.",
-    "dimension_value": "Value of the summarized model-readiness dimension.",
+    "dimension_name": "Field or coverage dimension summarized by the row.",
+    "dimension_value": "Readable value within the summarized dimension.",
     "non_null_count": "Rows with a populated value for the summarized feature.",
     "non_null_rate": "Share of summarized rows with a populated feature value.",
     "observed_target_count": "Rows with an observed direct FHFA outcome in the summary group.",
@@ -663,6 +693,45 @@ COMMON_COLUMN_COMMENTS = {
         "MLflow run ID of the published historical analogue baseline used by the audit."
     ),
     "analogue_audit_run_id": "MLflow run ID of the analogue case-review and stability build.",
+    "analogue_selection_run_id": (
+        "MLflow run ID of the expanded historical analogue selection build."
+    ),
+    "selection_queries_per_group": (
+        "Maximum deterministic queries selected per origin, Census region, and geographic role."
+    ),
+    "query_housing_composition_band": (
+        "Readable single-family housing-share band assigned to the validation query."
+    ),
+    "query_community_size_band": (
+        "Readable population band assigned to the validation query."
+    ),
+    "query_acs_uncertainty_band": (
+        "Band based on the largest core ACS relative margin of error for the validation query."
+    ),
+    "eligible_query_count": (
+        "Eligible validation tract-year queries in the horizon and dimension value."
+    ),
+    "eligible_query_tract_count": (
+        "Distinct eligible validation tract GEOIDs in the horizon and dimension value."
+    ),
+    "selected_query_count": (
+        "Selected expanded-evaluation tract-year queries in the horizon and dimension value."
+    ),
+    "selected_query_tract_count": (
+        "Distinct selected expanded-evaluation tract GEOIDs in the horizon and dimension value."
+    ),
+    "eligible_query_share": (
+        "Share of eligible horizon queries represented by the dimension value."
+    ),
+    "selected_query_share": (
+        "Share of selected horizon queries represented by the dimension value."
+    ),
+    "selected_minus_eligible_share": (
+        "Selected query share minus eligible query share for the dimension value."
+    ),
+    "coverage_status": (
+        "Whether at least one expanded-evaluation query represents the eligible dimension value."
+    ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."
     ),

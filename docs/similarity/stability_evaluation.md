@@ -133,16 +133,15 @@ historical state per physical tract retained 93.1% of matches on average, was bo
 for every query, and restored ten distinct communities. The application should therefore use the
 distinct-community rule by default while retaining tract-year candidates internally for audit.
 
-## Provisional representation decision
+## Representation decision after expanded evaluation
 
 Later-outcome accuracy does not clearly separate the representations on this small sample.
 Weighted median is the strongest analogue estimate at one year, while PCA inverse-distance is the
 strongest at three years; neither beats the primary state-trend or regularized-linear forecast.
-Weighted standardized retrieval is the provisional application default because it is stable under
+Weighted standardized retrieval became the application default because it is stable under
 reasonable weight changes, easier to explain feature by feature, and less likely to hide a large
-family-level difference. PCA remains a development comparison, not a second user-facing lens.
-
-This is a provisional product decision, not a final performance claim. The 16 queries per horizon
-are enough to reject fragile designs and choose the next implementation path, but the evaluation
-sample must be expanded or more strongly justified before freezing the representation or opening
-the locked temporal test.
+family-level difference. Job 602 expanded the sample to 88 one-year and 90 three-year queries and
+found lower overall analogue MAE for weighted retrieval at both horizons. PCA remains a development
+comparison, not a second user-facing lens. This freezes the retrieval representation for the next
+implementation stage; it does not turn analogue outcomes into the primary forecast or authorize
+opening the locked temporal test.

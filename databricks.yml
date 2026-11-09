@@ -161,6 +161,9 @@ variables:
   analogue_audit_mlflow_experiment:
     description: Shared MLflow experiment for analogue case review and stability evaluation
     default: /Shared/neighborhood-digital-twin/analogue-audit-stability
+  analogue_selection_mlflow_experiment:
+    description: Shared MLflow experiment for expanded historical analogue selection
+    default: /Shared/neighborhood-digital-twin/analogue-selection
 
 resources:
   jobs:
@@ -805,6 +808,39 @@ resources:
               top_k: "10"
               shortlist_k: "1000"
               mlflow_experiment: ${var.analogue_audit_mlflow_experiment}
+    historical_analogue_selection:
+      name: Neighborhood Digital Twin | 602 Evaluation | Historical Analogue Selection
+      description: Expands validation queries and compares final historical analogue representations.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: evaluation
+        run_order: "602"
+        lifecycle: model_selection
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_historical_analogue_selection
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/06_run_analogue_selection.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              modeling_panel_table: gold_modeling_panel
+              forecast_prediction_table: forecast_baseline_prediction
+              match_table: historical_analogue_selection_match
+              analogue_prediction_table: historical_analogue_selection_prediction
+              summary_table: historical_analogue_selection_summary
+              scorecard_table: historical_analogue_selection_scorecard
+              coverage_table: historical_analogue_selection_coverage
+              horizons: "1,3"
+              queries_per_group: "5"
+              top_k: "10"
+              pca_components: "6"
+              comparator_models: zero_change,state_current_trend,regularized_linear
+              mlflow_experiment: ${var.analogue_selection_mlflow_experiment}
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.

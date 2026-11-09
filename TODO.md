@@ -15,10 +15,10 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, expanded historical-analogue evaluation, current-neighborhood retrieval, serving
-tables, and the interactive application still need to be built. Analogue case review and bounded
-stability testing are now complete for the development sample. New source families should not be
-added until a model result or required app view shows a specific gap.
+uncertainty, current-neighborhood retrieval, serving tables, and the interactive application still
+need to be built. Historical-analogue case review, bounded stability testing, and expanded
+representation selection are complete. New source families should not be added until a model
+result or required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -40,8 +40,8 @@ added until a model result or required app view shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 23 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-502`, `600-601`, and `900`), grouping tags, and the maintained
+- The 24 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-502`, `600-602`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -93,11 +93,25 @@ added until a model result or required app view shows a specific gap.
   exactness-certified. Full family removals retain 37.6%; removing market trajectory is most
   disruptive at 16.6%, showing that it strongly controls the present match definition.
 - Five- and seven-component PCA variants retain 50.9% of the six-component list on average and
-  sometimes hide a large original-family gap. Weighted standardized retrieval is therefore the
-  provisional application default; PCA remains an internal comparison lens.
+  sometimes hide a large original-family gap. This made weighted standardized retrieval the
+  provisional choice entering the expanded evaluation; PCA remained the comparison lens.
 - Seventeen of 32 baseline query lists repeat a physical tract at multiple years. The certified
   distinct-tract variants retain 93.1% of neighbors and restore ten distinct communities, so the
   application should use a distinct-community policy.
+- Job `602 Evaluation | Historical Analogue Selection` expanded the evidence to 88 one-year and
+  90 three-year query tract-years. It published 3,560 matches, 1,246 predictions, four retrieval
+  summaries, 322 scorecard rows, and 78 selected-versus-eligible coverage rows.
+- The first live coverage review found that an otherwise balanced sample missed the under-25%
+  single-family group at one year. The corrected workflow adds deterministic, outcome-blind
+  supplements for missing housing, size, or ACS-uncertainty categories. The final run covers every
+  eligible required category; rare categories with one case remain coverage checks, not reliable
+  subgroup estimates.
+- Weighted analogue MAE is lower overall than PCA at both horizons: 0.0788 versus 0.0823 at one
+  year and 0.1022 versus 0.1098 at three years when comparing each representation's better
+  aggregation. Regularized linear remains more accurate at 0.0682 and 0.0801.
+- Weighted standardized distance and ten distinct physical communities are now the frozen
+  application retrieval policy. PCA remains an internal audit lens, and analogues remain secondary
+  historical context rather than the primary forecast.
 
 ## Important interpretation limits
 
@@ -199,12 +213,12 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: audit complete, production retrieval next
+### 2. Similarity and historical analogues: representation selected, production retrieval next
 
-- Treat weighted standardized distance and distinct physical communities as the provisional
-  production choices. Keep PCA and tract-year matches available for development audit.
-- Expand or justify the current 16-query-per-horizon sample before freezing the representation or
-  making a final performance claim. Do not open the locked temporal test for this decision.
+- Implement weighted standardized distance and ten distinct physical communities as the frozen
+  production retrieval policy. Keep PCA and tract-year matches available for development audit.
+- Preserve job-602 sample coverage, subgroup counts, and later-outcome comparisons. Do not convert
+  one-case rare-category checks into performance claims, and do not open the locked temporal test.
 - Preserve the implemented stability, case-review, distance, geography, coverage, and
   later-outcome evidence as the baseline for future changes.
 - Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even

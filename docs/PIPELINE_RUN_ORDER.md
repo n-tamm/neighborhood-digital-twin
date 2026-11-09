@@ -16,8 +16,8 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-502 Modeling`, `600-601 Evaluation`, and `900 Metadata`. Jobs increment by one inside each
-three-digit layer range,
+`400-401 Analysis`, `500-502 Modeling`, `600-602 Evaluation`, and `900 Metadata`. Jobs increment
+by one inside each three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
 ranges are `000-099` for setup and operations, `100-199` for bronze, `200-299` for silver,
@@ -51,6 +51,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 502 | Modeling | `historical_analogue_baseline` | After current successful runs of 302 and 500 | Retrieves time-safe historical matches for sampled validation queries and compares their later outcomes with forecast baselines |
 | 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
+| 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -76,6 +77,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 302 Model readiness + 500 Forecast -------------> 502 Historical analogue baseline
 500 Forecast + 501 Similarity ------------------> 600 Model evaluation figures
 502 Historical analogue baseline --------------> 601 Analogue review and stability
+500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -133,6 +135,7 @@ databricks bundle run similarity_baselines --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_baseline --profile neighborhood-twin -t team
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_selection --profile neighborhood-twin -t team
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
@@ -150,6 +153,13 @@ reproduce the published candidate identities, years, ranks, and distances. It th
 declared variants on the same validation queries. The exact baselines and certifiable bounded
 rerankings are distinguished from shortlist-based stress tests in every row; the job does not use
 the locked temporal tests or select the application representation automatically.
+Job 602 follows the audit evidence but does not overwrite jobs 502 or 601. It expands the
+deterministic validation sample from one to five queries per available origin, Census region, and
+geographic-role stratum, then adds an outcome-blind supplement for any missing housing-mix,
+community-size, or ACS-uncertainty category. It requires ten distinct candidate tracts and compares
+weighted and PCA retrieval on identical queries. Its coverage table compares the selected sample
+with all eligible validation queries across time, geography, cohort, housing mix, community size,
+and ACS uncertainty. The locked temporal tests remain unavailable to this workflow.
 
 ### Find the MLflow experiments
 
@@ -161,6 +171,7 @@ experiments are:
 - `/Shared/neighborhood-digital-twin/similarity-baselines` (experiment ID `3001817840578298`);
 - `/Shared/neighborhood-digital-twin/historical-analogues` (created by the first job-502 run).
 - `/Shared/neighborhood-digital-twin/analogue-audit-stability` (created by the first job-601 run).
+- `/Shared/neighborhood-digital-twin/analogue-selection` (created by the first job-602 run).
 
 They can also be found from **Machine Learning** or **Experiments** by searching for
 `forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
@@ -184,7 +195,8 @@ IDs used by each figure build, so figures should not be associated with experime
    similarity runs.
 10. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
     run.
-11. Finish with 900.
+11. Run 602 after 601 when the expanded representation-selection evidence should be refreshed.
+12. Finish with 900.
 
 ### New FHFA release
 
@@ -194,7 +206,8 @@ IDs used by each figure build, so figures should not be associated with experime
 4. Refresh 500 and 501 after the upstream contracts pass.
 5. Refresh 502 after 500 when analogue results should reflect the new FHFA history.
 6. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
-7. Finish with 900.
+7. Refresh 602 after 601 when representation-selection evidence should reflect the new inputs.
+8. Finish with 900.
 
 ### Geography-source change
 
@@ -244,6 +257,9 @@ Do not continue merely because a job is green. Before advancing:
   Historical analogue audit baselines must reproduce job 502, every variant must cover the same
   query set with top-k results, future and self matches must remain absent, and every result must
   state whether retrieval exactness was certified or only shortlist-based.
+  Expanded analogue selection must fill every available deterministic sampling stratum, compare
+  both representations on identical validation queries, retain ten distinct candidate tracts,
+  and publish selected-versus-eligible coverage without accessing locked temporal tests.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule
