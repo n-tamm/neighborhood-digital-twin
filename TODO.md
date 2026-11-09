@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 8, 2026. The broader design remains in the
+This is the working handoff as of November 9, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -15,10 +15,11 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, current-neighborhood retrieval, serving tables, and the interactive application still
-need to be built. Historical-analogue case review, bounded stability testing, and expanded
-representation selection are complete. New source families should not be added until a model
-result or required app view shows a specific gap.
+uncertainty, scalable analogue retrieval, match explanations, serving tables, and the interactive
+application still need to be built. Historical-analogue case review, bounded stability testing,
+expanded representation selection, and the first exact current-neighborhood retrieval are
+complete. New source families should not be added until a model result or required app view shows
+a specific gap.
 
 ## Data checkpoint
 
@@ -40,8 +41,8 @@ result or required app view shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 24 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-502`, `600-602`, and `900`), grouping tags, and the maintained
+- The 25 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-503`, `600-602`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -112,6 +113,19 @@ result or required app view shows a specific gap.
 - Weighted standardized distance and ten distinct physical communities are now the frozen
   application retrieval policy. PCA remains an internal audit lens, and analogues remain secondary
   historical context rather than the primary forecast.
+- Job `503 Modeling | Current Analogue Retrieval` now applies that policy to selected 2025
+  neighborhoods. Its first live run published 60 exact matches and six summaries for one Arizona,
+  Michigan, and Pennsylvania tract under MLflow run
+  `ff3ad7a038ce4d4180110a7a9adcbab1`.
+- Every current query returned ten distinct matches, and direct SQL checks found no self-match,
+  future outcome, locked temporal-test candidate, unapproved representation, or falsely calibrated
+  outcome-range row. Metadata covers all 33 match columns and all 35 summary columns.
+- Exact job-503 retrieval took about 14 minutes for three tracts. It is the reference result for
+  evaluating a scalable index or precomputed product, not a viable on-click application query.
+- Current historical-analogue coverage is narrower than profile coverage: 46,719 tracts have a
+  2025 model-ready query row, compared with 83,359 current ACS similarity candidates and 84,396
+  current ACS profiles. The application needs an explicit unavailable state unless a separate
+  ACS-only fallback is designed and evaluated.
 
 ## Important interpretation limits
 
@@ -213,7 +227,7 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: representation selected, production retrieval next
+### 2. Similarity and historical analogues: exact current retrieval implemented, scale next
 
 - Implement weighted standardized distance and ten distinct physical communities as the frozen
   production retrieval policy. Keep PCA and tract-year matches available for development audit.
@@ -223,9 +237,16 @@ dimension of lived experience are already represented.
   later-outcome evidence as the baseline for future changes.
 - Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even
   when later-outcome evaluation is unavailable.
-- Build current-neighborhood retrieval under a frozen preprocessing/version contract. Decide
-  whether an approximate-neighbor index or bounded on-demand calculation provides acceptable
-  latency without changing the match definition.
+- Preserve job 503 as the exact reference implementation. Do not use its roughly 14-minute batch
+  runtime as an on-click application path.
+- Test a bounded approximate-neighbor index or precomputed retrieval product against the exact
+  job-503 lists. Report top-ten recall, rank agreement, latency, and failure behavior before
+  approving it for the application.
+- Quantify and expose current retrieval eligibility. Historical analogues are currently available
+  for 46,719 model-ready 2025 tracts, not all 84,396 current ACS profiles.
+- Decide whether unsupported tracts should show an explained unavailable state or receive a
+  separately versioned ACS-only similarity fallback. Do not silently impute the missing market
+  trajectory family and call it the same representation.
 - Generate explanations containing shared strengths, important differences, candidate year and
   location, later outcome, coverage warnings, and the descriptive outcome range.
 - Publish compact, versioned serving tables rather than querying `gold_modeling_panel` or the

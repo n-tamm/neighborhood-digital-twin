@@ -130,7 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-All four similarity-development stages have completed validated live runs.
+All five implemented similarity stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -179,6 +179,22 @@ Weighted standardized distance and distinct physical candidates are now the sele
 policy. PCA remains an internal audit lens. Job 503 implements current-neighborhood retrieval for
 a small configurable set of latest-year model-ready tracts while keeping locked temporal-test
 outcomes unavailable.
+
+### Job 503: Current analogue retrieval
+
+- Applies the selected weighted representation to neighborhoods at the latest model-ready year.
+- Published ten distinct one-year and three-year historical matches for one Arizona, Michigan,
+  and Pennsylvania tract in the first validated run.
+- Excludes same-tract results, future candidate outcomes, and every locked temporal-test row.
+- Publishes the median, inverse-distance summary, and 10th-to-90th percentile historical outcome
+  range as context rather than a calibrated interval.
+- Took about 14 minutes for three query tracts, so exact retrieval is the audit reference rather
+  than the intended interactive serving method.
+
+The current historical representation can serve 46,719 tracts with 2025 model-ready features.
+The broader ACS similarity cohort contains 83,359 tracts. Unsupported tracts therefore need an
+explained unavailable state or a separately evaluated ACS-only method; they must not be passed
+through an invisible change to the selected representation.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 

@@ -89,6 +89,46 @@ measure on-demand latency and compare any approximate index with these exact top
 approximate method is acceptable only if its recall and rank behavior are documented and the user
 still receives the frozen weighted match definition in practice.
 
+## First live run
+
+The first validated job-503 run completed on November 9, 2026. It used 2025 as the current as-of
+year and selected one deterministic query tract in Arizona, Michigan, and Pennsylvania. The job
+published 60 matches and six query-horizon summaries under MLflow run
+`ff3ad7a038ce4d4180110a7a9adcbab1`.
+
+All hard checks passed. Each of the six query-horizon groups contains ten distinct candidate
+tracts with ranks one through ten. There were no self-matches, future candidate outcomes, locked
+temporal-test candidates, unapproved representations, duplicate run identifiers, or rows that
+misstated the descriptive outcome range as calibrated. Both tables have descriptions and comments
+on every column.
+
+The three examples show why the application needs to retain years and geography rather than only
+displaying a summary number:
+
+- the Arizona tract matched much older 2012-2013 states, mainly in California, with mean candidate
+  ages around twelve years;
+- the Michigan and Pennsylvania examples drew on more recent histories, with mean candidate ages
+  around five years; and
+- 90% to 100% of the returned matches crossed state lines, showing that the national search remains
+  active in the current-year workflow.
+
+These are three development examples, not a national performance sample. Their historical outcome
+ranges should be used to review the application presentation, not to claim current forecast
+accuracy.
+
+The Databricks task took about 14 minutes even though it returned only three tracts. Most of that
+work fits horizon-specific preprocessing and performs exact search over the full historical pool.
+This confirms that job 503 is a trustworthy batch reference, not an acceptable on-click query
+path. The next retrieval stage should test an approximate or precomputed approach against these
+exact lists and report top-ten recall, rank agreement, latency, and failure behavior before it is
+used by the application.
+
+Current coverage also needs an explicit unavailable state. The 2025 model-ready panel contains
+46,719 query tracts, compared with 83,359 current ACS similarity candidates and 84,396 current ACS
+profiles. The historical analogue feature set requires current FHFA market-trajectory fields, so
+it cannot honestly be offered to every profiled tract without a separately designed and evaluated
+fallback.
+
 ## Validation gates
 
 Publication stops if any query lacks ten distinct matches, a self-match appears, a candidate
