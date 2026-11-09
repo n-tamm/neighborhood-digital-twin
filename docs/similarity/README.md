@@ -176,8 +176,9 @@ advantage to PCA. The audit also supported distinct physical communities: that p
 - Confirms that the regularized-linear forecast remains the stronger primary numerical estimate.
 
 Weighted standardized distance and distinct physical candidates are now the selected application
-policy. PCA remains an internal audit lens. The next similarity stage is current-neighborhood
-retrieval using this frozen, versioned definition.
+policy. PCA remains an internal audit lens. Job 503 implements current-neighborhood retrieval for
+a small configurable set of latest-year model-ready tracts while keeping locked temporal-test
+outcomes unavailable.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 
@@ -224,3 +225,6 @@ application will eventually apply the approved representation to a neighborhood 
 10. [Expanded historical analogue evaluation](expanded_evaluation.md) explains the larger
     validation sample, distinct-community policy, sample-coverage evidence, publication gates,
     and representation-selection boundary.
+11. [Current-neighborhood historical analogue retrieval](current_neighborhood_retrieval.md)
+    explains the latest-year lookup, test-set safeguard, published outputs, coverage boundary,
+    and path toward application serving.

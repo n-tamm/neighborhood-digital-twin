@@ -107,6 +107,8 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 61. [`historical_analogue_selection_summary`](61_evaluation_historical_analogue_selection_summary.md)
 62. [`historical_analogue_selection_scorecard`](62_evaluation_historical_analogue_selection_scorecard.md)
 63. [`historical_analogue_selection_coverage`](63_evaluation_historical_analogue_selection_coverage.md)
+64. [`current_analogue_match`](64_model_current_analogue_match.md)
+65. [`current_analogue_summary`](65_model_current_analogue_summary.md)
 
 ### Gold exploration and readiness
 
