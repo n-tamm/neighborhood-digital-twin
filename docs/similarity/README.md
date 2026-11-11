@@ -213,6 +213,33 @@ The five-year analogue evaluation is intentionally unavailable. There is not eno
 model-ready history to produce leakage-safe five-year candidates for the existing validation
 period.
 
+## Visual evidence status and plan
+
+The project currently has one generated similarity figure:
+`06_similarity_representation_diagnostics.png`. It was useful for the initial current-state
+baseline because it showed distance spread, geographic reach, and raw-versus-PCA overlap. It is
+not enough for the final report or application story. It predates the historical analogue audit,
+expanded evaluation, selected weighted representation, and current-neighborhood retrieval.
+
+The final similarity visual package should cover three different needs:
+
+1. **Explain the method:** a compact workflow diagram should show the five feature families,
+   training-only preprocessing, equal family weighting, time-safe candidate filtering, distinct
+   top-ten retrieval, and later-outcome summary.
+2. **Evaluate the method:** figures should show stability under reasonable weight changes,
+   weighted-versus-PCA selection evidence, analogue error beside forecast comparators, and current
+   eligibility coverage. These visuals must use the governed evaluation tables rather than a few
+   hand-picked examples.
+3. **Present the result:** a polished case study should combine the selected tract, a map of its
+   historical matches, the strongest shared characteristics and largest differences, and aligned
+   later trajectories. It should make the analogue year and descriptive—not causal or
+   calibrated—interpretation impossible to miss.
+
+The first raw-versus-PCA figure can remain as development evidence, but it should not be the only
+similarity figure or the main final-report visual. New figures must be versioned in Databricks,
+linked to their source run IDs, documented one per file, and visually reviewed for legibility and
+interpretation before report use.
+
 The historical development method is implemented and evaluated, but the application-serving
 lookup is not yet complete. The current workflow validates the method using past query years; the
 application will eventually apply the approved representation to a neighborhood selected today.

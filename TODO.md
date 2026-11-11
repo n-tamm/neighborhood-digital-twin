@@ -249,6 +249,21 @@ dimension of lived experience are already represented.
   trajectory family and call it the same representation.
 - Generate explanations containing shared strengths, important differences, candidate year and
   location, later outcome, coverage warnings, and the descriptive outcome range.
+- Build a reviewed similarity visual package rather than relying on the early raw-versus-PCA
+  diagnostic alone. The minimum final set should include:
+  - a plain-language workflow diagram showing feature families, training-only preprocessing,
+    weighted distance, time-safe candidate filtering, top-ten retrieval, and later outcomes;
+  - a stability and representation-selection figure showing top-ten retention under bounded
+    weight changes, PCA comparison, and the evidence supporting weighted matching;
+  - an outcome-utility figure comparing analogue error with zero change, state trend, and the
+    primary forecast at one- and three-year horizons;
+  - a coverage figure showing where current historical analogues are available and where the
+    application must explain an unavailable result; and
+  - a polished case-study figure combining a query neighborhood, mapped historical matches,
+    feature similarities and differences, and what happened to the matches afterward.
+- Give every similarity figure one clear question, readable labels, restrained styling, source
+  run IDs, interpretation notes, and a documented limitation. Publish a versioned manifest and
+  visually inspect the complete set before selecting report or presentation figures.
 - Publish compact, versioned serving tables rather than querying `gold_modeling_panel` or the
   wide audit tables from the application.
 
