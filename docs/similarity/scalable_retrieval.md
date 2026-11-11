@@ -87,6 +87,37 @@ small historical-outcome drift, a meaningful runtime or storage advantage, and n
 coverage failure. The chosen method must then be tested at the intended precomputation scale in a
 later production-retrieval branch.
 
+## Validated run and decision
+
+The schema-1.1 run completed on November 11, 2026 under MLflow run
+`3dd5aaa6c4ce47d88ef752a1d5e20f6b`. It evaluated 29 current neighborhoods at both horizons. Every
+configuration returned ten distinct communities for every query, and no result used the query
+tract, a future outcome, or a locked temporal-test row.
+
+| Horizon | Method | Community recall | Mean / minimum tract-year recall | Candidate-pair share | Retrieval seconds |
+|---:|---|---:|---:|---:|---:|
+| 1 | Exact reference | 100% | 100% / 100% | Not applicable | 23.0 |
+| 1 | Narrow LSH | 100% | 100% / 100% | 88.7% | 73.4 |
+| 1 | Balanced LSH | 100% | 100% / 100% | 99.1% | 106.0 |
+| 1 | High-recall LSH | 100% | 100% / 100% | 99.8% | 127.2 |
+| 3 | Exact reference | 100% | 100% / 100% | Not applicable | 16.0 |
+| 3 | Narrow LSH | 100% | 99.66% / 90% | 89.8% | 52.9 |
+| 3 | Balanced LSH | 100% | 100% / 100% | 99.5% | 74.3 |
+| 3 | High-recall LSH | 100% | 100% / 100% | 99.9% | 86.8 |
+
+The LSH configurations are not approved for production. Their fidelity is high because they leave
+almost the entire cross-product in the shortlist, so hashing adds work instead of removing enough
+exact-distance calculations. The narrow three-year configuration also selected a different
+historical year for one otherwise identical community list. That changed the query's median
+analogue outcome by 0.049 on the cumulative log-change scale, even though community recall alone
+reported 100%.
+
+The seconds above measure retrieval after the represented Spark frames are cached. They are useful
+for comparing methods inside this run, but they are not application latency and should not be
+compared directly with the full cold-start runtime of job 503. The next serving design should test
+bounded exact precomputation or a genuinely selective index. Further tuning of these broad LSH
+buckets is not justified by the current evidence.
+
 ## Reproduction
 
 After the current model-ready panel and exact retrieval contract are current:

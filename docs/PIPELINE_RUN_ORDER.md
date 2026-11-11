@@ -177,9 +177,12 @@ missing housing-composition, community-size, or ACS-uncertainty group, and treat
 weighted top-ten retrieval as the reference. It evaluates three deterministic random-projection
 LSH configurations that generate candidate shortlists before applying the same exact distance and
 distinct-tract reranking. The benchmark records top-ten recall, Jaccard overlap, top-three
-retention, rank displacement, historical-outcome drift, shortlist size, runtime, and sample
-coverage. It does not authorize a serving method automatically and does not access locked
-temporal-test candidate outcomes.
+retention, tract-year-state recall, rank displacement, historical-outcome drift, shortlist size,
+runtime, and sample coverage. It does not authorize a serving method automatically and does not
+access locked temporal-test candidate outcomes. The November 11 run rejected all three LSH
+configurations because they retained 88.7% to 99.9% of possible pairs and were slower than the
+exact reference. Rerun 603 when the representation, candidate pool, benchmark contract, or a new
+candidate-generation method changes; do not treat it as an application-serving refresh.
 
 ### Find the MLflow experiments
 

@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 9, 2026. The broader design remains in the
+This is the working handoff as of November 11, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -15,11 +15,11 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, scalable analogue retrieval, match explanations, serving tables, and the interactive
+uncertainty, production analogue serving, match explanations, serving tables, and the interactive
 application still need to be built. Historical-analogue case review, bounded stability testing,
-expanded representation selection, and the first exact current-neighborhood retrieval are
-complete. New source families should not be added until a model result or required app view shows
-a specific gap.
+expanded representation selection, exact current-neighborhood retrieval, and the first scalable
+retrieval benchmark are complete. New source families should not be added until a model result or
+required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -41,8 +41,8 @@ a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 25 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-503`, `600-602`, and `900`), grouping tags, and the maintained
+- The 26 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-503`, `600-603`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -126,6 +126,21 @@ a specific gap.
   2025 model-ready query row, compared with 83,359 current ACS similarity candidates and 84,396
   current ACS profiles. The application needs an explicit unavailable state unless a separate
   ACS-only fallback is designed and evaluated.
+- Job `603 Evaluation | Scalable Analogue Retrieval` benchmarked exact retrieval and three
+  random-projection LSH configurations for 29 stratified current queries at one- and three-year
+  horizons. The final schema-1.1 run published 2,320 matches, 174 query-level evaluations, eight
+  configuration summaries, and 19 coverage rows under MLflow run
+  `3dd5aaa6c4ce47d88ef752a1d5e20f6b`.
+- All configurations returned complete top-ten lists with 100% physical-community recall. A new
+  tract-year-state metric exposed one narrow-LSH three-year query with 90% state recall, even
+  though it retained the same ten tract identifiers. That single changed historical year shifted
+  the query's median analogue outcome by 0.049 cumulative log-change units.
+- The tested LSH design is rejected for serving. Its shortlists retain 88.7% to 99.9% of the full
+  query-candidate cross-product and take about three to five times as long as exact retrieval in
+  the same cached benchmark. The high fidelity comes from doing almost all of the original work.
+- The benchmark contains no self, future-outcome, locked-test, incomplete-list, or duplicate-tract
+  violation. All required region, cohort, housing-mix, community-size, and ACS-uncertainty groups
+  are represented. Job 900 reapplied descriptions and comments to every new table column.
 
 ## Important interpretation limits
 
@@ -227,7 +242,7 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: exact current retrieval implemented, scale next
+### 2. Similarity and historical analogues: LSH benchmark complete, serving next
 
 - Implement weighted standardized distance and ten distinct physical communities as the frozen
   production retrieval policy. Keep PCA and tract-year matches available for development audit.
@@ -239,9 +254,13 @@ dimension of lived experience are already represented.
   when later-outcome evaluation is unavailable.
 - Preserve job 503 as the exact reference implementation. Do not use its roughly 14-minute batch
   runtime as an on-click application path.
-- Test a bounded approximate-neighbor index or precomputed retrieval product against the exact
-  job-503 lists. Report top-ten recall, rank agreement, latency, and failure behavior before
-  approving it for the application.
+- Preserve job 603 as evidence that broad random-projection LSH buckets do not improve this
+  workload. Do not approve or further tune the tested configurations without a new hypothesis
+  that materially reduces the candidate-pair share.
+- On the next similarity-serving branch, compare bounded exact precomputation with one genuinely
+  selective index design. Use the same 29-query benchmark and require community recall,
+  tract-year-state recall, rank agreement, outcome drift, runtime, storage size, and explicit
+  failure behavior before approving either path.
 - Quantify and expose current retrieval eligibility. Historical analogues are currently available
   for 46,719 model-ready 2025 tracts, not all 84,396 current ACS profiles.
 - Decide whether unsupported tracts should show an explained unavailable state or receive a
@@ -319,16 +338,20 @@ for approved output tables rather than mock analytical claims.
 
 The next checkpoint is complete when:
 
-- the baseline models run from the published split and panel tables;
-- experiment runs record reproducible configurations and artifacts in MLflow;
-- all forecast candidates use identical validation rows and have a subgroup scorecard;
-- point metrics are interpreted together, including bias, tail error, baseline skill, and the
-  majority-direction comparison rather than only the most favorable metric;
+- one focused nonlinear forecast candidate has been compared with the regularized-linear and
+  state-trend baselines on identical validation rows;
+- forecast selection uses subgroup, bias, tail-error, and independent-origin evidence rather than
+  only overall MAE;
+- one uncertainty method has been calibrated and evaluated on the reserved calibration origins;
+- a production analogue retrieval design either materially improves on job 603 or uses bounded
+  exact precomputation with documented runtime, storage, refresh, and unavailable-result behavior;
+- match explanations and the planned similarity visual package are published from governed model
+  and evaluation outputs;
+- compact, versioned forecast and analogue serving tables exist, with release lineage and no UI
+  dependency on `gold_modeling_panel`;
+- a descriptive application shell reads the documented serving interface and handles unsupported
+  tracts honestly;
 - the locked temporal tests remain untouched during model selection;
-- the current-state similarity baseline has stability results and reviewed examples;
-- retrospective analogue evaluation uses only information available at each query date and its
-  representation choice is reviewed for case quality and stability;
-- a descriptive application shell reads a documented serving interface;
 - the application clearly separates observed ACS, observed FHFA history, model forecasts,
   historical analogues, and scenario sensitivity; and
 - the team has an evidence-based decision on nonlinear forecasting, analytical adjacency, and any

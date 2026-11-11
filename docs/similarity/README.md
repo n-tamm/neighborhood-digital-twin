@@ -130,7 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-All five implemented similarity stages have completed validated live runs.
+All six implemented similarity stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -195,6 +195,22 @@ The current historical representation can serve 46,719 tracts with 2025 model-re
 The broader ACS similarity cohort contains 83,359 tracts. Unsupported tracts therefore need an
 explained unavailable state or a separately evaluated ACS-only method; they must not be passed
 through an invisible change to the selected representation.
+
+### Job 603: Scalable retrieval benchmark
+
+- Compares three deterministic random-projection LSH shortlists with exhaustive exact retrieval
+  for 29 stratified current queries at one- and three-year horizons.
+- Adds separate physical-community and tract-year-state recall so a different historical year
+  cannot be hidden behind the same tract identifier.
+- Covers every required region, cohort, housing-composition, community-size, and ACS-uncertainty
+  category without using later outcomes to select queries.
+- Finds perfect community recall, but the tested shortlists retain 88.7% to 99.9% of all possible
+  pairs and are roughly three to five times slower than exact retrieval within the cached run.
+
+The tested LSH design is rejected for application serving. This is useful engineering evidence:
+high recall came from doing nearly all of the original work. The next retrieval design should use
+bounded exact precomputation or a materially more selective index and must retain the same fidelity
+and timing checks.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 
