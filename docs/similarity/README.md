@@ -271,3 +271,5 @@ application will eventually apply the approved representation to a neighborhood 
 11. [Current-neighborhood historical analogue retrieval](current_neighborhood_retrieval.md)
     explains the latest-year lookup, test-set safeguard, published outputs, coverage boundary,
     and path toward application serving.
+12. [Scalable retrieval benchmark](scalable_retrieval.md) explains the exact reference, LSH
+    shortlist configurations, fidelity measures, coverage design, and serving-selection boundary.

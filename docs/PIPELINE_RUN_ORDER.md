@@ -16,7 +16,7 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-503 Modeling`, `600-602 Evaluation`, and `900 Metadata`. Jobs increment
+`400-401 Analysis`, `500-503 Modeling`, `600-603 Evaluation`, and `900 Metadata`. Jobs increment
 by one inside each three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
@@ -53,6 +53,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
 | 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
+| 603 | Evaluation | `scalable_analogue_retrieval` | After the weighted representation is frozen and job 503 establishes an exact current-query reference | Compares deterministic LSH shortlists with exhaustive exact top-ten matches on a stratified current-query benchmark |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -80,6 +81,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 502 Historical analogue baseline --------------> 601 Analogue review and stability
 500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
 302 Model readiness ----------------------------> 503 Current analogue retrieval
+503 Exact current retrieval contract -----------> 603 Scalable retrieval benchmark
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -139,6 +141,7 @@ databricks bundle run current_analogue_retrieval --profile neighborhood-twin -t 
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_selection --profile neighborhood-twin -t team
+databricks bundle run scalable_analogue_retrieval --profile neighborhood-twin -t team
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
@@ -169,6 +172,14 @@ on point-model training rows, returns exact weighted-standardized matches, and e
 locked temporal-test candidate. Its historical outcome range is descriptive context, not the
 primary forecast or a calibrated interval. The default bundle parameters retrieve one tract from
 each configured application-demo state; `query_geoids` can target specific model-ready tracts.
+Job 603 expands the current-query sample by Census region and modeling cohort, supplements any
+missing housing-composition, community-size, or ACS-uncertainty group, and treats exhaustive
+weighted top-ten retrieval as the reference. It evaluates three deterministic random-projection
+LSH configurations that generate candidate shortlists before applying the same exact distance and
+distinct-tract reranking. The benchmark records top-ten recall, Jaccard overlap, top-three
+retention, rank displacement, historical-outcome drift, shortlist size, runtime, and sample
+coverage. It does not authorize a serving method automatically and does not access locked
+temporal-test candidate outcomes.
 
 ### Find the MLflow experiments
 
@@ -182,6 +193,7 @@ experiments are:
 - `/Shared/neighborhood-digital-twin/analogue-audit-stability` (created by the first job-601 run).
 - `/Shared/neighborhood-digital-twin/analogue-selection` (created by the first job-602 run).
 - `/Shared/neighborhood-digital-twin/current-analogue-retrieval` (created by the first job-503 run).
+- `/Shared/neighborhood-digital-twin/scalable-analogue-retrieval` (created by the first job-603 run).
 
 They can also be found from **Machine Learning** or **Experiments** by searching for
 `forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
@@ -207,7 +219,8 @@ IDs used by each figure build, so figures should not be associated with experime
 11. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
     run.
 12. Run 602 after 601 when the expanded representation-selection evidence should be refreshed.
-13. Finish with 900.
+13. Run 603 when scalable-retrieval evidence should reflect the refreshed analogue inputs.
+14. Finish with 900.
 
 ### New FHFA release
 
@@ -219,7 +232,8 @@ IDs used by each figure build, so figures should not be associated with experime
 6. Refresh 503 when current-neighborhood analogue outputs should reflect the new inputs.
 7. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
 8. Refresh 602 after 601 when representation-selection evidence should reflect the new inputs.
-9. Finish with 900.
+9. Refresh 603 when scalable-retrieval evidence should reflect the new inputs.
+10. Finish with 900.
 
 ### Geography-source change
 
@@ -275,6 +289,10 @@ Do not continue merely because a job is green. Before advancing:
   Current analogue retrieval must use the frozen weighted representation, return complete top-k
   lists of distinct physical tracts, keep candidate outcomes time-safe, exclude locked temporal
   tests, and label the outcome range as descriptive rather than calibrated.
+  Scalable analogue evaluation must retain complete exact references, represent every declared
+  query and LSH configuration even when no approximate match is returned, keep fidelity metrics
+  within valid ranges, cover every required query category, and preserve all timing and locked-test
+  safeguards before an approximate method can be considered for serving.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule
