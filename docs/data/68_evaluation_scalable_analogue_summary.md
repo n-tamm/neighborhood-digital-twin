@@ -14,5 +14,9 @@ runtime. Approximate rows summarize complete-result share, recall, rank behavior
 shortlist size, and retrieval time. Runtime from one development run should be interpreted with
 fidelity and repeated operational evidence rather than as a universal latency guarantee.
 
+Community recall and tract-year-state recall are separate. Recovering the same physical tract at
+a different historical origin year can change the later outcome even when community overlap is
+perfect.
+
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.

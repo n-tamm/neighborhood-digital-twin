@@ -30,7 +30,7 @@ from neighborhood_twin.historical_analogues import (
     validate_analogue_columns,
 )
 
-SCALABLE_ANALOGUE_SCHEMA_VERSION = "1.0.0"
+SCALABLE_ANALOGUE_SCHEMA_VERSION = "1.1.0"
 SCALABLE_ANALOGUE_MATCH_TABLE = "scalable_analogue_match"
 SCALABLE_ANALOGUE_QUERY_EVALUATION_TABLE = "scalable_analogue_query_evaluation"
 SCALABLE_ANALOGUE_SUMMARY_TABLE = "scalable_analogue_summary"
@@ -415,6 +415,7 @@ def build_query_evaluation(
     ).select(
         *keys,
         functions.col("candidate_geoid_2020").alias("exact_candidate_geoid_2020"),
+        functions.col("candidate_origin_year").alias("exact_candidate_origin_year"),
         functions.col("match_rank").alias("exact_match_rank"),
     )
     approximate = matches.where(
@@ -460,6 +461,13 @@ def build_query_evaluation(
         )
         .agg(
             functions.count(functions.lit(1)).alias("exact_top_k_overlap_count"),
+            functions.sum(
+                functions.when(
+                    functions.col("approximate.candidate_origin_year")
+                    == functions.col("exact.exact_candidate_origin_year"),
+                    1,
+                ).otherwise(0)
+            ).alias("exact_candidate_state_overlap_count"),
             functions.avg(
                 functions.abs(
                     functions.col("approximate.match_rank")
@@ -518,6 +526,7 @@ def build_query_evaluation(
             0,
             subset=[
                 "exact_top_k_overlap_count",
+                "exact_candidate_state_overlap_count",
                 "exact_top_three_retention_count",
             ],
         )
@@ -532,6 +541,11 @@ def build_query_evaluation(
         .withColumn(
             "exact_top_k_recall",
             functions.col("exact_top_k_overlap_count") / functions.lit(float(top_k)),
+        )
+        .withColumn(
+            "exact_candidate_state_recall",
+            functions.col("exact_candidate_state_overlap_count")
+            / functions.lit(float(top_k)),
         )
         .withColumn(
             "top_k_jaccard_similarity",
@@ -581,6 +595,12 @@ def build_scalable_summary(
             functions.percentile_approx("exact_top_k_recall", 0.1, 10000).alias(
                 "p10_exact_top_k_recall"
             ),
+            functions.avg("exact_candidate_state_recall").alias(
+                "mean_exact_candidate_state_recall"
+            ),
+            functions.min("exact_candidate_state_recall").alias(
+                "minimum_exact_candidate_state_recall"
+            ),
             functions.avg("top_k_jaccard_similarity").alias(
                 "mean_top_k_jaccard_similarity"
             ),
@@ -610,6 +630,8 @@ def build_scalable_summary(
         .withColumn("complete_top_k_share", functions.lit(1.0))
         .withColumn("mean_exact_top_k_recall", functions.lit(1.0))
         .withColumn("p10_exact_top_k_recall", functions.lit(1.0))
+        .withColumn("mean_exact_candidate_state_recall", functions.lit(1.0))
+        .withColumn("minimum_exact_candidate_state_recall", functions.lit(1.0))
         .withColumn("mean_top_k_jaccard_similarity", functions.lit(1.0))
         .withColumn("mean_exact_top_three_retention_share", functions.lit(1.0))
         .withColumn("mean_shared_rank_displacement", functions.lit(0.0))

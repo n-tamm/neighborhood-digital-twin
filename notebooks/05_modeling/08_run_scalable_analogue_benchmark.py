@@ -228,6 +228,8 @@ def validate_outputs(result) -> None:
     if query_evaluation.where(
         (functions.col("exact_top_k_recall") < 0)
         | (functions.col("exact_top_k_recall") > 1)
+        | (functions.col("exact_candidate_state_recall") < 0)
+        | (functions.col("exact_candidate_state_recall") > 1)
         | (functions.col("top_k_jaccard_similarity") < 0)
         | (functions.col("top_k_jaccard_similarity") > 1)
     ).limit(1).count():
@@ -315,6 +317,10 @@ with mlflow.start_run(run_name="scalable-historical-analogue-retrieval") as acti
         mlflow.log_metric(
             f"{stem}_mean_exact_top_k_recall",
             float(row["mean_exact_top_k_recall"]),
+        )
+        mlflow.log_metric(
+            f"{stem}_mean_exact_candidate_state_recall",
+            float(row["mean_exact_candidate_state_recall"]),
         )
         mlflow.log_metric(
             f"{stem}_complete_top_k_share",

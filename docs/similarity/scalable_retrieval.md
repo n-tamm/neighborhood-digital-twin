@@ -58,6 +58,7 @@ whether any configuration actually behaves that way.
 |---|---|
 | Complete top-ten share | Does the method return ten distinct communities for every query? |
 | Exact top-ten recall | How many exact-reference communities are recovered? |
+| Exact tract-year state recall | Are the same historical years retained for those communities? |
 | Top-ten Jaccard similarity | How similar are the complete approximate and exact candidate sets? |
 | Exact top-three retention | Are the strongest exact matches preserved? |
 | Shared-rank displacement | How far do recovered communities move in the list? |

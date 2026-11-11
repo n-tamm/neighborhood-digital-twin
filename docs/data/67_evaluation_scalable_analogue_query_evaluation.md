@@ -8,8 +8,8 @@
 - **Grain and key:** one benchmark query tract, origin year, horizon, and approximate retrieval
   configuration.
 - **Purpose:** compares each approximate match list with the exhaustive exact top ten using
-  completeness, recall, Jaccard overlap, top-three retention, rank movement, and historical
-  outcome-summary drift.
+  completeness, community and tract-year-state recall, Jaccard overlap, top-three retention, rank
+  movement, and historical outcome-summary drift.
 
 Every declared query and configuration remains represented even when the approximate method finds
 no candidates. This prevents favorable averages created by dropping failed queries.

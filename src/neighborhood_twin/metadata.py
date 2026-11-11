@@ -838,11 +838,18 @@ COMMON_COLUMN_COMMENTS = {
     "exact_top_k_overlap_count": (
         "Approximate candidates also present in the exhaustive exact top-k result."
     ),
+    "exact_candidate_state_overlap_count": (
+        "Approximate matches retaining both the exact candidate tract and historical origin year."
+    ),
     "complete_top_k": (
         "Whether the approximate configuration returned the requested number of distinct matches."
     ),
     "exact_top_k_recall": (
         "Share of exhaustive exact top-k candidates recovered by the approximate result."
+    ),
+    "exact_candidate_state_recall": (
+        "Share of exact top-k candidate tract-and-origin-year states recovered by the "
+        "approximate result."
     ),
     "exact_top_three_retention_count": (
         "Exhaustive exact top-three candidates retained by the approximate result."
@@ -876,6 +883,12 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "p10_exact_top_k_recall": (
         "Tenth percentile query-level exact top-k recall for the configuration."
+    ),
+    "mean_exact_candidate_state_recall": (
+        "Mean share of exact candidate tract-and-origin-year states retained across queries."
+    ),
+    "minimum_exact_candidate_state_recall": (
+        "Lowest query-level exact candidate tract-and-origin-year retention for the configuration."
     ),
     "mean_top_k_jaccard_similarity": (
         "Mean intersection-over-union between approximate and exact top-k candidate sets."

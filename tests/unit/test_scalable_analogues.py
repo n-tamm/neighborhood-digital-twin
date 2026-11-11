@@ -19,7 +19,7 @@ from neighborhood_twin.scalable_analogues import (
 
 
 def test_scalable_contract_has_ordered_unique_approximation_configs() -> None:
-    assert SCALABLE_ANALOGUE_SCHEMA_VERSION == "1.0.0"
+    assert SCALABLE_ANALOGUE_SCHEMA_VERSION == "1.1.0"
     assert EXACT_REFERENCE_CONFIG == "exact_reference"
     assert len(DEFAULT_LSH_CONFIGURATIONS) == 3
     assert [item.bucket_length for item in DEFAULT_LSH_CONFIGURATIONS] == sorted(
