@@ -304,6 +304,16 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "interpretation dimensions.",
         "One row per horizon, coverage dimension, and dimension value.",
     ),
+    "current_analogue_match": TableMetadata(
+        "Exact weighted-standardized historical matches for selected neighborhoods at the "
+        "latest model-ready year, excluding locked temporal-test outcomes.",
+        "One row per current query tract, horizon, and historical match rank.",
+    ),
+    "current_analogue_summary": TableMetadata(
+        "Descriptive outcome range, distance, age, and geographic diagnostics for each selected "
+        "current neighborhood's historical matches.",
+        "One row per current query tract and horizon.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -319,6 +329,8 @@ MODEL_TABLES = {
     "historical_analogue_audit_match",
     "historical_analogue_selection_match",
     "historical_analogue_selection_prediction",
+    "current_analogue_match",
+    "current_analogue_summary",
 }
 
 EVALUATION_TABLES = {
@@ -731,6 +743,55 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "coverage_status": (
         "Whether at least one expanded-evaluation query represents the eligible dimension value."
+    ),
+    "query_as_of_year": (
+        "Latest model-ready calendar year represented by the selected current neighborhood."
+    ),
+    "query_forecast_end_year": (
+        "Calendar endpoint implied by the query as-of year and outcome horizon."
+    ),
+    "query_model_readiness_build_id": (
+        "Model-readiness build that supplied the selected current query features."
+    ),
+    "candidate_temporal_role": (
+        "Frozen development role of the historical candidate; locked temporal tests are excluded."
+    ),
+    "candidate_model_readiness_build_id": (
+        "Model-readiness build that supplied the historical candidate features and outcome."
+    ),
+    "locked_temporal_candidates_excluded": (
+        "Whether retrieval explicitly excluded every locked temporal-test candidate row."
+    ),
+    "median_similarity_distance": (
+        "Median weighted-standardized distance among the returned historical matches."
+    ),
+    "oldest_candidate_origin_year": (
+        "Earliest feature-origin year represented among the returned historical matches."
+    ),
+    "newest_candidate_origin_year": (
+        "Latest feature-origin year represented among the returned historical matches."
+    ),
+    "analogue_median_cumulative_change_pct": (
+        "Cumulative percentage change implied by the median historical analogue log outcome."
+    ),
+    "analogue_inverse_distance_cumulative_change_pct": (
+        "Cumulative percentage change implied by the inverse-distance historical outcome summary."
+    ),
+    "analogue_outcome_p10_cumulative_change_pct": (
+        "Cumulative percentage change implied by the tenth-percentile historical outcome."
+    ),
+    "analogue_outcome_p90_cumulative_change_pct": (
+        "Cumulative percentage change implied by the ninetieth-percentile historical outcome."
+    ),
+    "outcome_range_is_calibrated_interval": (
+        "False for the descriptive analogue range; it is not a calibrated forecast interval."
+    ),
+    "analogue_role": "Required interpretation of analogue output relative to the primary forecast.",
+    "current_analogue_run_id": (
+        "MLflow run ID of the current-neighborhood historical analogue retrieval build."
+    ),
+    "current_analogue_as_of_year": (
+        "As-of year applied consistently to every current query in the retrieval run."
     ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."

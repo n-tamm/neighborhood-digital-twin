@@ -164,6 +164,9 @@ variables:
   analogue_selection_mlflow_experiment:
     description: Shared MLflow experiment for expanded historical analogue selection
     default: /Shared/neighborhood-digital-twin/analogue-selection
+  current_analogue_mlflow_experiment:
+    description: Shared MLflow experiment for current-neighborhood historical analogue retrieval
+    default: /Shared/neighborhood-digital-twin/current-analogue-retrieval
 
 resources:
   jobs:
@@ -841,6 +844,35 @@ resources:
               pca_components: "6"
               comparator_models: zero_change,state_current_trend,regularized_linear
               mlflow_experiment: ${var.analogue_selection_mlflow_experiment}
+    current_analogue_retrieval:
+      name: Neighborhood Digital Twin | 503 Modeling | Current Analogue Retrieval
+      description: Retrieves frozen historical analogues for selected current neighborhoods.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "503"
+        lifecycle: application_model
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_current_analogue_retrieval
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/07_run_current_analogue_retrieval.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              modeling_panel_table: gold_modeling_panel
+              match_table: current_analogue_match
+              summary_table: current_analogue_summary
+              query_geoids: ""
+              query_state_fips: ${var.application_demo_state_fips}
+              queries_per_state: "1"
+              horizons: "1,3"
+              top_k: "10"
+              as_of_year: ""
+              mlflow_experiment: ${var.current_analogue_mlflow_experiment}
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.

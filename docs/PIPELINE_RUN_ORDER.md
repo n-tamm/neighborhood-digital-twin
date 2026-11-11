@@ -16,7 +16,7 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-502 Modeling`, `600-602 Evaluation`, and `900 Metadata`. Jobs increment
+`400-401 Analysis`, `500-503 Modeling`, `600-602 Evaluation`, and `900 Metadata`. Jobs increment
 by one inside each three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
@@ -49,6 +49,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 500 | Modeling | `forecast_baselines` | After 302 or forecast-development code changes | Publishes validation-only baseline predictions and scorecards; does not open locked tests |
 | 501 | Modeling | `similarity_baselines` | After 300 or similarity-development code changes | Publishes a small reviewable current-state baseline, not the final retrospective analogue product |
 | 502 | Modeling | `historical_analogue_baseline` | After current successful runs of 302 and 500 | Retrieves time-safe historical matches for sampled validation queries and compares their later outcomes with forecast baselines |
+| 503 | Modeling | `current_analogue_retrieval` | After a current successful run of 302, using the representation contract already selected by 602 | Applies the frozen weighted representation to selected latest-year neighborhoods without opening locked temporal-test outcomes |
 | 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
 | 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
@@ -78,6 +79,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 500 Forecast + 501 Similarity ------------------> 600 Model evaluation figures
 502 Historical analogue baseline --------------> 601 Analogue review and stability
 500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
+302 Model readiness ----------------------------> 503 Current analogue retrieval
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -133,6 +135,7 @@ run them in parallel during an agreed deployment window:
 databricks bundle run forecast_baselines --profile neighborhood-twin -t team
 databricks bundle run similarity_baselines --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_baseline --profile neighborhood-twin -t team
+databricks bundle run current_analogue_retrieval --profile neighborhood-twin -t team
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_selection --profile neighborhood-twin -t team
@@ -160,6 +163,12 @@ community-size, or ACS-uncertainty category. It requires ten distinct candidate 
 weighted and PCA retrieval on identical queries. Its coverage table compares the selected sample
 with all eligible validation queries across time, geography, cohort, housing mix, community size,
 and ACS uncertainty. The locked temporal tests remain unavailable to this workflow.
+Job 503 applies the representation and distinct-community policy selected by job 602 to a small,
+configurable set of neighborhoods at the latest model-ready year. It fits imputation and scaling
+on point-model training rows, returns exact weighted-standardized matches, and excludes every
+locked temporal-test candidate. Its historical outcome range is descriptive context, not the
+primary forecast or a calibrated interval. The default bundle parameters retrieve one tract from
+each configured application-demo state; `query_geoids` can target specific model-ready tracts.
 
 ### Find the MLflow experiments
 
@@ -172,6 +181,7 @@ experiments are:
 - `/Shared/neighborhood-digital-twin/historical-analogues` (created by the first job-502 run).
 - `/Shared/neighborhood-digital-twin/analogue-audit-stability` (created by the first job-601 run).
 - `/Shared/neighborhood-digital-twin/analogue-selection` (created by the first job-602 run).
+- `/Shared/neighborhood-digital-twin/current-analogue-retrieval` (created by the first job-503 run).
 
 They can also be found from **Machine Learning** or **Experiments** by searching for
 `forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
@@ -191,12 +201,13 @@ IDs used by each figure build, so figures should not be associated with experime
 6. Run 400 and 401 when analytical summaries or figures need refreshing.
 7. Run 500 and 501 when the source change should be reflected in model-development outputs.
 8. Run 502 after 500 when the historical analogue evaluation should be refreshed.
-9. Run 600 when reviewed evaluation figures should reflect the forecast and current-state
+9. Run 503 when current-neighborhood analogue outputs should reflect the refreshed inputs.
+10. Run 600 when reviewed evaluation figures should reflect the forecast and current-state
    similarity runs.
-10. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
+11. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
     run.
-11. Run 602 after 601 when the expanded representation-selection evidence should be refreshed.
-12. Finish with 900.
+12. Run 602 after 601 when the expanded representation-selection evidence should be refreshed.
+13. Finish with 900.
 
 ### New FHFA release
 
@@ -205,9 +216,10 @@ IDs used by each figure build, so figures should not be associated with experime
 3. Refresh 400 and 401 if the added year changes coverage or reported figures.
 4. Refresh 500 and 501 after the upstream contracts pass.
 5. Refresh 502 after 500 when analogue results should reflect the new FHFA history.
-6. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
-7. Refresh 602 after 601 when representation-selection evidence should reflect the new inputs.
-8. Finish with 900.
+6. Refresh 503 when current-neighborhood analogue outputs should reflect the new inputs.
+7. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
+8. Refresh 602 after 601 when representation-selection evidence should reflect the new inputs.
+9. Finish with 900.
 
 ### Geography-source change
 
@@ -260,6 +272,9 @@ Do not continue merely because a job is green. Before advancing:
   Expanded analogue selection must fill every available deterministic sampling stratum, compare
   both representations on identical validation queries, retain ten distinct candidate tracts,
   and publish selected-versus-eligible coverage without accessing locked temporal tests.
+  Current analogue retrieval must use the frozen weighted representation, return complete top-k
+  lists of distinct physical tracts, keep candidate outcomes time-safe, exclude locked temporal
+  tests, and label the outcome range as descriptive rather than calibrated.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule
