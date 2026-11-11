@@ -123,7 +123,7 @@ def _select_query_geoids(
     return tuple(row["geoid_2020"] for row in rows)
 
 
-def _rank_current_matches(
+def rank_current_analogue_matches(
     representation: Any,
     queries: Any,
     *,
@@ -235,7 +235,12 @@ def _rank_current_matches(
     )
 
 
-def _summarize_current_matches(matches: Any, *, distance_epsilon: float = 1e-9) -> Any:
+def summarize_current_analogue_matches(
+    matches: Any,
+    *,
+    distance_epsilon: float = 1e-9,
+    additional_group_columns: tuple[str, ...] = (),
+) -> Any:
     """Summarize historical outcomes without presenting them as calibrated forecasts."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
@@ -254,6 +259,7 @@ def _summarize_current_matches(matches: Any, *, distance_epsilon: float = 1e-9) 
         "query_geographic_role",
         "query_model_readiness_build_id",
         "representation_name",
+        *additional_group_columns,
     ]
     weighted = matches.withColumn(
         "_inverse_distance_weight",
@@ -396,7 +402,7 @@ def build_current_analogue_run(
             raise ValueError(
                 f"Not every selected current tract has a horizon-{horizon} model-ready row"
             )
-        matches = _rank_current_matches(represented, queries, top_k=top_k).cache()
+        matches = rank_current_analogue_matches(represented, queries, top_k=top_k).cache()
         if matches.count() != len(selected_geoids) * top_k:
             raise ValueError(
                 f"Horizon {horizon} did not return {top_k} matches for every current query"
@@ -406,7 +412,7 @@ def build_current_analogue_run(
     matches = horizon_matches[0]
     for frame in horizon_matches[1:]:
         matches = matches.unionByName(frame)
-    summary = _summarize_current_matches(matches)
+    summary = summarize_current_analogue_matches(matches)
     return CurrentAnalogueRun(
         run_id=run_id,
         built_at_utc=built_at_utc,
