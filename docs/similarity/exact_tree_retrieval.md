@@ -13,9 +13,11 @@ based on the live benchmark rather than that rule of thumb. Scikit-learn notes t
 performance depends on dimensionality and data structure, and exposes the number of distance
 calls for direct measurement. [Scikit-learn nearest-neighbor guide](https://scikit-learn.org/stable/modules/neighbors.html)
 
-Databricks serverless environment version 2 already includes NumPy and scikit-learn, so this path
-does not introduce a compiled package installation during each job run.
-[Databricks environment version 2](https://docs.databricks.com/aws/en/release-notes/serverless/environment-version/two)
+The job uses the standard Databricks serverless environment. This preserves the Spark
+Connect-compatible preprocessing already used by the project's modeling workflows while using
+the included NumPy and scikit-learn libraries. An early test with environment version 2 was
+rejected because its older PySpark client could not construct the existing Spark ML imputer on
+serverless compute.
 
 ## Preserved analytical contract
 
