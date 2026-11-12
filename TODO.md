@@ -15,8 +15,9 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, national analogue serving tables, match explanations, and the interactive
-application still need to be built. Historical-analogue case review, bounded stability testing,
+uncertainty, match explanations, and the interactive application still need to be built. The
+national analogue serving workflow is implemented and its first release passed live validation.
+Historical-analogue case review, bounded stability testing,
 expanded representation selection, exact current-neighborhood retrieval, and the first scalable
   retrieval benchmark are complete. Exact indexed retrieval is also validated for all 46,719
   eligible current tracts. New source families should not be added until a model result or required
@@ -42,8 +43,8 @@ expanded representation selection, exact current-neighborhood retrieval, and the
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 27 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-503`, `600-604`, and `900`), grouping tags, and the maintained
+- The 28 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-503`, `600-604`, `700`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -155,6 +156,21 @@ expanded representation selection, exact current-neighborhood retrieval, and the
 - Exact KD-tree retrieval is now selected for batch generation of the application analogue tables.
   The application should read compact published matches and explanations; it should not rebuild
   the index or scan the wide modeling panel during a user request.
+- Job `700 Serving | Current Analogue Products` published release
+  `analogue-20261112T220655832818Z` with 934,380 ranked matches, 93,438 tract-horizon summaries,
+  and 171,056 availability rows. It covers 46,719 eligible current tracts at both one and three
+  years and preserves an explicit result for all 85,528 canonical current-profile rows per
+  horizon. The complete serverless job took 433 seconds. The activation manifest reconciles all
+  three tables to model-readiness build
+  `20261107T185721624743Z` and job-604 run `fae78721154347039d41864bad2e871a`.
+- Per horizon, unavailable states are now concrete: 1,121 tracts lack a current ACS profile, 1,037
+  lack enough current similarity features, 19,443 lack FHFA history, and 17,208 lack the complete
+  model-ready market features used by the selected representation. The application must show
+  these reasons rather than silently changing the matching method.
+- The live run first exposed an interface mismatch between `query_geoid_2020` in retrieved matches
+  and `geoid_2020` in the availability contract. No release had been activated. The contract now
+  resolves either governed name explicitly, the corrected run passed, and job 900 confirmed
+  comments on all 113 columns across the four serving tables.
 
 ## Important interpretation limits
 
@@ -256,7 +272,7 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: exact index selected, serving products next
+### 2. Similarity and historical analogues: national serving implemented, explanations next
 
 - Implement weighted standardized distance and ten distinct physical communities as the frozen
   production retrieval policy. Keep PCA and tract-year matches available for development audit.
@@ -273,10 +289,9 @@ dimension of lived experience are already represented.
   that materially reduces the candidate-pair share.
 - Preserve job 604 as the approved retrieval implementation. It must continue to reproduce the
   job-603 reference before any representation or candidate-pool change is promoted.
-- On the next similarity-serving branch, use the exact KD-tree to publish versioned national match
-  and query-summary tables for the 46,719 eligible current tracts. Reconcile ten distinct matches
-  per tract and horizon, then record refresh time, row count, storage, release lineage, and explicit
-  unavailable-result behavior.
+- Preserve job 700 as the application publication boundary. It must use the approved job-604 run,
+  publish versioned national matches and summaries, retain an availability row for every current
+  tract and horizon, and write its activation manifest only after all checks pass.
 - Quantify and expose current retrieval eligibility. Historical analogues are currently available
   for 46,719 model-ready 2025 tracts, not all 84,396 current ACS profiles.
 - Decide whether unsupported tracts should show an explained unavailable state or receive a
@@ -299,6 +314,13 @@ dimension of lived experience are already represented.
     application must explain an unavailable result; and
   - a polished case-study figure combining a query neighborhood, mapped historical matches,
     feature similarities and differences, and what happened to the matches afterward.
+- Add `notebooks/08_final_analysis/01_similarity_model_walkthrough.py` as a standup-ready,
+  sequential explanation of the implemented system. It should read governed published tables and
+  walk through the question, coverage, feature families, preprocessing and weighting, time-safe
+  filtering, exact retrieval, an example query and its matches, shared and different traits,
+  later outcomes, stability and PCA evidence, analogue-versus-forecast performance, KD-tree scale,
+  limitations, and application interpretation. Include short speaking callouts, readable tables,
+  maps, and figures; do not retrain the system inside the presentation notebook.
 - Give every similarity figure one clear question, readable labels, restrained styling, source
   run IDs, interpretation notes, and a documented limitation. Publish a versioned manifest and
   visually inspect the complete set before selecting report or presentation figures.
@@ -315,8 +337,8 @@ dimension of lived experience are already represented.
 - Show unavailable forecasts as an explained state while preserving the descriptive profile.
 - Begin with tract search and map selection, community profile, housing composition, historical
   ACS/FHFA charts, source dates, uncertainty, and explicit coverage messages.
-- Use clear unavailable-result placeholders until approved forecast and analogue serving tables
-  exist; do not demonstrate mocked analytical claims.
+- Read approved analogue results from one complete job-700 release ID. Use clear unavailable-result
+  placeholders until forecast serving tables exist; do not demonstrate mocked analytical claims.
 - Defer the optional conversational or AI layer until the analytical application and serving
   contracts work. It may explain stored results but should not produce the underlying analysis.
 
@@ -334,7 +356,8 @@ dimension of lived experience are already represented.
 
 ### 5. Serving and integration
 
-- Build compact serving tables and a release manifest from approved outputs.
+- Extend the implemented analogue serving release with forecast, interval, explanation,
+  trajectory, profile/history, and display-geometry products as those components are approved.
 - Connect the application to the serving contract, then add forecasts, analogues, explanations,
   and guarded scenario sensitivity.
 - Add application contract tests, smoke tests, accessibility review, and deployment runbooks.
