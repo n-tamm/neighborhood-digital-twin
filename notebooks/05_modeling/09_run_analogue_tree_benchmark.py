@@ -474,6 +474,10 @@ def validate_outputs(matches, query_evaluation, summary, scale) -> None:
 # COMMAND ----------
 
 ensure_experiment_parent(experiment_path)
+# Environment version 2 ships an MLflow client that otherwise probes a Spark configuration that
+# serverless Spark Connect does not expose. The job does not register models, but an explicit
+# registry URI prevents that unsupported configuration lookup when the tracking client starts.
+mlflow.set_registry_uri("databricks-uc")
 mlflow.set_experiment(experiment_path)
 with mlflow.start_run(run_name="exact-kd-tree-analogue-retrieval") as active_run:
     built_at_utc = datetime.now(UTC).isoformat()
