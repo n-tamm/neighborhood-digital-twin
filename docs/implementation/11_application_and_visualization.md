@@ -64,14 +64,19 @@ The Databricks app should read versioned serving tables instead of rebuilding fe
 - explanation fields and quality flags;
 - data-source and model-version metadata.
 
-Document the detailed serving schema beside the table, export, and loading code when it is implemented. The app must reject incompatible data rather than silently guessing at changed columns.
+The first serving contract is now implemented for current historical analogues. Job 700 publishes
+versioned match, summary, availability, and manifest tables in `neighborhood_twin_serving`; its
+[component documentation](../similarity/analogue_serving_products.md) defines their grains and
+reading rule. Forecasts, calibrated intervals, deterministic match explanations, aligned
+trajectories, geometry, and profile-history bundles still need serving contracts. The app must
+reject incompatible data rather than silently guessing at changed columns.
 
-The pipeline is now ready to support a descriptive application shell, but the new
-`gold_modeling_panel` is not a serving table. It is wide, contains evaluation-only fields, and
-includes censored and future-scoring rows. The app should continue to use current profiles and
-display geometry until approved forecast and analogue outputs are available; later, a compact
-serving job should join only the selected tract's profile, history, forecasts, intervals,
-analogues, explanations, warnings, and version metadata.
+The pipeline is ready to support a descriptive application shell, but `gold_modeling_panel` is not
+a serving table. It is wide, contains evaluation-only fields, and includes censored and
+future-scoring rows. Approved analogue outputs are now available through the serving schema. The
+app may continue to read the current profile and display geometry while their serving bundles are
+built, but it must not query the modeling panel. Later serving jobs should add only the selected
+tract's profile, history, forecasts, intervals, explanations, warnings, and version metadata.
 
 Coverage will differ by feature. A user may be able to open a current profile for a tract that is
 not eligible for an FHFA forecast or outcome-based analogue evaluation. The interface should keep

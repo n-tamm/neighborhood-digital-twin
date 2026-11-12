@@ -58,4 +58,9 @@ compares random-projection LSH shortlists with an exhaustive reference, while
 and directly measures indexed work at full current-query scale. Jobs 603 and 604 are retrieval
 method evaluations; they do not themselves publish the final national application serving table.
 
+`06_representations/01_build_analogue_serving_products.py` is job 700. It applies the approved
+exact retrieval policy to every eligible current tract and publishes one append-only serving
+release containing ranked matches, descriptive summaries, explicit availability, and lineage.
+It writes the release manifest last so partial outputs cannot become active application data.
+
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.
