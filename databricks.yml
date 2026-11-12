@@ -35,6 +35,9 @@ variables:
   evaluation_schema:
     description: Model scorecards, diagnostics, evaluation manifests, and reviewed figures
     default: neighborhood_twin_evaluation
+  serving_schema:
+    description: Versioned application-facing data products and release manifests
+    default: neighborhood_twin_serving
   quality_schema:
     description: Persisted validation and pipeline-observability outputs
     default: neighborhood_twin_quality
@@ -197,6 +200,7 @@ resources:
               gold_schema: ${var.gold_schema}
               model_schema: ${var.model_schema}
               evaluation_schema: ${var.evaluation_schema}
+              serving_schema: ${var.serving_schema}
               quality_schema: ${var.quality_schema}
               volume: ${var.volume}
               evaluation_figure_volume: ${var.evaluation_figure_volume}
@@ -947,6 +951,40 @@ resources:
               query_batch_size: "250"
               scale_sample_size: "1000"
               mlflow_experiment: ${var.analogue_tree_mlflow_experiment}
+    analogue_serving_products:
+      name: Neighborhood Digital Twin | 700 Serving | Current Analogue Products
+      description: Publishes validated national current-analogue products behind a versioned serving contract.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: serving
+        run_order: "700"
+        lifecycle: serving_release
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: publish_current_analogue_products
+          notebook_task:
+            notebook_path: ./notebooks/06_representations/01_build_analogue_serving_products.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              serving_schema: ${var.serving_schema}
+              modeling_panel_table: gold_modeling_panel
+              current_profile_table: gold_tract_profile_current
+              tree_reference_table: analogue_tree_benchmark_match
+              match_table: serving_analogue_match_current
+              summary_table: serving_analogue_summary_current
+              availability_table: serving_analogue_availability_current
+              manifest_table: serving_release_manifest
+              horizons: "1,3"
+              top_k: "10"
+              as_of_year: ""
+              leaf_size: "40"
+              initial_neighbors: "64"
+              expansion_factor: "2"
+              query_batch_size: "250"
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.
@@ -969,6 +1007,7 @@ resources:
               gold_schema: ${var.gold_schema}
               model_schema: ${var.model_schema}
               evaluation_schema: ${var.evaluation_schema}
+              serving_schema: ${var.serving_schema}
               quality_schema: ${var.quality_schema}
 
 targets:

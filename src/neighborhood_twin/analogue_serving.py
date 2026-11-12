@@ -310,14 +310,23 @@ def build_serving_availability_frame(
         "product_build_id",
     ).crossJoin(functions.broadcast(horizons))
     available = functions.coalesce(functions.col("_analogue_available"), functions.lit(False))
+    has_current_acs = functions.coalesce(
+        functions.col("has_current_acs_profile"), functions.lit(False)
+    )
+    similarity_candidate = functions.coalesce(
+        functions.col("similarity_candidate"), functions.lit(False)
+    )
+    has_fhfa_history = functions.coalesce(
+        functions.col("has_fhfa_history"), functions.lit(False)
+    )
     availability_reason = (
         functions.when(available, functions.lit("available"))
-        .when(~functions.col("has_current_acs_profile"), functions.lit("current_acs_unavailable"))
+        .when(~has_current_acs, functions.lit("current_acs_unavailable"))
         .when(
-            ~functions.col("similarity_candidate"),
+            ~similarity_candidate,
             functions.lit("insufficient_current_similarity_features"),
         )
-        .when(~functions.col("has_fhfa_history"), functions.lit("fhfa_history_unavailable"))
+        .when(~has_fhfa_history, functions.lit("fhfa_history_unavailable"))
         .otherwise(functions.lit("model_ready_market_features_unavailable"))
     )
     representativeness_band = (
