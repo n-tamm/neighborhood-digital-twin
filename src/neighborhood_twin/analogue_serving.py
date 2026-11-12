@@ -287,8 +287,16 @@ def build_serving_availability_frame(
         [(int(value),) for value in release.horizons],
         "horizon_years integer",
     )
+    if "geoid_2020" in eligible_queries.columns:
+        eligible_geoid = functions.col("geoid_2020")
+    elif "query_geoid_2020" in eligible_queries.columns:
+        eligible_geoid = functions.col("query_geoid_2020")
+    else:
+        raise ValueError("eligible_queries must contain geoid_2020 or query_geoid_2020")
     eligible = (
-        eligible_queries.select("geoid_2020", "horizon_years")
+        eligible_queries.select(
+            eligible_geoid.alias("geoid_2020"), "horizon_years"
+        )
         .distinct()
         .withColumn("_analogue_available", functions.lit(True))
     )
