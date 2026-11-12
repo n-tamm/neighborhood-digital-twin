@@ -76,9 +76,31 @@ known by the current query year.
 | Expansion behavior | How often 64 states are insufficient and how large requests become |
 | Tree build time and array bytes | Batch refresh cost and in-memory index footprint |
 
-The KD-tree will be selected only if it is exact and provides a meaningful current-scale work or
-runtime advantage with manageable index size. If it fails, the project will retain job 503 as the
-audit reference and test a different serving design rather than weakening fidelity checks.
+The KD-tree is selected for batch generation of the national analogue serving product because it
+is exact and provides a meaningful current-scale work advantage with manageable index size. Job
+503 remains the independent Spark reference. The application will query compact published match
+and explanation tables rather than construct this in-memory index on each user request.
+
+## Validated result
+
+Job 604 completed on November 12 under MLflow run `fae78721154347039d41864bad2e871a`.
+
+- All 58 benchmark query-horizon rows reproduced the exhaustive community identities,
+  tract-year states, ranks, and outcome summaries within a `1e-12` numerical tolerance.
+- The one-year index contains 520,324 candidate states, builds in 0.49 seconds, and occupies about
+  57.8 MB. The three-year index contains 329,186 states, builds in 0.26 seconds, and occupies about
+  37.9 MB.
+- Full-current retrieval covers 46,719 tracts per horizon. It took about 193 seconds at one year
+  and 133 seconds at three years, or roughly 242 and 352 queries per second.
+- The index performed about 9.5% to 9.8% of the distance computations required by one exhaustive
+  query-candidate pass. This is direct full-current evidence, not a sample projection.
+- Two one-year queries, or 0.0043%, expanded from 64 to 128 candidate states. No three-year query
+  expanded. Every final result still contained ten distinct non-self tracts.
+
+The first standard-serverless run also exposed an instrumentation issue: the internal
+distance-call counter overflowed when all current queries were measured as one batch. The final
+implementation queries 250 tracts at a time, resets the counter, and sums the batch counts in
+Python. Unit tests confirm that batching does not change exhaustive neighbor ordering.
 
 ## Outputs
 
@@ -99,4 +121,4 @@ databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t tea
 ```
 
 Job 604 requires current jobs 302 and 603. It fails if job 603's reference uses a different
-model-readiness build.
+model-readiness build. Run job 900 afterward to restore table and column comments.

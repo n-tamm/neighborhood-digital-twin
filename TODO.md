@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 11, 2026. The broader design remains in the
+This is the working handoff as of November 12, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -15,11 +15,12 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, production analogue serving, match explanations, serving tables, and the interactive
+uncertainty, national analogue serving tables, match explanations, and the interactive
 application still need to be built. Historical-analogue case review, bounded stability testing,
 expanded representation selection, exact current-neighborhood retrieval, and the first scalable
-retrieval benchmark are complete. New source families should not be added until a model result or
-required app view shows a specific gap.
+  retrieval benchmark are complete. Exact indexed retrieval is also validated for all 46,719
+  eligible current tracts. New source families should not be added until a model result or required
+  app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -41,8 +42,8 @@ required app view shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 26 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-503`, `600-603`, and `900`), grouping tags, and the maintained
+- The 27 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-503`, `600-604`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -141,6 +142,19 @@ required app view shows a specific gap.
 - The benchmark contains no self, future-outcome, locked-test, incomplete-list, or duplicate-tract
   violation. All required region, cohort, housing-mix, community-size, and ACS-uncertainty groups
   are represented. Job 900 reapplied descriptions and comments to every new table column.
+- Job `604 Evaluation | Exact Tree Retrieval` replaced the unsuccessful LSH direction with an exact
+  KD-tree under the same frozen representation. It published 580 benchmark matches, 58 query-level
+  checks, two horizon summaries, and six scale rows under MLflow run
+  `fae78721154347039d41864bad2e871a`.
+- Every benchmark community, tract-year state, and rank matches job 603's exhaustive reference.
+  Outcome drift is zero within a `1e-12` numerical tolerance, and no self, future-outcome, locked,
+  or incomplete result passed publication.
+- The index directly queried all 46,719 eligible current tracts in about 193 seconds at one year
+  and 133 seconds at three years. It computed about 9.5% to 9.8% of one exhaustive pair pass while
+  using roughly 57.8 MB and 37.9 MB for the two horizon trees.
+- Exact KD-tree retrieval is now selected for batch generation of the application analogue tables.
+  The application should read compact published matches and explanations; it should not rebuild
+  the index or scan the wide modeling panel during a user request.
 
 ## Important interpretation limits
 
@@ -242,7 +256,7 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: LSH benchmark complete, serving next
+### 2. Similarity and historical analogues: exact index selected, serving products next
 
 - Implement weighted standardized distance and ten distinct physical communities as the frozen
   production retrieval policy. Keep PCA and tract-year matches available for development audit.
@@ -257,10 +271,12 @@ dimension of lived experience are already represented.
 - Preserve job 603 as evidence that broad random-projection LSH buckets do not improve this
   workload. Do not approve or further tune the tested configurations without a new hypothesis
   that materially reduces the candidate-pair share.
-- On the next similarity-serving branch, compare bounded exact precomputation with one genuinely
-  selective index design. Use the same 29-query benchmark and require community recall,
-  tract-year-state recall, rank agreement, outcome drift, runtime, storage size, and explicit
-  failure behavior before approving either path.
+- Preserve job 604 as the approved retrieval implementation. It must continue to reproduce the
+  job-603 reference before any representation or candidate-pool change is promoted.
+- On the next similarity-serving branch, use the exact KD-tree to publish versioned national match
+  and query-summary tables for the 46,719 eligible current tracts. Reconcile ten distinct matches
+  per tract and horizon, then record refresh time, row count, storage, release lineage, and explicit
+  unavailable-result behavior.
 - Quantify and expose current retrieval eligibility. Historical analogues are currently available
   for 46,719 model-ready 2025 tracts, not all 84,396 current ACS profiles.
 - Decide whether unsupported tracts should show an explained unavailable state or receive a
@@ -268,6 +284,9 @@ dimension of lived experience are already represented.
   trajectory family and call it the same representation.
 - Generate explanations containing shared strengths, important differences, candidate year and
   location, later outcome, coverage warnings, and the descriptive outcome range.
+- Keep the first explanation contract deterministic and data-backed. Store the strongest shared
+  feature-family similarities and largest differences in serving rows; do not require an LLM to
+  calculate or validate them.
 - Build a reviewed similarity visual package rather than relying on the early raw-versus-PCA
   diagnostic alone. The minimum final set should include:
   - a plain-language workflow diagram showing feature families, training-only preprocessing,

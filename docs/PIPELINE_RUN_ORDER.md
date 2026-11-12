@@ -194,6 +194,11 @@ expands its request until the top ten distinct physical tracts and any boundary 
 The workflow fails on any fidelity loss, same-tract result, future outcome, locked-test access, or
 incomplete top ten. Job 604 is evaluation evidence, not yet the national application serving
 table; rerun it after job 603 or when its tree configuration or retrieval implementation changes.
+The November 12 run reproduced all 58 query-horizon references exactly and directly queried all
+46,719 eligible current tracts in about 193 seconds at one year and 133 seconds at three years.
+It used about 9.5% to 9.8% of an exhaustive distance pass, so the exact tree is the approved engine
+for the next batch serving-table build. Job 604 still remains evaluation evidence rather than an
+application refresh until that serving job is implemented.
 
 ### Find the MLflow experiments
 

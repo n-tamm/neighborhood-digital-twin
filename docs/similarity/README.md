@@ -256,9 +256,11 @@ similarity figure or the main final-report visual. New figures must be versioned
 linked to their source run IDs, documented one per file, and visually reviewed for legibility and
 interpretation before report use.
 
-The historical development method is implemented and evaluated, but the application-serving
-lookup is not yet complete. The current workflow validates the method using past query years; the
-application will eventually apply the approved representation to a neighborhood selected today.
+The historical method, current-year lookup contract, and exact indexed retrieval are implemented
+and evaluated. The KD-tree reproduces the exhaustive reference and can retrieve matches for all
+46,719 eligible current tracts in a few minutes per horizon. What remains is the serving-product
+stage: publish those national matches, deterministic explanations, trajectories, and availability
+warnings in compact versioned tables that the application can query directly.
 
 ## Detailed documentation
 
