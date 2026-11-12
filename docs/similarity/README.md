@@ -289,3 +289,6 @@ application will eventually apply the approved representation to a neighborhood 
     and path toward application serving.
 12. [Scalable retrieval benchmark](scalable_retrieval.md) explains the exact reference, LSH
     shortlist configurations, fidelity measures, coverage design, and serving-selection boundary.
+13. [Exact indexed retrieval](exact_tree_retrieval.md) explains the KD-tree design, exact
+    distinct-community stopping rule, scale populations, decision measures, and publication
+    boundary.

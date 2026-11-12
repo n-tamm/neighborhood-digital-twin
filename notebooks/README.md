@@ -49,5 +49,13 @@ baseline matches. It then creates deterministic review cases and measures top-te
 small family-weight changes, family ablations, alternate PCA dimensions, and a distinct-tract
 candidate policy. Exact and boundary-certified results remain visibly separate from bounded
 shortlist stress tests.
+`05_modeling/06_run_analogue_selection.py` expands validation coverage and compares the weighted
+and PCA representations on identical queries before freezing the application representation.
+`05_modeling/07_run_current_analogue_retrieval.py` applies the frozen weighted representation to
+selected neighborhoods in the latest model-ready year. `05_modeling/08_run_scalable_analogue_benchmark.py`
+compares random-projection LSH shortlists with an exhaustive reference, while
+`05_modeling/09_run_analogue_tree_benchmark.py` tests an exact KD-tree against that same reference
+and directly measures indexed work at full current-query scale. Jobs 603 and 604 are retrieval
+method evaluations; they do not themselves publish the final national application serving table.
 
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.

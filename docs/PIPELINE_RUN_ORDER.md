@@ -16,7 +16,7 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-503 Modeling`, `600-603 Evaluation`, and `900 Metadata`. Jobs increment
+`400-401 Analysis`, `500-503 Modeling`, `600-604 Evaluation`, and `900 Metadata`. Jobs increment
 by one inside each three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
@@ -54,6 +54,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
 | 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
 | 603 | Evaluation | `scalable_analogue_retrieval` | After the weighted representation is frozen and job 503 establishes an exact current-query reference | Compares deterministic LSH shortlists with exhaustive exact top-ten matches on a stratified current-query benchmark |
+| 604 | Evaluation | `analogue_tree_retrieval` | After job 603 and from the same model-readiness build | Requires an exact KD-tree to reproduce the exhaustive benchmark, then measures indexed work on 1,000 and all eligible current queries |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -82,6 +83,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
 302 Model readiness ----------------------------> 503 Current analogue retrieval
 503 Exact current retrieval contract -----------> 603 Scalable retrieval benchmark
+603 Frozen exhaustive reference ----------------> 604 Exact tree retrieval benchmark
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -142,6 +144,7 @@ databricks bundle run model_evaluation_figures --profile neighborhood-twin -t te
 databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_selection --profile neighborhood-twin -t team
 databricks bundle run scalable_analogue_retrieval --profile neighborhood-twin -t team
+databricks bundle run analogue_tree_retrieval --profile neighborhood-twin -t team
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
@@ -183,6 +186,14 @@ access locked temporal-test candidate outcomes. The November 11 run rejected all
 configurations because they retained 88.7% to 99.9% of possible pairs and were slower than the
 exact reference. Rerun 603 when the representation, candidate pool, benchmark contract, or a new
 candidate-generation method changes; do not treat it as an application-serving refresh.
+Job 604 tests whether an exact scikit-learn KD-tree can retain that reference's identities, years,
+ranks, distances, and outcome summaries while avoiding the exhaustive Spark cross join. It first
+checks the same 29 job-603 queries, then measures direct indexed retrieval for a deterministic
+1,000-query sample and every eligible current query. The index operates on tract-year states and
+expands its request until the top ten distinct physical tracts and any boundary tie are resolved.
+The workflow fails on any fidelity loss, same-tract result, future outcome, locked-test access, or
+incomplete top ten. Job 604 is evaluation evidence, not yet the national application serving
+table; rerun it after job 603 or when its tree configuration or retrieval implementation changes.
 
 ### Find the MLflow experiments
 
@@ -197,6 +208,7 @@ experiments are:
 - `/Shared/neighborhood-digital-twin/analogue-selection` (created by the first job-602 run).
 - `/Shared/neighborhood-digital-twin/current-analogue-retrieval` (created by the first job-503 run).
 - `/Shared/neighborhood-digital-twin/scalable-analogue-retrieval` (created by the first job-603 run).
+- `/Shared/neighborhood-digital-twin/analogue-tree-retrieval` (created by the first job-604 run).
 
 They can also be found from **Machine Learning** or **Experiments** by searching for
 `forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
@@ -223,7 +235,8 @@ IDs used by each figure build, so figures should not be associated with experime
     run.
 12. Run 602 after 601 when the expanded representation-selection evidence should be refreshed.
 13. Run 603 when scalable-retrieval evidence should reflect the refreshed analogue inputs.
-14. Finish with 900.
+14. Run 604 after 603 when exact indexed-retrieval evidence should be refreshed.
+15. Finish with 900.
 
 ### New FHFA release
 
@@ -236,7 +249,8 @@ IDs used by each figure build, so figures should not be associated with experime
 7. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
 8. Refresh 602 after 601 when representation-selection evidence should reflect the new inputs.
 9. Refresh 603 when scalable-retrieval evidence should reflect the new inputs.
-10. Finish with 900.
+10. Refresh 604 after 603 when exact indexed-retrieval evidence should reflect the new inputs.
+11. Finish with 900.
 
 ### Geography-source change
 
@@ -262,6 +276,7 @@ equivalents are:
 
 - failed silver rebuild: run 200;
 - failed current-gold rebuild: run 300;
+- failed exact tree retrieval: correct and rerun 604 without rerunning unchanged job 603;
 - failed metadata application: run 900;
 - historical products not yet built: continue with 301, then 302.
 
@@ -296,6 +311,10 @@ Do not continue merely because a job is green. Before advancing:
   query and LSH configuration even when no approximate match is returned, keep fidelity metrics
   within valid ranges, cover every required query category, and preserve all timing and locked-test
   safeguards before an approximate method can be considered for serving.
+  Exact tree retrieval must reproduce every job-603 benchmark community and tract-year state in
+  the same rank with zero outcome drift, complete ten distinct non-self matches for every query,
+  preserve time and locked-test safeguards, and directly measure the 29-query, 1,000-query, and
+  full-current populations before it can be selected for serving.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule

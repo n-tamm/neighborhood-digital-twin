@@ -13,7 +13,10 @@ from neighborhood_twin.analogue_serving_retrieval import (
     ANALOGUE_TREE_SCHEMA_VERSION,
     KDTreeConfiguration,
     build_exact_kd_tree,
+    format_tract_geoid,
     kd_tree_array_bytes,
+    kd_tree_match_key_records,
+    kd_tree_scale_metrics,
     query_exact_kd_tree,
     validate_tree_configuration,
     validate_tree_inputs,
@@ -113,6 +116,46 @@ def test_kd_tree_keeps_the_closest_state_for_each_candidate_tract() -> None:
     assert candidate_origin_years[selected].tolist() == [2017, 2019, 2019]
 
 
+def test_kd_tree_matches_exhaustive_distinct_ranking_for_multiple_queries() -> None:
+    """Compare the indexed result with the declared exhaustive ordering."""
+
+    generator = np.random.default_rng(699)
+    candidate_vectors = generator.normal(size=(240, 4)).astype(np.float64)
+    candidate_geoids = np.repeat(np.arange(100, 180), 3).astype(np.int64)
+    candidate_origin_years = np.tile(np.asarray([2017, 2019, 2021]), 80)
+    query_vectors = generator.normal(size=(8, 4)).astype(np.float64)
+    query_geoids = np.asarray([100, 101, 500, 501, 502, 503, 504, 505], dtype=np.int64)
+    tree, _ = build_exact_kd_tree(candidate_vectors, leaf_size=8)
+
+    result = query_exact_kd_tree(
+        tree,
+        candidate_geoids,
+        candidate_origin_years,
+        query_vectors,
+        query_geoids,
+        top_k=10,
+        configuration=KDTreeConfiguration(leaf_size=8, initial_neighbors=12),
+    )
+
+    for query_position, query_vector in enumerate(query_vectors):
+        distances = np.linalg.norm(candidate_vectors - query_vector, axis=1)
+        best_by_tract: dict[int, tuple[float, int, int, int]] = {}
+        for candidate_position, distance in enumerate(distances):
+            geoid = int(candidate_geoids[candidate_position])
+            if geoid == int(query_geoids[query_position]):
+                continue
+            candidate = (
+                float(distance),
+                -int(candidate_origin_years[candidate_position]),
+                geoid,
+                candidate_position,
+            )
+            if geoid not in best_by_tract or candidate < best_by_tract[geoid]:
+                best_by_tract[geoid] = candidate
+        expected_positions = [item[3] for item in sorted(best_by_tract.values())[:10]]
+        assert result.neighbors.candidate_indices[query_position].tolist() == expected_positions
+
+
 def test_tree_input_validation_rejects_misaligned_or_nonfinite_arrays() -> None:
     (
         candidate_vectors,
@@ -149,3 +192,45 @@ def test_tree_input_validation_rejects_misaligned_or_nonfinite_arrays() -> None:
             query_geoids,
             top_k=3,
         )
+
+
+def test_tree_records_and_scale_metrics_preserve_lineage_keys() -> None:
+    (
+        candidate_vectors,
+        candidate_geoids,
+        candidate_origin_years,
+        query_vectors,
+        query_geoids,
+    ) = _example_arrays()
+    tree, _ = build_exact_kd_tree(candidate_vectors, leaf_size=2)
+    result = query_exact_kd_tree(
+        tree,
+        candidate_geoids,
+        candidate_origin_years,
+        query_vectors,
+        query_geoids,
+        top_k=3,
+        configuration=KDTreeConfiguration(leaf_size=2, initial_neighbors=3),
+    )
+
+    records = kd_tree_match_key_records(
+        result,
+        query_geoids,
+        candidate_geoids,
+        candidate_origin_years,
+        query_origin_year=2025,
+        horizon_years=1,
+    )
+    metrics = kd_tree_scale_metrics(
+        result,
+        horizon_years=1,
+        sample_name="unit_sample",
+        candidate_state_count=len(candidate_geoids),
+    )
+
+    assert format_tract_geoid(1) == "00000000001"
+    assert len(records) == 3
+    assert records[0]["query_origin_year"] == 2025
+    assert records[0]["candidate_geoid_2020"] == "00000000002"
+    assert metrics["query_count"] == 1
+    assert metrics["distance_computation_ratio"] > 0

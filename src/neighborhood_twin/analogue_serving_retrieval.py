@@ -62,6 +62,14 @@ class KDTreeQueryResult:
     query_elapsed_seconds: float
 
 
+def format_tract_geoid(value: int) -> str:
+    """Format a numeric U.S. census tract identifier as an 11-character GEOID."""
+
+    if value < 0 or value > 99_999_999_999:
+        raise ValueError("tract GEOID integers must fit within eleven decimal digits")
+    return f"{value:011d}"
+
+
 def validate_tree_configuration(configuration: KDTreeConfiguration, *, top_k: int) -> None:
     """Reject settings that cannot produce a stable distinct-community top-k."""
 
@@ -274,3 +282,94 @@ def query_exact_kd_tree(
         distance_computation_count=int(tree.get_n_calls()),
         query_elapsed_seconds=elapsed,
     )
+
+
+def kd_tree_match_key_records(
+    result: KDTreeQueryResult,
+    query_geoids: IntVector,
+    candidate_geoids: IntVector,
+    candidate_origin_years: IntVector,
+    *,
+    query_origin_year: int,
+    horizon_years: int,
+) -> list[dict[str, int | float | str]]:
+    """Convert ranked array positions into stable Spark-ready query and candidate keys."""
+
+    query_count, top_k = result.neighbors.candidate_indices.shape
+    if len(query_geoids) != query_count:
+        raise ValueError("query_geoids must align with the neighbor result")
+    records: list[dict[str, int | float | str]] = []
+    for query_position in range(query_count):
+        for rank_position in range(top_k):
+            candidate_position = int(
+                result.neighbors.candidate_indices[query_position, rank_position]
+            )
+            records.append(
+                {
+                    "query_geoid_2020": format_tract_geoid(
+                        int(query_geoids[query_position])
+                    ),
+                    "query_origin_year": int(query_origin_year),
+                    "horizon_years": int(horizon_years),
+                    "candidate_geoid_2020": format_tract_geoid(
+                        int(candidate_geoids[candidate_position])
+                    ),
+                    "candidate_origin_year": int(
+                        candidate_origin_years[candidate_position]
+                    ),
+                    "similarity_distance": float(
+                        result.neighbors.distances[query_position, rank_position]
+                    ),
+                    "match_rank": rank_position + 1,
+                    "retrieved_state_count": int(
+                        result.neighbors.retrieved_state_counts[query_position]
+                    ),
+                    "tree_expansion_count": int(
+                        result.neighbors.expansion_counts[query_position]
+                    ),
+                }
+            )
+    return records
+
+
+def kd_tree_scale_metrics(
+    result: KDTreeQueryResult,
+    *,
+    horizon_years: int,
+    sample_name: str,
+    candidate_state_count: int,
+) -> dict[str, int | float | str]:
+    """Summarize measured indexed work for a declared current-query sample."""
+
+    query_count = result.neighbors.candidate_indices.shape[0]
+    if not sample_name.strip():
+        raise ValueError("sample_name must not be blank")
+    if candidate_state_count <= 0 or query_count <= 0:
+        raise ValueError("candidate and query counts must be positive")
+    possible_pair_count = candidate_state_count * query_count
+    seconds = result.query_elapsed_seconds
+    return {
+        "horizon_years": int(horizon_years),
+        "sample_name": sample_name,
+        "query_count": query_count,
+        "candidate_state_count": int(candidate_state_count),
+        "possible_pair_count": int(possible_pair_count),
+        "distance_computation_count": int(result.distance_computation_count),
+        "distance_computation_ratio": (
+            result.distance_computation_count / possible_pair_count
+        ),
+        "query_elapsed_seconds": float(seconds),
+        "queries_per_second": query_count / seconds if seconds > 0 else 0.0,
+        "mean_retrieved_state_count": float(
+            np.mean(result.neighbors.retrieved_state_counts)
+        ),
+        "maximum_retrieved_state_count": int(
+            np.max(result.neighbors.retrieved_state_counts)
+        ),
+        "expanded_query_share": float(
+            np.mean(result.neighbors.expansion_counts > 0)
+        ),
+        "maximum_tree_expansion_count": int(
+            np.max(result.neighbors.expansion_counts)
+        ),
+    }

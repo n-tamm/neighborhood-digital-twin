@@ -170,6 +170,9 @@ variables:
   scalable_analogue_mlflow_experiment:
     description: Shared MLflow experiment for scalable analogue retrieval benchmarking
     default: /Shared/neighborhood-digital-twin/scalable-analogue-retrieval
+  analogue_tree_mlflow_experiment:
+    description: Shared MLflow experiment for exact indexed analogue retrieval benchmarking
+    default: /Shared/neighborhood-digital-twin/analogue-tree-retrieval
 
 resources:
   jobs:
@@ -909,6 +912,45 @@ resources:
               lsh_bucket_lengths: "0.75,1.5,3.0"
               lsh_num_hash_tables: "6,10,14"
               mlflow_experiment: ${var.scalable_analogue_mlflow_experiment}
+    analogue_tree_retrieval:
+      name: Neighborhood Digital Twin | 604 Evaluation | Exact Tree Retrieval
+      description: Benchmarks exact KD-tree retrieval against job 603 and at current-query scale.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: evaluation
+        run_order: "604"
+        lifecycle: retrieval_benchmark
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: run_analogue_tree_retrieval
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/09_run_analogue_tree_benchmark.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              modeling_panel_table: gold_modeling_panel
+              exact_reference_table: scalable_analogue_match
+              match_table: analogue_tree_benchmark_match
+              query_evaluation_table: analogue_tree_query_evaluation
+              summary_table: analogue_tree_summary
+              scale_table: analogue_tree_scale_benchmark
+              horizons: "1,3"
+              top_k: "10"
+              as_of_year: ""
+              leaf_size: "40"
+              initial_neighbors: "64"
+              expansion_factor: "2"
+              scale_sample_size: "1000"
+              mlflow_experiment: ${var.analogue_tree_mlflow_experiment}
+          environment_key: analogue_tree
+      environments:
+        - environment_key: analogue_tree
+          spec:
+            environment_version: "2"
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.
