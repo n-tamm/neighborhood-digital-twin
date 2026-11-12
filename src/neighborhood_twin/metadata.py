@@ -314,6 +314,26 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "current neighborhood's historical matches.",
         "One row per current query tract and horizon.",
     ),
+    "scalable_analogue_match": TableMetadata(
+        "Exact-reference and random-projection LSH-shortlisted historical analogue matches using "
+        "the same weighted representation and exact final distance.",
+        "One row per benchmark query, horizon, retrieval configuration, and match rank.",
+    ),
+    "scalable_analogue_query_evaluation": TableMetadata(
+        "Query-level retrieval fidelity, completeness, rank movement, and historical outcome "
+        "drift for each LSH configuration versus exhaustive exact matching.",
+        "One row per benchmark query, horizon, and approximate retrieval configuration.",
+    ),
+    "scalable_analogue_summary": TableMetadata(
+        "Configuration-level recall, completeness, rank, outcome-drift, shortlist-size, and "
+        "runtime evidence for scalable analogue retrieval selection.",
+        "One row per horizon and exact or approximate retrieval configuration.",
+    ),
+    "scalable_analogue_coverage": TableMetadata(
+        "Selected-versus-eligible current-query coverage across region, cohort, housing mix, "
+        "community size, and ACS uncertainty.",
+        "One row per benchmark coverage dimension and value.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -331,6 +351,7 @@ MODEL_TABLES = {
     "historical_analogue_selection_prediction",
     "current_analogue_match",
     "current_analogue_summary",
+    "scalable_analogue_match",
 }
 
 EVALUATION_TABLES = {
@@ -343,6 +364,9 @@ EVALUATION_TABLES = {
     "historical_analogue_selection_summary",
     "historical_analogue_selection_scorecard",
     "historical_analogue_selection_coverage",
+    "scalable_analogue_query_evaluation",
+    "scalable_analogue_summary",
+    "scalable_analogue_coverage",
     "model_evaluation_figure_manifest",
 }
 
@@ -792,6 +816,106 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "current_analogue_as_of_year": (
         "As-of year applied consistently to every current query in the retrieval run."
+    ),
+    "retrieval_config_name": (
+        "Stable exact-reference or LSH configuration name used to retrieve this result."
+    ),
+    "retrieval_method": (
+        "Exhaustive exact search or LSH candidate shortlisting followed by exact reranking."
+    ),
+    "lsh_bucket_length": (
+        "Random-projection hash bucket width; null for exhaustive exact retrieval."
+    ),
+    "lsh_num_hash_tables": (
+        "Number of deterministic random-projection hash tables; null for exhaustive retrieval."
+    ),
+    "approximate_match_count": (
+        "Matches returned for the query and approximate configuration, up to the requested top-k."
+    ),
+    "approximate_candidate_tract_count": (
+        "Distinct physical candidate tracts returned by the approximate configuration."
+    ),
+    "exact_top_k_overlap_count": (
+        "Approximate candidates also present in the exhaustive exact top-k result."
+    ),
+    "exact_candidate_state_overlap_count": (
+        "Approximate matches retaining both the exact candidate tract and historical origin year."
+    ),
+    "complete_top_k": (
+        "Whether the approximate configuration returned the requested number of distinct matches."
+    ),
+    "exact_top_k_recall": (
+        "Share of exhaustive exact top-k candidates recovered by the approximate result."
+    ),
+    "exact_candidate_state_recall": (
+        "Share of exact top-k candidate tract-and-origin-year states recovered by the "
+        "approximate result."
+    ),
+    "exact_top_three_retention_count": (
+        "Exhaustive exact top-three candidates retained by the approximate result."
+    ),
+    "exact_top_three_retention_share": (
+        "Share of the exhaustive exact top three retained by the approximate result."
+    ),
+    "approximate_analogue_median_log_change": (
+        "Median historical outcome produced by the approximate match list."
+    ),
+    "approximate_analogue_inverse_distance_log_change": (
+        "Inverse-distance historical outcome summary produced by the approximate match list."
+    ),
+    "exact_analogue_median_log_change": (
+        "Median historical outcome produced by the exhaustive exact match list."
+    ),
+    "exact_analogue_inverse_distance_log_change": (
+        "Inverse-distance historical outcome summary produced by the exhaustive exact match list."
+    ),
+    "median_outcome_drift_log_change": (
+        "Approximate minus exact median historical outcome on the cumulative log-change scale."
+    ),
+    "inverse_distance_outcome_drift_log_change": (
+        "Approximate minus exact inverse-distance outcome on the cumulative log-change scale."
+    ),
+    "complete_top_k_share": (
+        "Share of benchmark queries receiving the requested number of distinct matches."
+    ),
+    "mean_exact_top_k_recall": (
+        "Mean share of exhaustive exact top-k candidates recovered across benchmark queries."
+    ),
+    "p10_exact_top_k_recall": (
+        "Tenth percentile query-level exact top-k recall for the configuration."
+    ),
+    "mean_exact_candidate_state_recall": (
+        "Mean share of exact candidate tract-and-origin-year states retained across queries."
+    ),
+    "minimum_exact_candidate_state_recall": (
+        "Lowest query-level exact candidate tract-and-origin-year retention for the configuration."
+    ),
+    "mean_top_k_jaccard_similarity": (
+        "Mean intersection-over-union between approximate and exact top-k candidate sets."
+    ),
+    "mean_exact_top_three_retention_share": (
+        "Mean share of exact top-three candidates retained by the approximate result."
+    ),
+    "mean_absolute_median_outcome_drift_log_change": (
+        "Mean absolute approximate-versus-exact drift in the median historical outcome."
+    ),
+    "mean_absolute_inverse_distance_outcome_drift_log_change": (
+        "Mean absolute approximate-versus-exact drift in the inverse-distance outcome summary."
+    ),
+    "shortlist_pair_count": (
+        "Query-to-candidate pairs generated by the LSH shortlist before distinct-tract reranking."
+    ),
+    "retrieval_elapsed_seconds": (
+        "Measured benchmark seconds for candidate generation and final retrieval materialization."
+    ),
+    "benchmark_queries_per_group": (
+        "Maximum deterministic queries selected per Census-region and modeling-cohort group."
+    ),
+    "scalable_analogue_run_id": (
+        "MLflow run ID of the scalable analogue retrieval benchmark."
+    ),
+    "scalable_analogue_as_of_year": (
+        "Current model-ready year used for every query in the scalable retrieval benchmark."
     ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."

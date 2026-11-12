@@ -130,7 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-All five implemented similarity stages have completed validated live runs.
+All six implemented similarity stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -196,6 +196,22 @@ The broader ACS similarity cohort contains 83,359 tracts. Unsupported tracts the
 explained unavailable state or a separately evaluated ACS-only method; they must not be passed
 through an invisible change to the selected representation.
 
+### Job 603: Scalable retrieval benchmark
+
+- Compares three deterministic random-projection LSH shortlists with exhaustive exact retrieval
+  for 29 stratified current queries at one- and three-year horizons.
+- Adds separate physical-community and tract-year-state recall so a different historical year
+  cannot be hidden behind the same tract identifier.
+- Covers every required region, cohort, housing-composition, community-size, and ACS-uncertainty
+  category without using later outcomes to select queries.
+- Finds perfect community recall, but the tested shortlists retain 88.7% to 99.9% of all possible
+  pairs and are roughly three to five times slower than exact retrieval within the cached run.
+
+The tested LSH design is rejected for application serving. This is useful engineering evidence:
+high recall came from doing nearly all of the original work. The next retrieval design should use
+bounded exact precomputation or a materially more selective index and must retain the same fidelity
+and timing checks.
+
 The initial historical evaluation used 16 queries per horizon. It found that:
 
 - approximately 95% to 97.5% of matches crossed state lines, supporting the national comparison
@@ -212,6 +228,33 @@ is historical context and a secondary comparison.
 The five-year analogue evaluation is intentionally unavailable. There is not enough earlier
 model-ready history to produce leakage-safe five-year candidates for the existing validation
 period.
+
+## Visual evidence status and plan
+
+The project currently has one generated similarity figure:
+`06_similarity_representation_diagnostics.png`. It was useful for the initial current-state
+baseline because it showed distance spread, geographic reach, and raw-versus-PCA overlap. It is
+not enough for the final report or application story. It predates the historical analogue audit,
+expanded evaluation, selected weighted representation, and current-neighborhood retrieval.
+
+The final similarity visual package should cover three different needs:
+
+1. **Explain the method:** a compact workflow diagram should show the five feature families,
+   training-only preprocessing, equal family weighting, time-safe candidate filtering, distinct
+   top-ten retrieval, and later-outcome summary.
+2. **Evaluate the method:** figures should show stability under reasonable weight changes,
+   weighted-versus-PCA selection evidence, analogue error beside forecast comparators, and current
+   eligibility coverage. These visuals must use the governed evaluation tables rather than a few
+   hand-picked examples.
+3. **Present the result:** a polished case study should combine the selected tract, a map of its
+   historical matches, the strongest shared characteristics and largest differences, and aligned
+   later trajectories. It should make the analogue year and descriptive—not causal or
+   calibrated—interpretation impossible to miss.
+
+The first raw-versus-PCA figure can remain as development evidence, but it should not be the only
+similarity figure or the main final-report visual. New figures must be versioned in Databricks,
+linked to their source run IDs, documented one per file, and visually reviewed for legibility and
+interpretation before report use.
 
 The historical development method is implemented and evaluated, but the application-serving
 lookup is not yet complete. The current workflow validates the method using past query years; the
@@ -244,3 +287,5 @@ application will eventually apply the approved representation to a neighborhood 
 11. [Current-neighborhood historical analogue retrieval](current_neighborhood_retrieval.md)
     explains the latest-year lookup, test-set safeguard, published outputs, coverage boundary,
     and path toward application serving.
+12. [Scalable retrieval benchmark](scalable_retrieval.md) explains the exact reference, LSH
+    shortlist configurations, fidelity measures, coverage design, and serving-selection boundary.

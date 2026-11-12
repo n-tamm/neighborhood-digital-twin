@@ -36,6 +36,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Expanded analogue selection and coverage safeguards, November 8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Current analogue retrieval and scalable serving benchmark, November 9-11, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -287,6 +288,17 @@ forecast remained more accurate. The result therefore froze weighted, distinct-c
 retrieval for application development without promoting analogue outcomes to the primary
 forecast. This is another case where post-run data review changed the generated implementation
 rather than merely confirming that it executed.
+
+The scalable analogue benchmark was evaluated with 101 local unit tests, Ruff, mypy, bundle
+validation, two successful live job-603 runs, the metadata job, and direct SQL reconciliation of
+all four outputs. The first live run recovered the same ten physical communities for every query,
+but outcome drift on one narrow-LSH result showed that community IDs alone had hidden a different
+historical origin year. The evaluation contract was revised to measure tract-year-state recall,
+the schema was versioned, and the workflow was rerun. The final checks found complete distinct
+top tens and no self, future-outcome, or locked-test matches. They also showed that the LSH
+shortlists retained 88.7% to 99.9% of the candidate cross-product and ran roughly three to five
+times slower than exact retrieval within the cached comparison. The tested LSH approach was
+therefore rejected rather than adopted because it had high recall.
 
 ## Maintenance requirements
 
