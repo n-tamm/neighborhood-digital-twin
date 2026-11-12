@@ -13,6 +13,8 @@ Current and planned module boundaries:
 - `features`: point-in-time feature and target construction;
 - `models`: baselines, candidate forecasters, calibration, and model persistence;
 - `representations`: PCA or other representations, analogue search, and optional clustering;
+- `analogue_serving_retrieval`: exact indexed current-neighborhood analogue retrieval and
+  candidate-pruning diagnostics;
 - `simulation`: scenario definitions, support checks, and distribution generation;
 - `evaluation`: backtesting, metrics, slices, ablations, and visual diagnostics;
 - `app_data`: serving-bundle construction and contract validation;

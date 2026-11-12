@@ -300,6 +300,24 @@ shortlists retained 88.7% to 99.9% of the candidate cross-product and ran roughl
 times slower than exact retrieval within the cached comparison. The tested LSH approach was
 therefore rejected rather than adopted because it had high recall.
 
+The exact indexed-retrieval workflow was evaluated with Ruff, mypy, all 107 local unit tests,
+bundle validation, repeated live serverless runs, the metadata workflow, and direct SQL review of
+all four published tables. A randomized known-answer test compares batched KD-tree neighbors with
+an exhaustive distinct-tract ordering. The first live attempt revealed that an explicitly pinned
+older serverless environment was incompatible with the Spark Connect preprocessing used by the
+existing models, so the job was aligned with the project's standard serverless runtime. The next
+full-scale attempt reached its final gate but found that scikit-learn's internal distance counter
+overflowed on the national query batch. Retrieval was changed to bounded batches whose counters
+are summed in Python, and the complete test suite was rerun before deployment.
+
+The validated job reproduced every community, tract-year state, and rank in the 58-row exhaustive
+reference evaluation. It then directly queried all 46,719 current eligible tracts per horizon,
+using about 9.5% to 9.8% of one exhaustive distance pass and completing in about 193 and 133
+seconds. SQL reconciliation confirmed the expected 580 match rows, 58 query evaluations, two
+summaries, six scale rows, one run ID per table, and comments on every output column. These results
+changed the implementation decision: the exact KD-tree is approved for batch serving-table
+generation, while the earlier LSH design remains rejected.
+
 ## Maintenance requirements
 
 - Update the model table when a materially contributing model or configuration changes.

@@ -334,6 +334,26 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "community size, and ACS uncertainty.",
         "One row per benchmark coverage dimension and value.",
     ),
+    "analogue_tree_benchmark_match": TableMetadata(
+        "Exact KD-tree historical analogue matches for job-603 benchmark queries under the "
+        "frozen weighted representation and distinct-community policy.",
+        "One row per benchmark query, horizon, and historical match rank.",
+    ),
+    "analogue_tree_query_evaluation": TableMetadata(
+        "Query-level exact-reference fidelity and historical-outcome reconciliation for indexed "
+        "KD-tree retrieval.",
+        "One row per benchmark query and horizon.",
+    ),
+    "analogue_tree_summary": TableMetadata(
+        "Horizon-level KD-tree fidelity, construction, pruning, runtime, expansion, and storage "
+        "evidence used for the production retrieval decision.",
+        "One row per outcome horizon and indexed retrieval configuration.",
+    ),
+    "analogue_tree_scale_benchmark": TableMetadata(
+        "Measured exact KD-tree query work for the job-603 sample, a deterministic intermediate "
+        "sample, and every eligible current query.",
+        "One row per horizon and declared current-query population.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -352,6 +372,7 @@ MODEL_TABLES = {
     "current_analogue_match",
     "current_analogue_summary",
     "scalable_analogue_match",
+    "analogue_tree_benchmark_match",
 }
 
 EVALUATION_TABLES = {
@@ -367,6 +388,9 @@ EVALUATION_TABLES = {
     "scalable_analogue_query_evaluation",
     "scalable_analogue_summary",
     "scalable_analogue_coverage",
+    "analogue_tree_query_evaluation",
+    "analogue_tree_summary",
+    "analogue_tree_scale_benchmark",
     "model_evaluation_figure_manifest",
 }
 
@@ -821,7 +845,7 @@ COMMON_COLUMN_COMMENTS = {
         "Stable exact-reference or LSH configuration name used to retrieve this result."
     ),
     "retrieval_method": (
-        "Exhaustive exact search or LSH candidate shortlisting followed by exact reranking."
+        "Declared exhaustive, shortlisted, or exact indexed method used for retrieval."
     ),
     "lsh_bucket_length": (
         "Random-projection hash bucket width; null for exhaustive exact retrieval."
@@ -916,6 +940,67 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "scalable_analogue_as_of_year": (
         "Current model-ready year used for every query in the scalable retrieval benchmark."
+    ),
+    "retrieved_state_count": (
+        "Candidate tract-year states requested from the index before distinct-tract reranking."
+    ),
+    "tree_expansion_count": (
+        "Number of times the requested neighbor count doubled to resolve distinct tracts or ties."
+    ),
+    "tree_leaf_size": "Maximum leaf-size setting used to construct the exact KD-tree.",
+    "tree_initial_neighbors": (
+        "Candidate states initially requested before any distinct-tract or tie expansion."
+    ),
+    "tree_expansion_factor": (
+        "Multiplier applied when the indexed candidate request requires expansion."
+    ),
+    "tree_query_batch_size": (
+        "Current queries evaluated before resetting and accumulating the tree distance counter."
+    ),
+    "tree_build_elapsed_seconds": "Measured seconds required to construct the exact KD-tree.",
+    "tree_array_bytes": (
+        "Bytes occupied by the NumPy arrays returned from the fitted KD-tree structure."
+    ),
+    "current_eligible_query_count": (
+        "Current model-ready tracts eligible for the historical-analogue representation."
+    ),
+    "candidate_state_count": "Historical tract-year states present in the indexed candidate pool.",
+    "candidate_state_count_from_index": (
+        "Historical tract-year states confirmed in the constructed index."
+    ),
+    "sample_name": "Stable name of the current-query population used for the scale measurement.",
+    "possible_pair_count": (
+        "Query count multiplied by candidate-state count for one exhaustive distance pass."
+    ),
+    "distance_computation_count": (
+        "Distance computations reported by the KD-tree, including repeated work after expansion."
+    ),
+    "distance_computation_ratio": (
+        "Reported KD-tree distance computations divided by one exhaustive query-candidate pass; "
+        "it can exceed one when expansion repeats work."
+    ),
+    "query_elapsed_seconds": (
+        "Measured seconds for indexed querying and distinct-community post-processing."
+    ),
+    "queries_per_second": "Current queries completed per measured indexed-query second.",
+    "mean_retrieved_state_count": (
+        "Mean candidate states requested from the index for each current query."
+    ),
+    "maximum_retrieved_state_count": (
+        "Largest candidate-state request needed by any current query in the population."
+    ),
+    "expanded_query_share": (
+        "Share of current queries that needed more than the initial candidate-state request."
+    ),
+    "maximum_tree_expansion_count": (
+        "Largest number of candidate-request expansions needed by a current query."
+    ),
+    "minimum_exact_top_k_recall": (
+        "Lowest query-level physical-community recall against the exhaustive exact reference."
+    ),
+    "analogue_tree_run_id": "MLflow run ID of the exact indexed analogue retrieval benchmark.",
+    "analogue_tree_as_of_year": (
+        "Current model-ready year used by the exact indexed retrieval benchmark."
     ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."

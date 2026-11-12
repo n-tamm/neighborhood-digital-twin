@@ -256,9 +256,11 @@ similarity figure or the main final-report visual. New figures must be versioned
 linked to their source run IDs, documented one per file, and visually reviewed for legibility and
 interpretation before report use.
 
-The historical development method is implemented and evaluated, but the application-serving
-lookup is not yet complete. The current workflow validates the method using past query years; the
-application will eventually apply the approved representation to a neighborhood selected today.
+The historical method, current-year lookup contract, and exact indexed retrieval are implemented
+and evaluated. The KD-tree reproduces the exhaustive reference and can retrieve matches for all
+46,719 eligible current tracts in a few minutes per horizon. What remains is the serving-product
+stage: publish those national matches, deterministic explanations, trajectories, and availability
+warnings in compact versioned tables that the application can query directly.
 
 ## Detailed documentation
 
@@ -289,3 +291,6 @@ application will eventually apply the approved representation to a neighborhood 
     and path toward application serving.
 12. [Scalable retrieval benchmark](scalable_retrieval.md) explains the exact reference, LSH
     shortlist configurations, fidelity measures, coverage design, and serving-selection boundary.
+13. [Exact indexed retrieval](exact_tree_retrieval.md) explains the KD-tree design, exact
+    distinct-community stopping rule, scale populations, decision measures, and publication
+    boundary.
