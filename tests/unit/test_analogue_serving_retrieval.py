@@ -60,6 +60,8 @@ def test_tree_contract_and_configuration_validation() -> None:
         validate_tree_configuration(KDTreeConfiguration(initial_neighbors=4), top_k=10)
     with pytest.raises(ValueError, match="expansion_factor"):
         validate_tree_configuration(KDTreeConfiguration(expansion_factor=1), top_k=10)
+    with pytest.raises(ValueError, match="query_batch_size"):
+        validate_tree_configuration(KDTreeConfiguration(query_batch_size=0), top_k=10)
 
 
 def test_kd_tree_returns_exact_distinct_nonself_tracts() -> None:
@@ -134,7 +136,11 @@ def test_kd_tree_matches_exhaustive_distinct_ranking_for_multiple_queries() -> N
         query_vectors,
         query_geoids,
         top_k=10,
-        configuration=KDTreeConfiguration(leaf_size=8, initial_neighbors=12),
+        configuration=KDTreeConfiguration(
+            leaf_size=8,
+            initial_neighbors=12,
+            query_batch_size=3,
+        ),
     )
 
     for query_position, query_vector in enumerate(query_vectors):

@@ -115,6 +115,11 @@ dbutils.widgets.text(
     "Candidate-state expansion factor",
 )
 dbutils.widgets.text(
+    "query_batch_size",
+    str(DEFAULT_KD_TREE_CONFIGURATION.query_batch_size),
+    "Current queries evaluated before resetting the distance counter",
+)
+dbutils.widgets.text(
     "scale_sample_size", "1000", "Deterministic intermediate current-query sample"
 )
 dbutils.widgets.text(
@@ -152,6 +157,7 @@ configuration = KDTreeConfiguration(
     leaf_size=int(dbutils.widgets.get("leaf_size")),
     initial_neighbors=int(dbutils.widgets.get("initial_neighbors")),
     expansion_factor=int(dbutils.widgets.get("expansion_factor")),
+    query_batch_size=int(dbutils.widgets.get("query_batch_size")),
 )
 experiment_path = dbutils.widgets.get("mlflow_experiment").strip()
 
@@ -493,6 +499,7 @@ with mlflow.start_run(run_name="exact-kd-tree-analogue-retrieval") as active_run
             "leaf_size": configuration.leaf_size,
             "initial_neighbors": configuration.initial_neighbors,
             "expansion_factor": configuration.expansion_factor,
+            "query_batch_size": configuration.query_batch_size,
             "scale_sample_size": scale_sample_size,
             "scikit_learn_version": sklearn.__version__,
         }
@@ -596,6 +603,7 @@ with mlflow.start_run(run_name="exact-kd-tree-analogue-retrieval") as active_run
                 "tree_leaf_size": int(configuration.leaf_size),
                 "tree_initial_neighbors": int(configuration.initial_neighbors),
                 "tree_expansion_factor": int(configuration.expansion_factor),
+                "tree_query_batch_size": int(configuration.query_batch_size),
                 "current_eligible_query_count": int(len(query_geoids)),
                 "candidate_state_count_from_index": int(len(candidate_geoids)),
             }

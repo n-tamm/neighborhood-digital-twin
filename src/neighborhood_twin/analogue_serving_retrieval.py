@@ -38,6 +38,7 @@ class KDTreeConfiguration:
     initial_neighbors: int = 64
     expansion_factor: int = 2
     tie_tolerance: float = 1e-12
+    query_batch_size: int = 250
 
 
 DEFAULT_KD_TREE_CONFIGURATION = KDTreeConfiguration()
@@ -83,6 +84,8 @@ def validate_tree_configuration(configuration: KDTreeConfiguration, *, top_k: in
         raise ValueError("expansion_factor must be at least two")
     if configuration.tie_tolerance < 0:
         raise ValueError("tie_tolerance must not be negative")
+    if configuration.query_batch_size <= 0:
+        raise ValueError("query_batch_size must be positive")
 
 
 def validate_tree_inputs(
@@ -263,23 +266,52 @@ def query_exact_kd_tree(
     top_k: int,
     configuration: KDTreeConfiguration = DEFAULT_KD_TREE_CONFIGURATION,
 ) -> KDTreeQueryResult:
-    """Measure exact distinct-community KD-tree retrieval and distance-computation work."""
+    """Measure batched exact retrieval without overflowing the tree's distance-call counter."""
 
-    tree.reset_n_calls()
+    validate_tree_configuration(configuration, top_k=top_k)
+    if query_vectors.ndim != 2 or len(query_geoids) != query_vectors.shape[0]:
+        raise ValueError("query identifiers and vectors must align")
+    if len(query_geoids) == 0:
+        raise ValueError("at least one query vector is required")
     started = perf_counter()
-    neighbors = rank_distinct_kd_tree_neighbors(
-        tree,
-        candidate_geoids,
-        candidate_origin_years,
-        query_vectors,
-        query_geoids,
-        top_k=top_k,
-        configuration=configuration,
+    neighbor_batches = []
+    distance_computation_count = 0
+    for start in range(0, len(query_geoids), configuration.query_batch_size):
+        stop = min(start + configuration.query_batch_size, len(query_geoids))
+        tree.reset_n_calls()
+        neighbor_batches.append(
+            rank_distinct_kd_tree_neighbors(
+                tree,
+                candidate_geoids,
+                candidate_origin_years,
+                query_vectors[start:stop],
+                query_geoids[start:stop],
+                top_k=top_k,
+                configuration=configuration,
+            )
+        )
+        batch_calls = int(tree.get_n_calls())
+        if batch_calls < 0:
+            raise OverflowError(
+                "KD-tree distance-call counter overflowed within one query batch"
+            )
+        distance_computation_count += batch_calls
+    neighbors = DistinctNeighborResult(
+        candidate_indices=np.concatenate(
+            [batch.candidate_indices for batch in neighbor_batches], axis=0
+        ),
+        distances=np.concatenate([batch.distances for batch in neighbor_batches], axis=0),
+        retrieved_state_counts=np.concatenate(
+            [batch.retrieved_state_counts for batch in neighbor_batches]
+        ),
+        expansion_counts=np.concatenate(
+            [batch.expansion_counts for batch in neighbor_batches]
+        ),
     )
     elapsed = perf_counter() - started
     return KDTreeQueryResult(
         neighbors=neighbors,
-        distance_computation_count=int(tree.get_n_calls()),
+        distance_computation_count=distance_computation_count,
         query_elapsed_seconds=elapsed,
     )
 

@@ -944,6 +944,7 @@ resources:
               leaf_size: "40"
               initial_neighbors: "64"
               expansion_factor: "2"
+              query_batch_size: "250"
               scale_sample_size: "1000"
               mlflow_experiment: ${var.analogue_tree_mlflow_experiment}
     table_metadata_pipeline:

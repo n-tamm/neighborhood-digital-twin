@@ -954,6 +954,9 @@ COMMON_COLUMN_COMMENTS = {
     "tree_expansion_factor": (
         "Multiplier applied when the indexed candidate request requires expansion."
     ),
+    "tree_query_batch_size": (
+        "Current queries evaluated before resetting and accumulating the tree distance counter."
+    ),
     "tree_build_elapsed_seconds": "Measured seconds required to construct the exact KD-tree.",
     "tree_array_bytes": (
         "Bytes occupied by the NumPy arrays returned from the fitted KD-tree structure."

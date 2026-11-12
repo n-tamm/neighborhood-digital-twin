@@ -47,6 +47,10 @@ retrieved state, the request doubles. Retrieval stops only when the next unseen 
 farther than the selected top ten. This makes the distinct-community result exact while retaining
 measured expansion counts for operational review.
 
+Queries run in batches of 250. Scikit-learn exposes an internal distance-call counter, but one
+national batch can exceed that counter's integer range. Resetting it per batch and accumulating
+the results in Python prevents overflow without changing the index or neighbor ordering.
+
 ## Evaluation populations
 
 The job measures three populations per horizon:
