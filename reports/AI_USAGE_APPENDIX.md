@@ -37,6 +37,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Expanded analogue selection and coverage safeguards, November 8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Current analogue retrieval and scalable serving benchmark, November 9-11, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| National analogue serving contract and publication, November 12, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -317,6 +318,18 @@ seconds. SQL reconciliation confirmed the expected 580 match rows, 58 query eval
 summaries, six scale rows, one run ID per table, and comments on every output column. These results
 changed the implementation decision: the exact KD-tree is approved for batch serving-table
 generation, while the earlier LSH design remains rejected.
+
+The national analogue serving workflow was reviewed with Ruff, mypy, focused unit tests, bundle
+validation, a live serverless run, the metadata workflow, and direct SQL reconciliation. The first
+live attempt completed both national retrieval passes but failed before publication because the
+match output used `query_geoid_2020` while the availability builder expected `geoid_2020`. The
+unchanged retry was canceled, the contract was revised to resolve either governed key explicitly,
+and no partial release had been activated. The corrected run published 934,380 matches, 93,438
+summaries, 171,056 availability rows, and a three-row manifest written last. SQL review confirmed
+46,719 available tracts at each horizon, ten matches per available tract, explicit unavailable
+reason counts, one source model build and tree run, and comments on all 113 serving columns. This
+live failure is also why application releases are append-only and become active through a final
+manifest rather than because a data table happens to exist.
 
 ## Maintenance requirements
 

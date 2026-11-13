@@ -56,6 +56,8 @@ def test_table_layers_separate_pipeline_products_from_quality_results() -> None:
     assert TABLE_LAYERS["historical_analogue_selection_summary"] == "evaluation"
     assert TABLE_LAYERS["historical_analogue_selection_scorecard"] == "evaluation"
     assert TABLE_LAYERS["historical_analogue_selection_coverage"] == "evaluation"
+    assert TABLE_LAYERS["serving_analogue_match_current"] == "serving"
+    assert TABLE_LAYERS["serving_release_manifest"] == "serving"
 
 
 def test_metadata_application_skips_matching_column_comments() -> None:
@@ -101,6 +103,7 @@ def test_metadata_application_uses_layer_specific_schemas() -> None:
                 "workspace.gold.gold_tract_profile_current",
                 "workspace.model.forecast_baseline_prediction",
                 "workspace.evaluation.forecast_baseline_scorecard",
+                "workspace.serving.serving_release_manifest",
             }
 
     class Spark:
@@ -124,6 +127,7 @@ def test_metadata_application_uses_layer_specific_schemas() -> None:
         gold_schema="gold",
         model_schema="model",
         evaluation_schema="evaluation",
+        serving_schema="serving",
         quality_schema="quality",
     )
 
@@ -132,4 +136,5 @@ def test_metadata_application_uses_layer_specific_schemas() -> None:
         "workspace.gold.gold_tract_profile_current",
         "workspace.model.forecast_baseline_prediction",
         "workspace.evaluation.forecast_baseline_scorecard",
+        "workspace.serving.serving_release_manifest",
     ]

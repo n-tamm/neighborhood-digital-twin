@@ -354,6 +354,22 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "sample, and every eligible current query.",
         "One row per horizon and declared current-query population.",
     ),
+    "serving_analogue_match_current": TableMetadata(
+        "Versioned exact historical matches approved for the current-neighborhood application.",
+        "One row per serving release, current query tract, horizon, and match rank.",
+    ),
+    "serving_analogue_summary_current": TableMetadata(
+        "Versioned descriptive outcome and distance summaries for approved current analogues.",
+        "One row per serving release, current query tract, and horizon.",
+    ),
+    "serving_analogue_availability_current": TableMetadata(
+        "Explicit current analogue availability, reason, and FHFA target-scope context.",
+        "One row per serving release, current profile tract, and horizon.",
+    ),
+    "serving_release_manifest": TableMetadata(
+        "Validated serving-table inventory whose rows activate an application release.",
+        "One row per serving release, component, and published table.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
@@ -394,6 +410,13 @@ EVALUATION_TABLES = {
     "model_evaluation_figure_manifest",
 }
 
+SERVING_TABLES = {
+    "serving_analogue_match_current",
+    "serving_analogue_summary_current",
+    "serving_analogue_availability_current",
+    "serving_release_manifest",
+}
+
 TABLE_LAYERS = {
     table: (
         "quality"
@@ -402,6 +425,8 @@ TABLE_LAYERS = {
         if table in MODEL_TABLES
         else "evaluation"
         if table in EVALUATION_TABLES
+        else "serving"
+        if table in SERVING_TABLES
         else "bronze"
         if table == "source_snapshot_manifest" or table.startswith("bronze_")
         else "silver"
@@ -1002,6 +1027,37 @@ COMMON_COLUMN_COMMENTS = {
     "analogue_tree_as_of_year": (
         "Current model-ready year used by the exact indexed retrieval benchmark."
     ),
+    "serving_release_id": (
+        "Immutable identifier shared by all tables in one validated application release."
+    ),
+    "serving_schema_version": "Executable serving-table contract version.",
+    "serving_built_at_utc": "UTC timestamp when the serving release was built.",
+    "serving_built_at_utc_text": (
+        "ISO-formatted UTC build timestamp retained while creating the release manifest."
+    ),
+    "serving_as_of_year": "Latest model-ready year represented by this serving release.",
+    "source_model_readiness_build_id": (
+        "Model-readiness build used to construct this serving release."
+    ),
+    "source_analogue_tree_run_id": (
+        "Validated job-604 MLflow run whose exact retrieval policy this release uses."
+    ),
+    "component_name": "Application component represented by the release-manifest row.",
+    "table_name": "Managed table represented by the release-manifest row.",
+    "row_count": "Validated row count published for the named serving table.",
+    "horizons_csv": "Comma-separated outcome horizons included in the serving release.",
+    "release_status": "Manifest publication status after all serving validations pass.",
+    "analogue_available": "Whether a complete approved historical top-k is available.",
+    "availability_reason": (
+        "Plain-language machine-readable reason that an analogue result is available or absent."
+    ),
+    "target_representativeness_band": (
+        "Housing-composition context for how broadly the FHFA single-family target represents "
+        "the tract."
+    ),
+    "target_scope_note": (
+        "Application-ready warning that describes the supported FHFA single-family outcome scope."
+    ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."
     ),
@@ -1124,6 +1180,7 @@ def apply_table_metadata(
     gold_schema: str | None = None,
     model_schema: str | None = None,
     evaluation_schema: str | None = None,
+    serving_schema: str | None = None,
     quality_schema: str | None = None,
 ) -> list[str]:
     """Apply idempotent table descriptions and column comments to existing managed tables."""
@@ -1134,6 +1191,7 @@ def apply_table_metadata(
         gold_schema = schema
         model_schema = schema
         evaluation_schema = schema
+        serving_schema = schema
         quality_schema = schema
     layer_schemas = {
         "bronze": bronze_schema,
@@ -1141,10 +1199,11 @@ def apply_table_metadata(
         "gold": gold_schema,
         "model": model_schema,
         "evaluation": evaluation_schema,
+        "serving": serving_schema,
         "quality": quality_schema,
     }
     if any(value is None for value in layer_schemas.values()):
-        raise ValueError("Provide schema or all six layer-specific schemas")
+        raise ValueError("Provide schema or all seven layer-specific schemas")
 
     updated: list[str] = []
     for table, metadata in TABLE_METADATA.items():

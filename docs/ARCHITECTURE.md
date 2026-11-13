@@ -13,9 +13,10 @@ flowchart LR
     E --> V[Evaluation schema: scorecards and figures]
     F --> V
     E --> G[Scenario sensitivity]
-    E --> H[Validated serving tables]
+    E --> H[Serving schema: versioned approved releases]
     F --> H
     G --> H
+    V -. approval evidence .-> H
     H --> I[Databricks Streamlit app]
     H -. optional public bundle .-> J[Anonymous public mirror]
 ```
@@ -58,6 +59,10 @@ not compete in one long table list:
     └── tables: *_quality_metrics
 ```
 
+The implemented serving schema sits beside model and evaluation. It currently contains versioned
+current-analogue matches, query summaries, explicit availability rows, and the release manifest;
+forecast and explanation products will join it only after their own contracts pass evaluation.
+
 `neighborhood_twin_test` is reserved for future integration-test fixtures or results, but is not
 created until those tests exist. The original `neighborhood_twin_dev` schema is retained unchanged
 as a migration source and rollback reference; active jobs no longer write to it. Historical source
@@ -78,7 +83,13 @@ the evaluation.
 
 ## Application boundary
 
-The Databricks application receives only the data needed for supported views: tract profiles, history, forecasts and intervals, analogues, explanations, scenario definitions, geometry, and version metadata. It must reject incompatible or incomplete inputs and clearly label unavailable results. It should query dedicated serving tables through a SQL warehouse rather than reading raw or training tables.
+The Databricks application receives only the data needed for supported views: tract profiles,
+history, forecasts and intervals, analogues, explanations, scenario definitions, geometry, and
+version metadata. It must reject incompatible or incomplete inputs and clearly label unavailable
+results. It should query the dedicated `neighborhood_twin_serving` schema through a SQL warehouse
+rather than reading raw or training tables. A release is active only after its manifest contains a
+validated row for every required component table. This keeps each application release internally
+consistent and leaves the previous release available for rollback.
 
 Databricks Apps cannot be made anonymously public. The primary Databricks application is therefore appropriate for team development, mentor review, and an authenticated demonstration. If the course or portfolio needs an anonymous URL, the same serving contract will be exported as a compact bundle for a public Streamlit mirror; raw tables and Databricks credentials will not be exposed.
 

@@ -46,6 +46,7 @@ dbutils.widgets.text("model_schema", "neighborhood_twin_model", "Model-output sc
 dbutils.widgets.text(
     "evaluation_schema", "neighborhood_twin_evaluation", "Model-evaluation schema"
 )
+dbutils.widgets.text("serving_schema", "neighborhood_twin_serving", "Serving schema")
 dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 
 updated = apply_table_metadata(
@@ -56,6 +57,7 @@ updated = apply_table_metadata(
     gold_schema=dbutils.widgets.get("gold_schema").strip(),
     model_schema=dbutils.widgets.get("model_schema").strip(),
     evaluation_schema=dbutils.widgets.get("evaluation_schema").strip(),
+    serving_schema=dbutils.widgets.get("serving_schema").strip(),
     quality_schema=dbutils.widgets.get("quality_schema").strip(),
 )
 print(f"Applied table and column metadata to {len(updated)} tables.")

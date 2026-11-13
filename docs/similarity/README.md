@@ -257,10 +257,10 @@ linked to their source run IDs, documented one per file, and visually reviewed f
 interpretation before report use.
 
 The historical method, current-year lookup contract, and exact indexed retrieval are implemented
-and evaluated. The KD-tree reproduces the exhaustive reference and can retrieve matches for all
-46,719 eligible current tracts in a few minutes per horizon. What remains is the serving-product
-stage: publish those national matches, deterministic explanations, trajectories, and availability
-warnings in compact versioned tables that the application can query directly.
+and evaluated. Job 700 now applies the KD-tree nationally and publishes versioned matches,
+descriptive summaries, availability reasons, target-scope warnings, and release lineage for the
+application. Deterministic match explanations, aligned trajectories, the final visual package,
+and the application integration remain.
 
 ## Detailed documentation
 
@@ -294,3 +294,5 @@ warnings in compact versioned tables that the application can query directly.
 13. [Exact indexed retrieval](exact_tree_retrieval.md) explains the KD-tree design, exact
     distinct-community stopping rule, scale populations, decision measures, and publication
     boundary.
+14. [Current analogue serving products](analogue_serving_products.md) explains the national batch
+    release, table grains, activation manifest, validation gates, and application reading rule.

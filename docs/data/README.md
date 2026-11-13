@@ -117,6 +117,10 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 71. [`analogue_tree_query_evaluation`](71_evaluation_analogue_tree_query_evaluation.md)
 72. [`analogue_tree_summary`](72_evaluation_analogue_tree_summary.md)
 73. [`analogue_tree_scale_benchmark`](73_evaluation_analogue_tree_scale_benchmark.md)
+74. [`serving_analogue_match_current`](74_serving_analogue_match_current.md)
+75. [`serving_analogue_summary_current`](75_serving_analogue_summary_current.md)
+76. [`serving_analogue_availability_current`](76_serving_analogue_availability_current.md)
+77. [`serving_release_manifest`](77_serving_release_manifest.md)
 
 ### Gold exploration and readiness
 
@@ -154,7 +158,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 26, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
+As of November 12, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
 the 50 states and District of Columbia, national FHFA tract HPI history through 2025, and national
 Census geography support. The validated ACS contract contains all 765 required state-release
 pairs, 1,152,605 selected silver tract-release rows, and 24,204,705 normalized measure rows.
@@ -203,3 +207,10 @@ matches. The evaluation schema contains 1,248 sliced forecast scorecard rows, tw
 representation summaries, and a seven-row figure manifest. These are development products rather
 than final claims: interval calibration, time-safe retrospective similarity evaluation, and the
 locked temporal tests remain outstanding.
+
+The first application-serving component was published on November 12. The serving schema contains
+934,380 approved current analogue matches, 93,438 tract-horizon summaries, 171,056 availability
+rows, and a three-row activation manifest. It covers 46,719 model-ready current tracts at both
+one and three years while retaining an explicit availability state for all 85,528 canonical tract
+profiles at each horizon. All 113 serving-table columns have managed comments. Forecasts,
+explanations, and aligned trajectory products are not yet serving tables.
