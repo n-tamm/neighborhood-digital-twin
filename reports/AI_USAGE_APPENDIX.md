@@ -35,6 +35,8 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Model-output governance, evaluation metrics, and diagnostic figures, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Forecast model implementation and decade-safe target/split update on `braeden-forecasting`, November 7-8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Local forecasting meeting notebook, embedded EDA figures, and production scorecard interpretation, November 12, 2026 | OpenAI Copilot SDK in VS Code | Not exposed in the available session metadata | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -268,6 +270,75 @@ baselines. Review of the actual matches and metrics then supported weighted stan
 and distinct physical communities as provisional application choices. This evaluation illustrates
 why a green job status was not treated as sufficient evidence: the most important correction came
 from reconciling the analytical output after a technically successful run.
+
+The forecasting model work on the `braeden-forecasting` branch started from the governed
+`gold_modeling_panel` and the existing regularized-linear and fixed-baseline workflow. AI assistance
+was used for code generation, debugging, repository organization, and methodological brainstorming;
+the forecasting module and Databricks notebook record OpenAI ChatGPT/GPT-5, and state that the
+authors performed and verified the final modeling, implementation, validation, and interpretation.
+The model was designed as a small, comparable baseline ladder rather than an unrestricted algorithm
+search: zero change, latest-change persistence, recent three-year mean, county trend, and state
+trend are compared with the regularized linear model and a fixed-parameter Spark ML
+gradient-boosted-tree challenger. Both fitted models use the same registered 26 point-in-time HPI,
+county/state, ACS housing, socioeconomic, timing, and uncertainty features. They predict cumulative
+log change in tract FHFA single-family HPI, with a separate direct model for each one-, three-, and
+five-year horizon.
+
+Preprocessing is fitted on training rows only. The linear pipeline uses median imputation,
+centering/scaling, and L2 regularization (`regParam=0.05`, up to 100 iterations); the tree pipeline
+uses median imputation and a fixed configuration (depth 4, 50 iterations, step size 0.05,
+subsampling 0.8, seed 699). The tree settings form a reproducible challenger, not a hyperparameter
+search. Predictions are scored only on observed validation rows; calibration and locked temporal
+test outcomes are not used in model fitting or this development scorecard. The comparison retains
+MAE, RMSE, signed bias, tail error, subgroup and geography slices, zero-change skill, and
+majority-direction context rather than treating one aggregate score as a sufficient selection
+criterion.
+
+A subsequent modeling change made the target/split contract decade-safe: an observed target is
+allowed only when its forecast origin and endpoint are in the same calendar decade; crossing
+targets are retained as censored records and made ineligible for fitting and evaluation. Frozen
+temporal validation/calibration origins were moved as needed to comply, rather than randomly
+splitting repeated tract-year rows. The target, split, and readiness code received regression
+tests; all 88 unit tests passed, as did Ruff, Python compilation, and bundle validation, followed
+by live Databricks rebuilds and forecasting. The resulting November 7 run published 1,588,340
+validation predictions across 59,179 tracts and seven methods, with 1,463 scorecard rows; a
+Databricks check found zero cross-decade validation predictions. Validation favored
+gradient-boosted trees at one and three years and regularized linear at five years, but the
+five-year evidence had only two training origins and one validation origin. No champion was
+selected, the locked test remained unopened, and the similarity model was not changed.
+
+The meeting-demo work began with a request for a self-contained offline forecasting proof of
+concept, including model features and county/state trends. A synthetic-data command-line demo was
+created, then formatted as a Jupyter notebook. The user subsequently redirected the notebook to
+use the production workflow's source rather than synthetic input. The command-line script remains
+a separate synthetic proof of concept; the notebook now uses a deterministic, bounded 500-tract
+sample from the governed `gold_modeling_panel`, queried with the user-selected Databricks profile
+after the CLI was updated. It includes observed, one-year, decade-safe training and validation
+rows only; locked temporal test outcomes are excluded. Cached panel and aggregate EDA files allow
+the notebook to be rerun locally after download. A request for separate per-step READMEs was
+superseded by the consolidated demo format; the notebook index and forecasting overview were
+updated rather than retaining a set of redundant step documents.
+
+The notebook fits local scikit-learn equivalents of the regularized linear and gradient-boosted-
+tree candidates, compares them with five simple baselines, and documents the 26 registered
+features, the cumulative log HPI-change target, the temporal split, and metric interpretation.
+The sample has 4,130 rows from 500 tracts (3,293 training and 837 validation rows). Its split is
+the governed time-based split, not a random pairing split: the same tract can appear in both
+roles at different origin years. Explanations also distinguish tract GEOID continuity from
+guaranteed boundary continuity, clarify that a one-year HPI target is not an individual home
+price, and explain how validation MAE describes average absolute prediction error. Related
+interpretive answers covered the forecasting flow, feature inputs, model-versus-baseline results,
+example HPI values, the reasonableness and units of the reported errors, and what the EDA plots
+represent; these explanations did not change the production model.
+
+The notebook reproduces six published forecasting-relevant EDA figures (figures 2, 3, 4, 5, 7,
+and 8) from cached aggregate data, alongside five local validation/diagnostic charts. All 11
+plots are embedded as PNG display outputs in the notebook itself. Markdown was expanded to list
+the feature inputs and explain each candidate's current demo MAE, units, row counts, and
+limitations. The notebook index, forecasting documentation, and local optional dependency
+declaration (Matplotlib and scikit-learn) were updated to match. The notebook JSON and embedded
+image outputs were checked; the focused forecasting unit suite passed seven tests, and
+`git diff --check` passed.
 
 ## Maintenance requirements
 
