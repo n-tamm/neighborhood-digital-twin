@@ -207,16 +207,23 @@ refresh; job 700 applies its approved policy nationally.
 Job 700 rebuilds the training-only feature preprocessing for each approved horizon, constructs the
 exact KD-tree, and retrieves ten distinct historical tracts for every eligible current tract. It
 publishes append-only release partitions in `neighborhood_twin_serving`: match-level evidence, a
-query-level descriptive summary, and an availability row for every current profile and horizon.
-The job validates lineage, complete top tens, uniqueness, time safety, locked-test exclusion,
-summary reconciliation, and coverage before writing. It writes the release manifest last. Only a
-release with three `validated` manifest rows is approved for application use; data rows from a
-failed attempt without a manifest remain inactive and can be cleaned up later by exact release ID.
+query-level descriptive summary, an availability row for every current profile and horizon,
+deterministic match explanations, and aligned annual outcome trajectories. The job validates
+lineage, complete top tens, uniqueness, time safety, locked-test exclusion, explanation coverage,
+trajectory endpoints, summary reconciliation, and coverage before writing. It writes the release
+manifest last. Schema 1.0 required three `validated` manifest rows; schema 1.1 requires five. Data
+rows from a failed attempt without a complete manifest remain inactive and can be cleaned up later
+by exact release ID.
 Job 700 does not use MLflow because it applies an already evaluated and frozen retrieval policy
 rather than comparing models.
 The first live release on November 12 published 934,380 matches, 93,438 query summaries, and
 171,056 availability rows. It covered 46,719 eligible tracts at both horizons and activated the
 release only after all counts and safety checks reconciled.
+Schema-1.1 release `analogue-20261113T132155097077Z` added 934,380 deterministic explanations and
+2,803,140 aligned annual trajectory rows without changing that retrieval population. Its
+five-table run completed in 470 seconds. All one-year paths and all endpoints are observed; 23,097
+three-year match paths retain explicit intermediate gaps. Run job 900 after a successful contract
+change so the new table and column comments are applied.
 
 ### Find the MLflow experiments
 

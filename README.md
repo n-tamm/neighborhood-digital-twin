@@ -12,10 +12,11 @@ This is a data science capstone, not a neighborhood-ranking or home-investment t
 > Weighted historical matching with ten distinct communities is the selected analogue method; it
 > provides useful context but has not beaten the stronger forecast baselines. Job 700 now publishes
 > a validated national application release with 934,380 matches, 93,438 tract-horizon summaries,
-> and explicit availability states for all 85,528 canonical tracts at both supported horizons. The
-> next work is focused forecast improvement and uncertainty calibration, analogue explanations and
-> presentation visuals, and the interactive application. Features below are planned unless marked
-> complete.
+> explicit availability states for all 85,528 canonical tracts at both supported horizons,
+> 934,380 deterministic match explanations, and 2,803,140 aligned historical-path rows. The next
+> work is focused forecast improvement and uncertainty calibration, similarity presentation
+> visuals and walkthrough, and the interactive application. Features below are planned unless
+> marked complete.
 
 ## What the finished product should do
 
@@ -92,7 +93,7 @@ flowchart TB
 
     GR -.->|next| NF["Focused nonlinear forecast<br/>and calibrated uncertainty"]
     EV -.->|model-selection evidence| NF
-    AR --> SV["700 Serving schema<br/>versioned current analogues and release manifest"]
+    AR --> SV["700 Serving schema<br/>analogues, explanations, paths, and manifest"]
     NF -.->|planned output| SV
     SV -.-> APP["Interactive Databricks<br/>Streamlit application"]
 
@@ -383,11 +384,11 @@ source comment, but the dependency must be declared in the correct environment f
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
 forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
-initial forecast, current-state similarity, and time-safe historical-analogue outputs in a
-dedicated model schema and governed diagnostics in a separate evaluation schema. These are
-development baselines, not final models: model selection, calibrated uncertainty, analogue case
-review and stability testing, serving products, and the interactive application remain. Current
-figure locations and reproduction steps are documented in the
+initial forecast, current-state similarity, time-safe historical-analogue outputs, governed model
+diagnostics, and a versioned five-table national analogue serving contract. The similarity method,
+case review, stability testing, exact retrieval, explanations, and annual paths are implemented;
+the final similarity visual package, forecast model selection and uncertainty, and interactive
+application remain. Current figure locations and reproduction steps are documented in the
 [EDA figure guide](reports/EDA_FIGURES.md) and
 [model evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md).
 

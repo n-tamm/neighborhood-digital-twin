@@ -258,9 +258,9 @@ interpretation before report use.
 
 The historical method, current-year lookup contract, and exact indexed retrieval are implemented
 and evaluated. Job 700 now applies the KD-tree nationally and publishes versioned matches,
-descriptive summaries, availability reasons, target-scope warnings, and release lineage for the
-application. Deterministic match explanations, aligned trajectories, the final visual package,
-and the application integration remain.
+descriptive summaries, availability reasons, target-scope warnings, deterministic match
+explanations, aligned annual trajectories, and release lineage for the application. The final
+visual package, communication walkthrough, and application integration remain.
 
 ## Detailed documentation
 
@@ -296,3 +296,6 @@ and the application integration remain.
     boundary.
 14. [Current analogue serving products](analogue_serving_products.md) explains the national batch
     release, table grains, activation manifest, validation gates, and application reading rule.
+15. [Analogue explanations and historical trajectories](analogue_explanations_and_trajectories.md)
+    explains the family-level gap method, annual path construction, interpretation limits, and
+    serving checks.

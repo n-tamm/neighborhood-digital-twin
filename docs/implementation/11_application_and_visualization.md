@@ -65,11 +65,11 @@ The Databricks app should read versioned serving tables instead of rebuilding fe
 - data-source and model-version metadata.
 
 The first serving contract is now implemented for current historical analogues. Job 700 publishes
-versioned match, summary, availability, and manifest tables in `neighborhood_twin_serving`; its
-[component documentation](../similarity/analogue_serving_products.md) defines their grains and
-reading rule. Forecasts, calibrated intervals, deterministic match explanations, aligned
-trajectories, geometry, and profile-history bundles still need serving contracts. The app must
-reject incompatible data rather than silently guessing at changed columns.
+versioned match, summary, availability, deterministic explanation, aligned annual trajectory, and
+manifest tables in `neighborhood_twin_serving`; its [component documentation](../similarity/analogue_serving_products.md)
+defines their grains and reading rule. Forecasts, calibrated intervals, geometry, and
+profile-history bundles still need serving contracts. The app must reject incompatible data
+rather than silently guessing at changed columns.
 
 The pipeline is ready to support a descriptive application shell, but `gold_modeling_panel` is not
 a serving table. It is wide, contains evaluation-only fields, and includes censored and

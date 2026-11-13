@@ -1,7 +1,7 @@
 # Data Guide
 
 This folder explains the tables that currently exist across the shared Databricks bronze, silver,
-gold, model, evaluation, and quality schemas. It is the
+gold, model, evaluation, serving, and quality schemas. It is the
 starting point for understanding what a row represents, which table should be used for a given
 task, and where important limitations enter the pipeline.
 
@@ -121,6 +121,8 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 75. [`serving_analogue_summary_current`](75_serving_analogue_summary_current.md)
 76. [`serving_analogue_availability_current`](76_serving_analogue_availability_current.md)
 77. [`serving_release_manifest`](77_serving_release_manifest.md)
+78. [`serving_analogue_explanation_current`](78_serving_analogue_explanation_current.md)
+79. [`serving_analogue_trajectory_current`](79_serving_analogue_trajectory_current.md)
 
 ### Gold exploration and readiness
 
@@ -208,9 +210,10 @@ representation summaries, and a seven-row figure manifest. These are development
 than final claims: interval calibration, time-safe retrospective similarity evaluation, and the
 locked temporal tests remain outstanding.
 
-The first application-serving component was published on November 12. The serving schema contains
-934,380 approved current analogue matches, 93,438 tract-horizon summaries, 171,056 availability
-rows, and a three-row activation manifest. It covers 46,719 model-ready current tracts at both
-one and three years while retaining an explicit availability state for all 85,528 canonical tract
-profiles at each horizon. All 113 serving-table columns have managed comments. Forecasts,
-explanations, and aligned trajectory products are not yet serving tables.
+The first application-serving component was published on November 12 and expanded under schema
+1.1 on November 13. The current validated release contains 934,380 approved matches, 93,438
+tract-horizon summaries, 171,056 availability rows, 934,380 deterministic explanations,
+2,803,140 annual trajectory rows, and a five-row activation manifest. It covers 46,719 model-ready
+current tracts at both one and three years while retaining an explicit availability state for all
+85,528 canonical tract profiles at each horizon. Job 900 confirmed comments on all 43 explanation
+and 26 trajectory columns. Forecasts and calibrated intervals are not yet serving tables.
