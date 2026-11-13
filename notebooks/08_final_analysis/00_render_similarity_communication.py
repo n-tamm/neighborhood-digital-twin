@@ -351,13 +351,13 @@ for start, end in ((3.65, 4.0), (7.25, 7.6), (10.85, 11.2)):
     )
 axis.annotate(
     "",
-    xy=(9.85, 3.25),
+    xy=(5.85, 3.25),
     xytext=(12.8, 4.75),
     arrowprops={"arrowstyle": "-|>", "color": MUTED, "lw": 1.8},
 )
 axis.annotate(
     "",
-    xy=(7.75, 2.12),
+    xy=(8.0, 2.12),
     xytext=(7.7, 2.12),
     arrowprops={"arrowstyle": "-|>", "color": MUTED, "lw": 1.8},
 )
@@ -628,12 +628,14 @@ axis.xaxis.set_major_formatter(lambda value, _position: f"{value / 1000:,.0f}k")
 clean_axis(axis, grid_axis="x")
 axis.text(
     0.99,
-    0.06,
+    0.50,
     "The same current representation supports both horizons,\nso their eligibility counts match.",
     transform=axis.transAxes,
     ha="right",
+    va="center",
     fontsize=9,
     color=MUTED,
+    bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.94, "pad": 4},
 )
 add_note(
     figure,
