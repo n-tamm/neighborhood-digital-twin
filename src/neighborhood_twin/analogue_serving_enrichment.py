@@ -359,11 +359,16 @@ def build_serving_trajectory_frame(
             "Historical targets are missing: " + ", ".join(sorted(missing_targets))
         )
     one_year = historical_targets.where(functions.col("horizon_years") == 1)
-    base = one_year.select(
+    direct_horizon = historical_targets.where(functions.col("target_is_observed")).select(
         functions.col("geoid_2020").alias("candidate_geoid_2020"),
         functions.col("forecast_origin_year").alias("candidate_origin_year"),
+        "horizon_years",
         functions.col("origin_hpi").alias("trajectory_origin_hpi"),
         functions.col("origin_source_snapshot_id").alias("trajectory_origin_snapshot_id"),
+        functions.col("target_end_hpi").alias("trajectory_endpoint_hpi"),
+        functions.col("target_end_source_snapshot_id").alias(
+            "trajectory_endpoint_snapshot_id"
+        ),
     )
     observations = one_year.where(functions.col("target_is_observed")).select(
         functions.col("geoid_2020").alias("_observation_geoid"),
@@ -372,7 +377,11 @@ def build_serving_trajectory_frame(
         functions.col("target_end_source_snapshot_id").alias("_observation_snapshot_id"),
     )
     expanded = (
-        matches.join(base, ["candidate_geoid_2020", "candidate_origin_year"], "inner")
+        matches.join(
+            direct_horizon,
+            ["candidate_geoid_2020", "candidate_origin_year", "horizon_years"],
+            "inner",
+        )
         .withColumn(
             "trajectory_year_offset",
             functions.explode(functions.sequence(functions.lit(0), "horizon_years")),
@@ -393,14 +402,28 @@ def build_serving_trajectory_frame(
         & (functions.col("trajectory_year_offset") > 0),
         "left",
     )
-    trajectory_hpi = functions.when(
-        functions.col("trajectory_year_offset") == 0,
-        functions.col("trajectory_origin_hpi"),
-    ).otherwise(functions.col("_observed_hpi"))
-    trajectory_snapshot = functions.when(
-        functions.col("trajectory_year_offset") == 0,
-        functions.col("trajectory_origin_snapshot_id"),
-    ).otherwise(functions.col("_observation_snapshot_id"))
+    trajectory_hpi = (
+        functions.when(
+            functions.col("trajectory_year_offset") == 0,
+            functions.col("trajectory_origin_hpi"),
+        )
+        .when(
+            functions.col("trajectory_year_offset") == functions.col("horizon_years"),
+            functions.col("trajectory_endpoint_hpi"),
+        )
+        .otherwise(functions.col("_observed_hpi"))
+    )
+    trajectory_snapshot = (
+        functions.when(
+            functions.col("trajectory_year_offset") == 0,
+            functions.col("trajectory_origin_snapshot_id"),
+        )
+        .when(
+            functions.col("trajectory_year_offset") == functions.col("horizon_years"),
+            functions.col("trajectory_endpoint_snapshot_id"),
+        )
+        .otherwise(functions.col("_observation_snapshot_id"))
+    )
     with_values = (
         joined.withColumn("trajectory_hpi", trajectory_hpi)
         .withColumn("trajectory_source_snapshot_id", trajectory_snapshot)
