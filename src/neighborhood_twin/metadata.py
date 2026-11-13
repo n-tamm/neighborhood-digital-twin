@@ -383,6 +383,11 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "figure volume.",
         "One row per figure in the current model-evaluation build.",
     ),
+    "similarity_evaluation_figure_manifest": TableMetadata(
+        "Versioned inventory of similarity communication figures with audit, selection, "
+        "retrieval, and serving lineage.",
+        "One row per figure in the current similarity communication build.",
+    ),
 }
 
 MODEL_TABLES = {
@@ -416,6 +421,7 @@ EVALUATION_TABLES = {
     "analogue_tree_summary",
     "analogue_tree_scale_benchmark",
     "model_evaluation_figure_manifest",
+    "similarity_evaluation_figure_manifest",
 }
 
 SERVING_TABLES = {
@@ -1219,10 +1225,29 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "evaluation_build_id": "Identifier for the model-evaluation figure build.",
     "evaluation_built_at_utc": "UTC timestamp when the evaluation figure build completed.",
+    "similarity_figure_build_id": "Identifier for the similarity communication figure build.",
+    "similarity_figure_built_at_utc": (
+        "UTC timestamp when the similarity communication figure build completed."
+    ),
+    "figure_sequence": "Display order of the figure within its governed matched set.",
     "figure_file_name": "Stable PNG file name within the versioned evaluation build directory.",
+    "figure_title": "Human-readable title of the rendered figure.",
     "figure_path": "Managed-volume path containing the rendered evaluation figure.",
     "source_forecast_run_id": "Forecast MLflow run represented by the evaluation figure build.",
     "source_similarity_run_id": "Similarity MLflow run represented by the evaluation figure build.",
+    "source_analogue_audit_run_id": (
+        "Job-601 analogue audit run represented by the similarity figure build."
+    ),
+    "source_analogue_selection_run_id": (
+        "Job-602 analogue selection run represented by the similarity figure build."
+    ),
+    "source_serving_release_id": (
+        "Complete schema-1.1 serving release represented by the similarity figure build."
+    ),
+    "case_query_geoid_2020": (
+        "Current tract used for the declared communication case study in this figure build."
+    ),
+    "case_horizon_years": "Outcome horizon used by the declared communication case study.",
 }
 
 

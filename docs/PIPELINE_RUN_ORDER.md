@@ -11,19 +11,21 @@ Every bundle job has a sortable display name and four tags:
 
 - `project=neighborhood-digital-twin` keeps the project jobs filterable;
 - `pipeline_group` is `setup`, `bronze`, `silver`, `gold`, `analysis`, `modeling`, `evaluation`,
-  `serving`, or `metadata`;
+  `serving`, `presentation`, or `metadata`;
 - `run_order` matches the number in the display name; and
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-503 Modeling`, `600-604 Evaluation`, `700 Serving`, and `900 Metadata`.
+`400-401 Analysis`, `500-503 Modeling`, `600-604 Evaluation`, `700 Serving`, `800 Presentation`,
+and `900 Metadata`.
 Jobs increment
 by one inside each three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
 ranges are `000-099` for setup and operations, `100-199` for bronze, `200-299` for silver,
 `300-399` for gold, `400-499` for analysis, `500-599` for modeling, `600-699` for evaluation,
-`700-799` for serving, and `900-999` for metadata.
+`700-799` for serving, `800-899` for presentation and final-analysis builds, and `900-999` for
+metadata.
 The bundle job keys remain stable even if a display label is clarified later.
 
 ## Job inventory
@@ -57,6 +59,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 603 | Evaluation | `scalable_analogue_retrieval` | After the weighted representation is frozen and job 503 establishes an exact current-query reference | Compares deterministic LSH shortlists with exhaustive exact top-ten matches on a stratified current-query benchmark |
 | 604 | Evaluation | `analogue_tree_retrieval` | After job 603 and from the same model-readiness build | Requires an exact KD-tree to reproduce the exhaustive benchmark, then measures indexed work on 1,000 and all eligible current queries |
 | 700 | Serving | `analogue_serving_products` | After a successful current job 604 or when approved current analogues need refreshing | Publishes national exact matches, descriptive summaries, explicit availability, and an activation manifest; it does not train or select the method |
+| 800 | Presentation | `similarity_communication_figures` | After current approved outputs from 601, 602, 604, and 700 | Renders five lineage-linked similarity figures; it reads governed evidence and does not retrain or retrieve matches |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -87,6 +90,7 @@ The bundle job keys remain stable even if a display label is clarified later.
 503 Exact current retrieval contract -----------> 603 Scalable retrieval benchmark
 603 Frozen exhaustive reference ----------------> 604 Exact tree retrieval benchmark
 604 Approved exact retrieval policy ------------> 700 National analogue serving release
+601/602/604 Evaluation + 700 Serving -----------> 800 Similarity communication figures
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -225,6 +229,14 @@ five-table run completed in 470 seconds. All one-year paths and all endpoints ar
 three-year match paths retain explicit intermediate gaps. Run job 900 after a successful contract
 change so the new table and column comments are applied.
 
+Job 800 reads the approved job-601 stability evidence, job-602 selection scorecard, job-604 scale
+measurements, and latest complete schema-1.1 job-700 release. It publishes five PNGs and one
+current manifest in `neighborhood_twin_evaluation`. The figures explain method flow, stability and
+representation selection, later-outcome utility, current availability, and one declared Michigan
+case. It does not fit preprocessing, change feature weights, retrieve matches, or open locked
+tests. Run it after a relevant upstream analytical change or a reviewed visual-design change, then
+run job 900 so the manifest receives its table and column metadata.
+
 ### Find the MLflow experiments
 
 The modeling notebooks create their shared experiment folders idempotently. In the Databricks
@@ -267,7 +279,8 @@ IDs used by each figure build, so figures should not be associated with experime
 13. Run 603 when scalable-retrieval evidence should reflect the refreshed analogue inputs.
 14. Run 604 after 603 when exact indexed-retrieval evidence should be refreshed.
 15. Run 700 after 604 when the application release should reflect the refreshed inputs.
-16. Finish with 900.
+16. Run 800 when the report and walkthrough should reflect the refreshed similarity evidence.
+17. Finish with 900.
 
 ### New FHFA release
 

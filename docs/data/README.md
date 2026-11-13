@@ -123,6 +123,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 77. [`serving_release_manifest`](77_serving_release_manifest.md)
 78. [`serving_analogue_explanation_current`](78_serving_analogue_explanation_current.md)
 79. [`serving_analogue_trajectory_current`](79_serving_analogue_trajectory_current.md)
+80. [`similarity_evaluation_figure_manifest`](80_evaluation_similarity_figure_manifest.md)
 
 ### Gold exploration and readiness
 

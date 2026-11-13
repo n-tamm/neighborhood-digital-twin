@@ -299,3 +299,5 @@ visual package, communication walkthrough, and application integration remain.
 15. [Analogue explanations and historical trajectories](analogue_explanations_and_trajectories.md)
     explains the family-level gap method, annual path construction, interpretation limits, and
     serving checks.
+16. [Similarity communication figures and walkthrough](communication_figures_and_walkthrough.md)
+    defines the five-figure set, case-study rule, lineage gates, and standup sequence.
