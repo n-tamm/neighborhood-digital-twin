@@ -84,5 +84,29 @@ requires job 800 but not model or serving refreshes. If any upstream representat
 or serving release changes, refresh the relevant upstream jobs first so the new figure manifest
 records one coherent set of lineage IDs. Run job 900 afterward to apply metadata to the manifest.
 
-Live build identifiers, visual-review findings, and figure-level results will be added after the
-first successful Databricks publication.
+## Validated live result
+
+Job 800 run `626327765918889` completed successfully in 58 seconds and published build
+`20261113T193948450115Z`. The manifest contains the expected five rows and one coherent set of
+source identifiers:
+
+- audit run `a7f7d2c018214708a955a4ac9b9ec0c4`;
+- selection run `f161ff3938b34032afe3634ef3de38df`;
+- exact-tree run `fae78721154347039d41864bad2e871a`; and
+- serving release `analogue-20261113T132155097077Z`.
+
+The files range from 148,449 to 364,326 bytes, so each passed the publication-size guard. Full-
+resolution review found two layout issues in the first render: the final workflow transitions
+were ambiguous, and the coverage explanation overlapped the bar. Both were corrected and the
+governed job was rerun. The accepted five-figure set was then inspected for titles, labels,
+legends, scales, color contrast, and consistency with the underlying evidence. Job 900 completed
+successfully and confirmed comments on all 14 manifest columns.
+
+The final set makes four project decisions visible: weighted matching is the default; bounded
+weight changes are stable but family ablations are not minor changes; analogue outcomes are useful
+context but not the strongest forecast; and the complete method is available for 46,719 of 85,528
+current canonical tracts at each supported horizon. The Michigan example then shows what one
+available result looks like without turning it into a national performance claim.
+
+See the report-facing [similarity figure guide](../../reports/SIMILARITY_FIGURES.md) for the file
+inventory, speaking sequence, and reproduction commands.

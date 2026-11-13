@@ -39,6 +39,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Current analogue retrieval and scalable serving benchmark, November 9-11, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | National analogue serving contract and publication, November 12, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Deterministic analogue explanations and historical trajectories, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Similarity communication figures and standup walkthrough, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -348,6 +349,18 @@ confirmed one explanation per match, complete one-year paths, observed endpoints
 comments on all 43 explanation and 26 trajectory columns. The documentation and application
 guidance were then changed so missing intermediate years are displayed rather than silently
 interpolated or treated as a failed later outcome.
+
+The similarity communication workflow was evaluated with unit tests for its figure and lineage
+contracts, Ruff, mypy, notebook compilation, all 125 local tests, bundle validation, and two live
+job-800 renders. The first successful render was not accepted only because the job was green. All
+five PNGs were downloaded and inspected at full resolution. That review found an ambiguous
+transition between the final workflow stages and a coverage annotation sitting on top of the
+stacked bar. Both layouts were revised, the complete job was rerun, and the two changed figures
+were inspected again. The accepted 58-second run published five manifest rows with one audit,
+selection, tree, and serving lineage set. Job 900 then succeeded, and read-only SQL confirmed the
+table description and comments on all 14 manifest columns. The walkthrough reads these governed
+outputs rather than reproducing model logic, and the case-study rule uses completeness and
+geographic diversity rather than later outcome performance.
 
 ## Maintenance requirements
 

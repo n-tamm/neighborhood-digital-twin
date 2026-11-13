@@ -15,9 +15,10 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, the final similarity visual package and walkthrough, and the interactive application
-still need to be built. The national analogue serving workflow now publishes matches, summaries,
-availability, deterministic explanations, and annual historical paths as one validated release.
+uncertainty, and the interactive application still need to be built. The national analogue
+serving workflow publishes matches, summaries, availability, deterministic explanations, and
+annual historical paths as one validated release. Job 800 now turns that release and its approved
+evaluation evidence into five reviewed figures and a standup-ready walkthrough.
 Historical-analogue case review, bounded stability testing, expanded representation selection,
 exact current-neighborhood retrieval, and scalable retrieval evaluation are complete. Exact
 indexed retrieval is validated for all 46,719 eligible current tracts. New source families should
@@ -43,8 +44,8 @@ not be added until a model result or required app view shows a specific gap.
   current warning is that the five-year horizon has three independent training origins.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 28 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-503`, `600-604`, `700`, and `900`), grouping tags, and the maintained
+- The 29 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-503`, `600-604`, `700`, `800`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -282,9 +283,9 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: serving and explanations implemented, visuals next
+### 2. Similarity and historical analogues: implemented, preserve through app integration
 
-- Implement weighted standardized distance and ten distinct physical communities as the frozen
+- Preserve weighted standardized distance and ten distinct physical communities as the frozen
   production retrieval policy. Keep PCA and tract-year matches available for development audit.
 - Preserve job-602 sample coverage, subgroup counts, and later-outcome comparisons. Do not convert
   one-case rare-category checks into performance claims, and do not open the locked temporal test.
@@ -310,30 +311,17 @@ dimension of lived experience are already represented.
 - Preserve the deterministic explanation and trajectory contracts in schema 1.1. The application
   should read their stored family gaps, highlighted values, annual paths, and missingness flags;
   it should not reconstruct model logic or interpolate missing points during a request.
-- Build a reviewed similarity visual package rather than relying on the early raw-versus-PCA
-  diagnostic alone. The minimum final set should include:
-  - a plain-language workflow diagram showing feature families, training-only preprocessing,
-    weighted distance, time-safe candidate filtering, top-ten retrieval, and later outcomes;
-  - a stability and representation-selection figure showing top-ten retention under bounded
-    weight changes, PCA comparison, and the evidence supporting weighted matching;
-  - an outcome-utility figure comparing analogue error with zero change, state trend, and the
-    primary forecast at one- and three-year horizons;
-  - a coverage figure showing where current historical analogues are available and where the
-    application must explain an unavailable result; and
-  - a polished case-study figure combining a query neighborhood, mapped historical matches,
-    feature similarities and differences, and what happened to the matches afterward.
-- Add `notebooks/08_final_analysis/01_similarity_model_walkthrough.py` as a standup-ready,
-  sequential explanation of the implemented system. It should read governed published tables and
-  walk through the question, coverage, feature families, preprocessing and weighting, time-safe
-  filtering, exact retrieval, an example query and its matches, shared and different traits,
-  later outcomes, stability and PCA evidence, analogue-versus-forecast performance, KD-tree scale,
-  limitations, and application interpretation. Include short speaking callouts, readable tables,
-  maps, and figures; do not retrain the system inside the presentation notebook.
-- Give every similarity figure one clear question, readable labels, restrained styling, source
-  run IDs, interpretation notes, and a documented limitation. Publish a versioned manifest and
-  visually inspect the complete set before selecting report or presentation figures.
-- Publish compact, versioned serving tables rather than querying `gold_modeling_panel` or the
-  wide audit tables from the application.
+- Preserve job-800 build `20261113T193948450115Z` as the current reviewed communication baseline.
+  Its five figures cover the workflow, stability and representation choice, later-outcome utility,
+  current availability, and an Oakland County example. The standup notebook reads those governed
+  outputs in sequence and does not retrain the method.
+- Keep the figure manifest tied to one audit run, selection run, exact-tree run, and complete
+  serving release. Refresh job 800 only after one of those approved inputs or the visual design
+  changes, inspect every new image at full resolution, and run job 900 afterward.
+- Integrate the compact job-700 serving release into the application rather than querying
+  `gold_modeling_panel` or the wide audit tables. Render stored feature-family gaps and observed
+  paths, keep intermediate gaps visible, and show the stored unavailable reason when no complete
+  result exists.
 
 ### 3. Descriptive application shell
 
@@ -395,8 +383,8 @@ The next checkpoint is complete when:
 - one uncertainty method has been calibrated and evaluated on the reserved calibration origins;
 - the implemented exact analogue precomputation, explanations, trajectories, runtime, refresh,
   and unavailable-result behavior remain documented and contract-tested;
-- the planned similarity visual package and standup walkthrough are published from governed model,
-  evaluation, and serving outputs;
+- the reviewed similarity visual package and standup walkthrough remain reproducible from governed
+  model, evaluation, and serving outputs;
 - compact, versioned forecast and analogue serving tables exist, with release lineage and no UI
   dependency on `gold_modeling_panel`;
 - a descriptive application shell reads the documented serving interface and handles unsupported

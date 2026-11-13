@@ -217,4 +217,6 @@ tract-horizon summaries, 171,056 availability rows, 934,380 deterministic explan
 2,803,140 annual trajectory rows, and a five-row activation manifest. It covers 46,719 model-ready
 current tracts at both one and three years while retaining an explicit availability state for all
 85,528 canonical tract profiles at each horizon. Job 900 confirmed comments on all 43 explanation
-and 26 trajectory columns. Forecasts and calibrated intervals are not yet serving tables.
+and 26 trajectory columns. Job 800 also publishes a five-row similarity figure manifest for the
+reviewed report and standup build; job 900 confirmed comments on all 14 of its columns. Forecasts
+and calibrated intervals are not yet serving tables.

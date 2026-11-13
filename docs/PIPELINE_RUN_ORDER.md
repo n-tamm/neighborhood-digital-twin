@@ -237,6 +237,11 @@ case. It does not fit preprocessing, change feature weights, retrieve matches, o
 tests. Run it after a relevant upstream analytical change or a reviewed visual-design change, then
 run job 900 so the manifest receives its table and column metadata.
 
+The current reviewed job-800 run is `626327765918889`. It completed in 58 seconds and published
+build `20261113T193948450115Z` with five manifest rows. Job 900 run `508147795488600` then
+confirmed the manifest table description and all 14 column comments. The current build and its
+source lineage are documented in `reports/SIMILARITY_FIGURES.md`.
+
 ### Find the MLflow experiments
 
 The modeling notebooks create their shared experiment folders idempotently. In the Databricks
