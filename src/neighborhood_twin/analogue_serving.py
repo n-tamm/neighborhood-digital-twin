@@ -20,10 +20,12 @@ from neighborhood_twin.current_analogues import (
     summarize_current_analogue_matches,
 )
 
-ANALOGUE_SERVING_SCHEMA_VERSION = "1.0.0"
+ANALOGUE_SERVING_SCHEMA_VERSION = "1.1.0"
 ANALOGUE_SERVING_MATCH_TABLE = "serving_analogue_match_current"
 ANALOGUE_SERVING_SUMMARY_TABLE = "serving_analogue_summary_current"
 ANALOGUE_SERVING_AVAILABILITY_TABLE = "serving_analogue_availability_current"
+ANALOGUE_SERVING_EXPLANATION_TABLE = "serving_analogue_explanation_current"
+ANALOGUE_SERVING_TRAJECTORY_TABLE = "serving_analogue_trajectory_current"
 SERVING_RELEASE_MANIFEST_TABLE = "serving_release_manifest"
 ANALOGUE_SERVING_COMPONENT = "historical_analogues"
 ANALOGUE_SERVING_RETRIEVAL_METHOD = "exact_kd_tree_distinct_tract"
@@ -488,6 +490,8 @@ def build_release_manifest(
         ANALOGUE_SERVING_MATCH_TABLE,
         ANALOGUE_SERVING_SUMMARY_TABLE,
         ANALOGUE_SERVING_AVAILABILITY_TABLE,
+        ANALOGUE_SERVING_EXPLANATION_TABLE,
+        ANALOGUE_SERVING_TRAJECTORY_TABLE,
     }
     if set(row_counts) != required or any(value <= 0 for value in row_counts.values()):
         raise ValueError("row_counts must contain every positive analogue serving table count")

@@ -366,6 +366,14 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Explicit current analogue availability, reason, and FHFA target-scope context.",
         "One row per serving release, current profile tract, and horizon.",
     ),
+    "serving_analogue_explanation_current": TableMetadata(
+        "Deterministic feature-family similarities and differences for approved current matches.",
+        "One row per serving release, current query tract, horizon, and match rank.",
+    ),
+    "serving_analogue_trajectory_current": TableMetadata(
+        "Aligned observed annual FHFA paths following each approved historical match.",
+        "One row per serving release, current query, match rank, and trajectory-year offset.",
+    ),
     "serving_release_manifest": TableMetadata(
         "Validated serving-table inventory whose rows activate an application release.",
         "One row per serving release, component, and published table.",
@@ -414,6 +422,8 @@ SERVING_TABLES = {
     "serving_analogue_match_current",
     "serving_analogue_summary_current",
     "serving_analogue_availability_current",
+    "serving_analogue_explanation_current",
+    "serving_analogue_trajectory_current",
     "serving_release_manifest",
 }
 
@@ -1057,6 +1067,84 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "target_scope_note": (
         "Application-ready warning that describes the supported FHFA single-family outcome scope."
+    ),
+    "strongest_shared_family": (
+        "Feature family with the smallest mean absolute standardized query-to-candidate gap."
+    ),
+    "strongest_shared_family_display_name": (
+        "Readable label for the closest feature family."
+    ),
+    "strongest_shared_family_gap": (
+        "Smallest family-level mean absolute standardized query-to-candidate gap."
+    ),
+    "second_shared_family": "Feature family with the second-smallest standardized gap.",
+    "second_shared_family_display_name": (
+        "Readable label for the second-closest feature family."
+    ),
+    "second_shared_family_gap": "Second-smallest family-level standardized gap.",
+    "largest_difference_family": (
+        "Feature family with the largest mean absolute standardized query-to-candidate gap."
+    ),
+    "largest_difference_family_display_name": (
+        "Readable label for the most different feature family."
+    ),
+    "largest_difference_family_gap": "Largest family-level standardized gap.",
+    "second_difference_family": "Feature family with the second-largest standardized gap.",
+    "second_difference_family_display_name": (
+        "Readable label for the second-most-different feature family."
+    ),
+    "second_difference_family_gap": "Second-largest family-level standardized gap.",
+    "strongest_shared_feature_display_name": (
+        "Readable label for the governed feature with the smallest standardized gap."
+    ),
+    "strongest_shared_query_value": (
+        "Training-imputed unscaled query value for the closest governed feature."
+    ),
+    "strongest_shared_candidate_value": (
+        "Training-imputed unscaled candidate value for the closest governed feature."
+    ),
+    "strongest_shared_standardized_gap": (
+        "Absolute standardized gap for the closest governed feature."
+    ),
+    "largest_difference_feature_display_name": (
+        "Readable label for the governed feature with the largest standardized gap."
+    ),
+    "largest_difference_query_value": (
+        "Training-imputed unscaled query value for the most different governed feature."
+    ),
+    "largest_difference_candidate_value": (
+        "Training-imputed unscaled candidate value for the most different governed feature."
+    ),
+    "largest_difference_standardized_gap": (
+        "Absolute standardized gap for the most different governed feature."
+    ),
+    "query_imputed_feature_count": (
+        "Number of query explanation features filled by the training-fitted imputer."
+    ),
+    "candidate_imputed_feature_count": (
+        "Number of candidate explanation features filled by the training-fitted imputer."
+    ),
+    "explanation_scope_note": (
+        "Application-ready warning that similarity explanations are descriptive, not causal."
+    ),
+    "trajectory_year_offset": "Years elapsed after the historical candidate origin.",
+    "trajectory_observation_year": "Calendar year represented by the aligned path row.",
+    "trajectory_hpi": "Observed FHFA single-family tract HPI at the aligned path year.",
+    "trajectory_cumulative_log_change": (
+        "Log FHFA HPI change from the historical candidate origin through this path year."
+    ),
+    "trajectory_cumulative_change_pct": (
+        "Percentage FHFA HPI change from the candidate origin through this path year."
+    ),
+    "trajectory_observed": "Whether an observed FHFA HPI is available at this path offset.",
+    "trajectory_path_complete": (
+        "Whether every annual FHFA observation from candidate origin through horizon is present."
+    ),
+    "is_horizon_endpoint": "Whether this row is the declared analogue outcome endpoint.",
+    "trajectory_source_snapshot_id": "FHFA source snapshot supporting this path observation.",
+    "trajectory_role": "Machine-readable boundary for the descriptive historical path.",
+    "trajectory_scope_note": (
+        "Application-ready warning that the observed historical path is not a forecast."
     ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."
