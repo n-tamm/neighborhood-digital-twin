@@ -10,9 +10,11 @@ import pytest
 
 from neighborhood_twin.analogue_serving import (
     ANALOGUE_SERVING_AVAILABILITY_TABLE,
+    ANALOGUE_SERVING_EXPLANATION_TABLE,
     ANALOGUE_SERVING_MATCH_TABLE,
     ANALOGUE_SERVING_SCHEMA_VERSION,
     ANALOGUE_SERVING_SUMMARY_TABLE,
+    ANALOGUE_SERVING_TRAJECTORY_TABLE,
     AnalogueServingRelease,
     new_analogue_serving_release,
     validate_analogue_serving_release,
@@ -34,10 +36,12 @@ def _release(**overrides: object) -> AnalogueServingRelease:
 
 
 def test_serving_contract_constants_and_release_factory() -> None:
-    assert ANALOGUE_SERVING_SCHEMA_VERSION == "1.0.0"
+    assert ANALOGUE_SERVING_SCHEMA_VERSION == "1.1.0"
     assert ANALOGUE_SERVING_MATCH_TABLE == "serving_analogue_match_current"
     assert ANALOGUE_SERVING_SUMMARY_TABLE == "serving_analogue_summary_current"
     assert ANALOGUE_SERVING_AVAILABILITY_TABLE == "serving_analogue_availability_current"
+    assert ANALOGUE_SERVING_EXPLANATION_TABLE == "serving_analogue_explanation_current"
+    assert ANALOGUE_SERVING_TRAJECTORY_TABLE == "serving_analogue_trajectory_current"
 
     release = new_analogue_serving_release(
         as_of_year=2025,

@@ -41,7 +41,9 @@ For each horizon, the notebook:
    outcomes; and
 6. combines both horizons under one immutable serving release ID.
 
-The release is then reduced into three application-facing tables and validated as one unit.
+The release is then reduced into five application-facing tables and validated as one unit. The
+first three provide retrieval and availability; the other two explain each match and preserve its
+observed annual outcome path.
 
 ## Published tables
 
@@ -70,12 +72,28 @@ missing model-ready market features. It also carries a housing-composition band 
 the application can explain that later outcomes describe FHFA's single-family market rather than
 all housing in the tract.
 
+### `serving_analogue_explanation_current`
+
+One row represents one published match. It identifies the feature families and individual
+features that are most similar and most different for that query-candidate pair. All gaps use the
+same training-fitted imputation, scaling, and feature-family weights used during retrieval, so the
+application does not invent an explanation with a second calculation. These are descriptive
+comparisons of model inputs, not causal explanations of the candidate's later outcome.
+
+### `serving_analogue_trajectory_current`
+
+One row represents one annual offset along a published match's observed outcome path, beginning
+at the candidate year and ending at the selected one- or three-year horizon. It contains the
+observed HPI level and cumulative change from the candidate year. Missing intermediate values are
+kept explicit, and the endpoint must reconcile to the later outcome in the match table.
+
 ### `serving_release_manifest`
 
 The manifest has one row per component table in a validated release. It records row counts, schema
 version, as-of year, horizons, top-k setting, retrieval method, source model-readiness build, and
 source job-604 run. The manifest is written after the data tables. Application code should only
-select a release that has validated manifest rows for all three required tables.
+select a release that has validated manifest rows for every table required by its schema version.
+Schema version 1.0 required three rows; version 1.1 requires all five tables above.
 
 ## Publication and rollback behavior
 
@@ -97,7 +115,10 @@ Publication stops unless all of the following hold:
 - every available key has matches and one summary, and no unavailable key has either;
 - every current profile has exactly one availability row per supported horizon;
 - the summary range remains labeled as uncalibrated historical context; and
-- all three release row counts are positive and reconcile before the manifest is written.
+- all five release row counts are positive and reconcile before the manifest is written;
+- every match has exactly one explanation row with finite governed gaps; and
+- every match has the expected offset-zero-through-horizon trajectory rows, an observed endpoint,
+  and an endpoint change that reconciles to the published match outcome.
 
 Job 900 then applies table descriptions and column comments. These checks protect structure and
 timing; they do not make the historical outcomes causal or convert them into a primary forecast.
@@ -109,10 +130,10 @@ can read the corresponding summary and ten matches from the same release ID. For
 tract, it should keep the broader community profile visible and show the recorded reason rather
 than returning an empty chart.
 
-Match explanations and aligned historical trajectories are intentionally not part of this first
-release. They require their own tested contracts so they can name the strongest shared traits and
-largest differences without recomputing model logic in the app. The next communication notebook
-should also read these governed tables rather than retraining the representation during a standup.
+The application can now join the explanation and trajectory tables to each selected match using
+the release, horizon, query tract, candidate tract, candidate year, and match rank. It should read
+these governed outputs rather than retraining the representation or rebuilding the annual path in
+the application. A future communication notebook should use the same contract.
 
 ## First live release
 
@@ -135,6 +156,25 @@ application states, not rows silently dropped from the product.
 The release points to model-readiness build `20261107T185721624743Z` and exact-tree evaluation run
 `fae78721154347039d41864bad2e871a`. Job 900 then confirmed comments on all 26 availability, 35
 match, 39 summary, and 13 manifest columns.
+
+## Current enriched release
+
+The November 13 schema-1.1 release `analogue-20261113T132155097077Z` retains the same approved
+population and lineage while activating five component tables:
+
+| Table | Rows |
+|---|---:|
+| `serving_analogue_match_current` | 934,380 |
+| `serving_analogue_summary_current` | 93,438 |
+| `serving_analogue_availability_current` | 171,056 |
+| `serving_analogue_explanation_current` | 934,380 |
+| `serving_analogue_trajectory_current` | 2,803,140 |
+
+The 470-second job reconciled one explanation to every match and one endpoint to every historical
+outcome before writing its five-row manifest. All one-year paths are complete. Among three-year
+matches, 444,093 paths are complete and 23,097 retain one or more explicit missing intermediate
+observations; their direct endpoints are still observed and consistent. Job 900 confirmed comments
+on all 43 explanation and 26 trajectory columns.
 
 ## Refresh rule
 

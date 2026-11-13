@@ -12,9 +12,10 @@
 # MAGIC # Publish current historical analogue serving products
 # MAGIC
 # MAGIC This job applies the exact retrieval policy validated by job 604 to every eligible current
-# MAGIC tract. It publishes compact matches, descriptive outcome summaries, and explicit
-# MAGIC availability states. All tables are versioned and append-only. The manifest is written last,
-# MAGIC so an incomplete release cannot become an approved application input.
+# MAGIC tract. It publishes compact matches, descriptive outcome summaries, explicit availability,
+# MAGIC deterministic explanations, and aligned historical outcome paths. All tables are versioned
+# MAGIC and append-only. The manifest is written last, so an incomplete release cannot become an
+# MAGIC approved application input.
 
 # COMMAND ----------
 
@@ -44,8 +45,10 @@ from pyspark.sql import functions, types
 
 from neighborhood_twin.analogue_serving import (
     ANALOGUE_SERVING_AVAILABILITY_TABLE,
+    ANALOGUE_SERVING_EXPLANATION_TABLE,
     ANALOGUE_SERVING_MATCH_TABLE,
     ANALOGUE_SERVING_SUMMARY_TABLE,
+    ANALOGUE_SERVING_TRAJECTORY_TABLE,
     SERVING_RELEASE_MANIFEST_TABLE,
     build_indexed_match_frame,
     build_release_manifest,
@@ -54,6 +57,11 @@ from neighborhood_twin.analogue_serving import (
     build_serving_summary_frame,
     new_analogue_serving_release,
     validate_serving_outputs,
+)
+from neighborhood_twin.analogue_serving_enrichment import (
+    build_serving_explanation_frame,
+    build_serving_trajectory_frame,
+    validate_serving_enrichment,
 )
 from neighborhood_twin.analogue_serving_retrieval import (
     DEFAULT_KD_TREE_CONFIGURATION,
@@ -76,6 +84,9 @@ dbutils.widgets.text("model_schema", "neighborhood_twin_model", "Model schema")
 dbutils.widgets.text("serving_schema", "neighborhood_twin_serving", "Serving schema")
 dbutils.widgets.text("modeling_panel_table", "gold_modeling_panel", "Modeling panel")
 dbutils.widgets.text(
+    "historical_target_table", "gold_forecast_target_historical", "Historical targets"
+)
+dbutils.widgets.text(
     "current_profile_table", "gold_tract_profile_current", "Current tract profile"
 )
 dbutils.widgets.text(
@@ -85,6 +96,12 @@ dbutils.widgets.text("match_table", ANALOGUE_SERVING_MATCH_TABLE, "Serving match
 dbutils.widgets.text("summary_table", ANALOGUE_SERVING_SUMMARY_TABLE, "Serving summaries")
 dbutils.widgets.text(
     "availability_table", ANALOGUE_SERVING_AVAILABILITY_TABLE, "Serving availability"
+)
+dbutils.widgets.text(
+    "explanation_table", ANALOGUE_SERVING_EXPLANATION_TABLE, "Serving explanations"
+)
+dbutils.widgets.text(
+    "trajectory_table", ANALOGUE_SERVING_TRAJECTORY_TABLE, "Serving trajectories"
 )
 dbutils.widgets.text(
     "manifest_table", SERVING_RELEASE_MANIFEST_TABLE, "Serving release manifest"
@@ -126,11 +143,14 @@ gold_schema = dbutils.widgets.get("gold_schema").strip()
 model_schema = dbutils.widgets.get("model_schema").strip()
 serving_schema = dbutils.widgets.get("serving_schema").strip()
 modeling_panel_table = dbutils.widgets.get("modeling_panel_table").strip()
+historical_target_table = dbutils.widgets.get("historical_target_table").strip()
 current_profile_table = dbutils.widgets.get("current_profile_table").strip()
 tree_reference_table = dbutils.widgets.get("tree_reference_table").strip()
 match_table = dbutils.widgets.get("match_table").strip()
 summary_table = dbutils.widgets.get("summary_table").strip()
 availability_table = dbutils.widgets.get("availability_table").strip()
+explanation_table = dbutils.widgets.get("explanation_table").strip()
+trajectory_table = dbutils.widgets.get("trajectory_table").strip()
 manifest_table = dbutils.widgets.get("manifest_table").strip()
 horizons = _parse_int_tuple(dbutils.widgets.get("horizons"), label="horizons")
 top_k = int(dbutils.widgets.get("top_k"))
@@ -146,19 +166,25 @@ if (
     match_table,
     summary_table,
     availability_table,
+    explanation_table,
+    trajectory_table,
     manifest_table,
 ) != (
     ANALOGUE_SERVING_MATCH_TABLE,
     ANALOGUE_SERVING_SUMMARY_TABLE,
     ANALOGUE_SERVING_AVAILABILITY_TABLE,
+    ANALOGUE_SERVING_EXPLANATION_TABLE,
+    ANALOGUE_SERVING_TRAJECTORY_TABLE,
     SERVING_RELEASE_MANIFEST_TABLE,
 ):
     raise ValueError("Serving table names are fixed by the versioned release contract")
 
 panel_name = qualified_name(catalog, gold_schema, modeling_panel_table)
+historical_target_name = qualified_name(catalog, gold_schema, historical_target_table)
 profile_name = qualified_name(catalog, gold_schema, current_profile_table)
 tree_reference_name = qualified_name(catalog, model_schema, tree_reference_table)
 panel = spark.table(panel_name)
+historical_targets = spark.table(historical_target_name)
 current_profile = spark.table(profile_name)
 tree_reference = spark.table(tree_reference_name)
 validate_analogue_columns(panel.columns)
@@ -193,6 +219,13 @@ if len(panel_build_ids) != 1 or reference_build_ids != panel_build_ids:
     raise RuntimeError("Job 604 must be refreshed after the current model-readiness build")
 model_readiness_build_id = next(iter(panel_build_ids))
 source_tree_run_id = next(iter(tree_run_ids))
+release = new_analogue_serving_release(
+    as_of_year=as_of_year,
+    horizons=horizons,
+    top_k=top_k,
+    model_readiness_build_id=model_readiness_build_id,
+    source_tree_run_id=source_tree_run_id,
+)
 
 if current_profile.groupBy("geoid_2020").count().where(
     functions.col("count") != 1
@@ -326,6 +359,7 @@ def _build_key_frame(
 # COMMAND ----------
 
 horizon_matches = []
+horizon_explanations = []
 retrieval_metrics = []
 for horizon in horizons:
     horizon_panel = panel.where(functions.col("horizon_years") == horizon)
@@ -367,6 +401,11 @@ for horizon in horizons:
     ).cache()
     horizon_match.count()
     horizon_matches.append(horizon_match)
+    horizon_explanation = build_serving_explanation_frame(
+        horizon_match, represented, release
+    ).cache()
+    horizon_explanation.count()
+    horizon_explanations.append(horizon_explanation)
     retrieval_metrics.append(
         (
             int(horizon),
@@ -385,13 +424,10 @@ indexed_matches = horizon_matches[0]
 for frame in horizon_matches[1:]:
     indexed_matches = indexed_matches.unionByName(frame)
 
-release = new_analogue_serving_release(
-    as_of_year=as_of_year,
-    horizons=horizons,
-    top_k=top_k,
-    model_readiness_build_id=model_readiness_build_id,
-    source_tree_run_id=source_tree_run_id,
-)
+serving_explanations = horizon_explanations[0]
+for frame in horizon_explanations[1:]:
+    serving_explanations = serving_explanations.unionByName(frame)
+
 serving_matches = build_serving_match_frame(indexed_matches, current_profile, release).cache()
 serving_summary = build_serving_summary_frame(
     indexed_matches, current_profile, release
@@ -399,9 +435,16 @@ serving_summary = build_serving_summary_frame(
 serving_availability = build_serving_availability_frame(
     current_profile, indexed_matches, release
 ).cache()
-row_counts = validate_serving_outputs(
+serving_trajectories = build_serving_trajectory_frame(
+    serving_matches, historical_targets, release
+).cache()
+base_row_counts = validate_serving_outputs(
     serving_matches, serving_summary, serving_availability, release
 )
+enrichment_row_counts = validate_serving_enrichment(
+    serving_matches, serving_explanations, serving_trajectories, release
+)
+row_counts = {**base_row_counts, **enrichment_row_counts}
 manifest = build_release_manifest(spark, release, row_counts)
 
 # COMMAND ----------
@@ -416,6 +459,8 @@ published_frames = (
     (match_table, serving_matches),
     (summary_table, serving_summary),
     (availability_table, serving_availability),
+    (explanation_table, serving_explanations),
+    (trajectory_table, serving_trajectories),
 )
 for table, frame in published_frames:
     raw_name = f"{catalog}.{serving_schema}.{table}"
@@ -470,5 +515,10 @@ display(
     .orderBy("horizon_years", "availability_reason")
 )
 display(serving_summary.orderBy("horizon_years", "query_geoid_2020").limit(20))
+display(
+    serving_trajectories.groupBy("horizon_years", "trajectory_path_complete")
+    .count()
+    .orderBy("horizon_years", "trajectory_path_complete")
+)
 display(published_manifest.orderBy("table_name"))
 print(f"Activated analogue serving release {release.release_id} in {serving_schema}.")

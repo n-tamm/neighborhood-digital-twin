@@ -57,6 +57,8 @@ def test_table_layers_separate_pipeline_products_from_quality_results() -> None:
     assert TABLE_LAYERS["historical_analogue_selection_scorecard"] == "evaluation"
     assert TABLE_LAYERS["historical_analogue_selection_coverage"] == "evaluation"
     assert TABLE_LAYERS["serving_analogue_match_current"] == "serving"
+    assert TABLE_LAYERS["serving_analogue_explanation_current"] == "serving"
+    assert TABLE_LAYERS["serving_analogue_trajectory_current"] == "serving"
     assert TABLE_LAYERS["serving_release_manifest"] == "serving"
 
 

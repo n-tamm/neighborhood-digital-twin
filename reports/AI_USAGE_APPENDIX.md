@@ -38,6 +38,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Expanded analogue selection and coverage safeguards, November 8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Current analogue retrieval and scalable serving benchmark, November 9-11, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | National analogue serving contract and publication, November 12, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Deterministic analogue explanations and historical trajectories, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -330,6 +331,23 @@ summaries, 171,056 availability rows, and a three-row manifest written last. SQL
 reason counts, one source model build and tree run, and comments on all 113 serving columns. This
 live failure is also why application releases are append-only and become active through a final
 manifest rather than because a data table happens to exist.
+
+The schema-1.1 serving enrichment was evaluated with Ruff, mypy, all 120 local tests, bundle
+validation, live job-700 execution, job-900 metadata application, and read-only SQL reconciliation
+of the complete release. The first live attempt reached its endpoint gate and correctly failed:
+some valid three-year FHFA outcomes have a missing intermediate annual origin, but the generated
+trajectory logic had required the endpoint to pass through that one-year chain. The automatic
+unchanged retry was canceled. The implementation was revised to read the endpoint from the
+approved direct horizon target while retaining unavailable intermediate points as explicit gaps.
+The failed attempt activated no data because its manifest had not been written.
+
+The corrected 470-second run activated five tables containing 934,380 explanations and 2,803,140
+trajectory rows in addition to the existing match, summary, and availability products. SQL review
+confirmed one explanation per match, complete one-year paths, observed endpoints for every path,
+23,097 three-year paths with explicit intermediate gaps, the expected five-row manifest, and
+comments on all 43 explanation and 26 trajectory columns. The documentation and application
+guidance were then changed so missing intermediate years are displayed rather than silently
+interpolated or treated as a failed later outcome.
 
 ## Maintenance requirements
 

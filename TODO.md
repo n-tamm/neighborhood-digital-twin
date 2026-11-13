@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 12, 2026. The broader design remains in the
+This is the working handoff as of November 13, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -15,13 +15,13 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, match explanations, and the interactive application still need to be built. The
-national analogue serving workflow is implemented and its first release passed live validation.
-Historical-analogue case review, bounded stability testing,
-expanded representation selection, exact current-neighborhood retrieval, and the first scalable
-  retrieval benchmark are complete. Exact indexed retrieval is also validated for all 46,719
-  eligible current tracts. New source families should not be added until a model result or required
-  app view shows a specific gap.
+uncertainty, the final similarity visual package and walkthrough, and the interactive application
+still need to be built. The national analogue serving workflow now publishes matches, summaries,
+availability, deterministic explanations, and annual historical paths as one validated release.
+Historical-analogue case review, bounded stability testing, expanded representation selection,
+exact current-neighborhood retrieval, and scalable retrieval evaluation are complete. Exact
+indexed retrieval is validated for all 46,719 eligible current tracts. New source families should
+not be added until a model result or required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -163,6 +163,15 @@ expanded representation selection, exact current-neighborhood retrieval, and the
   horizon. The complete serverless job took 433 seconds. The activation manifest reconciles all
   three tables to model-readiness build
   `20261107T185721624743Z` and job-604 run `fae78721154347039d41864bad2e871a`.
+- Schema-1.1 release `analogue-20261113T132155097077Z` extends that same population with 934,380
+  deterministic match explanations and 2,803,140 annual trajectory rows. Its five-table manifest
+  activated only after one-to-one explanation keys and every path endpoint reconciled.
+- All 467,190 one-year paths are complete. At three years, 444,093 paths are complete and 23,097
+  contain at least one explicit intermediate gap; all endpoints remain observed. The application
+  must show these gaps rather than connecting across them as if values were observed.
+- The explanation output shows that housing structure is most often the closest family and recent
+  market trajectory is most often the largest difference. These are representation diagnostics,
+  not causal findings. Imputation counts are stored with every match explanation.
 - Per horizon, unavailable states are now concrete: 1,121 tracts lack a current ACS profile, 1,037
   lack enough current similarity features, 19,443 lack FHFA history, and 17,208 lack the complete
   model-ready market features used by the selected representation. The application must show
@@ -170,7 +179,8 @@ expanded representation selection, exact current-neighborhood retrieval, and the
 - The live run first exposed an interface mismatch between `query_geoid_2020` in retrieved matches
   and `geoid_2020` in the availability contract. No release had been activated. The contract now
   resolves either governed name explicitly, the corrected run passed, and job 900 confirmed
-  comments on all 113 columns across the four serving tables.
+  comments on all 113 columns across the original four serving tables. After schema 1.1, job 900
+  also confirmed all 43 explanation and 26 trajectory column comments.
 
 ## Important interpretation limits
 
@@ -272,7 +282,7 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: national serving implemented, explanations next
+### 2. Similarity and historical analogues: serving and explanations implemented, visuals next
 
 - Implement weighted standardized distance and ten distinct physical communities as the frozen
   production retrieval policy. Keep PCA and tract-year matches available for development audit.
@@ -297,11 +307,9 @@ dimension of lived experience are already represented.
 - Decide whether unsupported tracts should show an explained unavailable state or receive a
   separately versioned ACS-only similarity fallback. Do not silently impute the missing market
   trajectory family and call it the same representation.
-- Generate explanations containing shared strengths, important differences, candidate year and
-  location, later outcome, coverage warnings, and the descriptive outcome range.
-- Keep the first explanation contract deterministic and data-backed. Store the strongest shared
-  feature-family similarities and largest differences in serving rows; do not require an LLM to
-  calculate or validate them.
+- Preserve the deterministic explanation and trajectory contracts in schema 1.1. The application
+  should read their stored family gaps, highlighted values, annual paths, and missingness flags;
+  it should not reconstruct model logic or interpolate missing points during a request.
 - Build a reviewed similarity visual package rather than relying on the early raw-versus-PCA
   diagnostic alone. The minimum final set should include:
   - a plain-language workflow diagram showing feature families, training-only preprocessing,
@@ -356,8 +364,8 @@ dimension of lived experience are already represented.
 
 ### 5. Serving and integration
 
-- Extend the implemented analogue serving release with forecast, interval, explanation,
-  trajectory, profile/history, and display-geometry products as those components are approved.
+- Extend the implemented analogue serving release with forecast, interval, profile/history, and
+  display-geometry products as those components are approved.
 - Connect the application to the serving contract, then add forecasts, analogues, explanations,
   and guarded scenario sensitivity.
 - Add application contract tests, smoke tests, accessibility review, and deployment runbooks.
@@ -385,10 +393,10 @@ The next checkpoint is complete when:
 - forecast selection uses subgroup, bias, tail-error, and independent-origin evidence rather than
   only overall MAE;
 - one uncertainty method has been calibrated and evaluated on the reserved calibration origins;
-- a production analogue retrieval design either materially improves on job 603 or uses bounded
-  exact precomputation with documented runtime, storage, refresh, and unavailable-result behavior;
-- match explanations and the planned similarity visual package are published from governed model
-  and evaluation outputs;
+- the implemented exact analogue precomputation, explanations, trajectories, runtime, refresh,
+  and unavailable-result behavior remain documented and contract-tested;
+- the planned similarity visual package and standup walkthrough are published from governed model,
+  evaluation, and serving outputs;
 - compact, versioned forecast and analogue serving tables exist, with release lineage and no UI
   dependency on `gold_modeling_panel`;
 - a descriptive application shell reads the documented serving interface and handles unsupported

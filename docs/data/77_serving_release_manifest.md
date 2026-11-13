@@ -3,8 +3,9 @@
 ## Purpose and grain
 
 This Delta table is the activation record for application-serving releases. Its grain is one
-serving release, component, and published table. The analogue component has three validated rows:
-match, summary, and availability.
+serving release, component, and published table. Analogue serving schema 1.0 had three validated
+rows: match, summary, and availability. Schema 1.1 has five rows by adding the match-explanation
+and annual-trajectory tables.
 
 ## Important fields
 
@@ -24,4 +25,5 @@ partition without a complete manifest is an inactive partial attempt, not the ne
 ## Sample
 
 See [`serving_release_manifest.jsonl`](../../data/samples/serving_release_manifest.jsonl). It
-contains the complete three-row activation manifest for the first approved analogue release.
+contains the complete five-row activation manifest for validated schema-1.1 release
+`analogue-20261113T132155097077Z`.
