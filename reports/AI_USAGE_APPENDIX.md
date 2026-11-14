@@ -380,6 +380,19 @@ exception. That live render did expose a non-fatal Arrow warning caused by mixed
 lineage values. The UI now converts those display values explicitly instead of relying on
 Streamlit's automatic type repair.
 
+The first application map revision was evaluated against live geometry rather than only a
+synthetic polygon. Read-only profiling found that the Autauga context window contained 30 possible
+tracts and only about 45 KB of WKB, supporting a bounded outline design. The final query returned
+17 nearby display polygons and all 20 analogue polygons. Tests confirmed that the primary map uses
+polygon traces rather than point markers and that the neighborhood repository groups its seven
+result sets on one SQL connection. A same-warehouse comparison reduced neighborhood loading from
+11.57 to 6.22 seconds, while a complete live render produced eight Plotly figures without an
+exception. The implementation retains a hard 80-tract context cap and keeps the geometry explicitly
+display-only so a visual improvement cannot silently become a spatial-model claim.
+Additional live construction checks covered Michigan, New York County, Alaska, and Honolulu.
+Those cases exercised dense urban context, the 80-row cap, non-contiguous states, and an unavailable
+three-year analogue result without producing a map-construction error.
+
 ## Maintenance requirements
 
 - Update the model table when a materially contributing model or configuration changes.

@@ -20,7 +20,7 @@ exactly 11 digits, search text is length-limited, and user values are passed as 
 |---|---|
 | `gold_tract_profile_current` | Current labels, ACS profile, housing composition, coverage flags, and latest HPI context |
 | `silver_fhfa_tract_year` | Observed annual single-family HPI history |
-| `silver_tract_display_geometry_2020` | Selected and matched tract display centers |
+| `silver_tract_display_geometry_2020` | Simplified selected, nearby-context, and matched tract outlines plus display bounds |
 | `serving_release_manifest` | Select one complete validated analogue release |
 | `serving_analogue_availability_current` | Search universe, horizon availability, and unavailable reason |
 | `serving_analogue_summary_current` | Match count and descriptive outcome distribution |
@@ -30,6 +30,21 @@ exactly 11 digits, search text is length-limited, and user values are passed as 
 
 The interface does not read the modeling panel, evaluation tables, raw snapshots, or bronze data.
 Every Databricks App table resource is `SELECT` only, and the warehouse permission is `CAN_USE`.
+
+## Geometry query and performance boundary
+
+Live mode converts stored WKB into GeoJSON in Databricks SQL with
+[`st_geomfromwkb`](https://docs.databricks.com/aws/en/sql/language-manual/functions/st_geomfromwkb)
+and
+[`st_asgeojson`](https://docs.databricks.com/aws/en/sql/language-manual/functions/st_asgeojson).
+This avoids a second geometry library in the application runtime. The selected-neighborhood query
+returns the chosen tract and an expanded local display window, ordered by center proximity and
+capped at 80 rows. The match query returns only the 20 approved candidate outlines across the two
+horizons.
+
+The seven result sets needed for one neighborhood are executed over one SQL connection instead of
+opening one connection per table. Streamlit then caches the assembled neighborhood for 15 minutes,
+so switching tabs, horizons, or inspected matches does not rerun warehouse queries.
 
 ## Release-selection rule
 

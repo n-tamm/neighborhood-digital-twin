@@ -12,7 +12,9 @@ The first Streamlit foundation is now implemented and managed as the private Dat
 `neighborhood-intelligence`. It provides tract search, a map-first current profile, housing-stock
 composition, observed FHFA history, historical analogue summaries and ranked matches, stored
 feature-family explanations, observed post-match trajectories, release lineage, and explicit
-limitations. A reduced real-data fixture supports credential-free local work.
+limitations. The map now uses simplified selected, nearby-context, and matched tract polygons,
+with side-by-side footprint comparisons for an inspected analogue. A reduced real-data fixture
+supports credential-free local work.
 
 Forecasting remains an explicit unavailable state until a selected model and calibrated interval
 are published. Scenario sensitivity, metro comparison, analytical neighbor context, and an AI
@@ -114,6 +116,12 @@ historical feature row and from the smaller eligible population for a selected h
 - Cache immutable tables and expensive transforms using keys that include the serving release.
 - Keep the default app functional within Databricks Apps limits and, if used, the public mirror's limits.
 - Move heavy spatial joins, training, and batch inference out of request-time execution.
+
+The current app executes the seven neighborhood result sets over one SQL connection and caches the
+assembled view by GEOID for 15 minutes. The local context query is ordered by center proximity and
+capped at 80 simplified polygons. In one warm-warehouse comparison, this reduced neighborhood-load
+time from 11.57 to 6.22 seconds even after the geometry payload was added. Treat this as a
+development benchmark, not a guaranteed response time.
 
 Set measurable budgets after the prototype: for example, a useful first view within several seconds on a cold start and sub-second updates for cached controls.
 

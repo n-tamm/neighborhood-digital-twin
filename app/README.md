@@ -7,6 +7,10 @@ approved historical analogues. Forecasting has a deliberate unavailable state un
 forecasting workstream publishes a selected model, calibrated interval, and versioned serving
 contract.
 
+The primary map uses the selected tract's simplified boundary and nearby tract outlines. The
+analogue experience uses actual matched-tract polygons and side-by-side footprint comparisons
+rather than point markers.
+
 The interface is intentionally thin. It does not train models, rebuild features, download source
 data, or query `gold_modeling_panel`. Live mode uses a Databricks App service principal and reads
 only the compact tables declared in `databricks.yml`.
@@ -70,6 +74,8 @@ until access is explicitly granted after live validation.
   demonstration value for an approved forecast.
 - Simplified geometry locates places on the map but is not used for similarity, adjacency, or
   distance claims.
+- Live neighborhood result sets share one warehouse connection and are cached by tract so richer
+  boundary maps do not require repeated SQL startup on tab or horizon changes.
 
 The implementation and interpretation details are in
 [the application documentation](../docs/application/README.md).

@@ -342,6 +342,12 @@ dimension of lived experience are already represented.
   state, returned HTTP 200, selected the validated release, and rendered all ten matches per
   horizon without an exception. Manual exact-GEOID search, unavailable-state, desktop and narrow
   layout, legend, caveat, and accessibility review remain.
+- The first map refinement replaces point markers with actual simplified tract polygons. The main
+  map shows the selected tract within a capped local tract context; analogue results use matched
+  outlines, rank labels, and side-by-side footprint views with land-area labels. Live neighborhood
+  loading fell from 11.57 to 6.22 seconds in a warm-warehouse comparison after seven result sets
+  were moved onto one connection. Visual review across dense urban, rural, coastal, Alaska, and
+  Hawaii examples remains necessary before the map design is final.
 - Next app work should integrate the approved forecast serving contract, then compare forecast and
   historical-analogue evidence without blending their interpretation. Scenario sensitivity and an
   optional conversational layer remain deferred.

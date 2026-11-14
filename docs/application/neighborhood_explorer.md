@@ -20,8 +20,9 @@ uses its own data contracts, language, component design, and model boundaries.
    evidence only. They do not change or imply a forecast.
 3. **Check evidence availability.** Status badges show whether the current profile, FHFA history,
    analogue result, and forecast are available. Text and symbols accompany color.
-4. **Orient on the map.** The selected tract and historical matches use separate colors and labels.
-   Map centers are display aids, not spatial model inputs.
+4. **Orient on the map.** The selected tract is shown as an actual simplified outline within
+   nearby tract boundaries. Historical matches use gold outlines and rank labels in the analogue
+   view. All geometry remains display-only rather than a model input.
 5. **Open a focused tab.** Overview, Forecast, Historical analogues, and Methods & limitations keep
    different evidence types from being blended together.
 
@@ -47,7 +48,8 @@ analogue outcome is displayed as the tract's expected future.
 The analogue screen reads one complete validated release. It provides the number and geographic
 diversity of matches, the descriptive distribution of their observed later outcomes, a ranked
 match table, five feature-family gaps, plain-language strongest-shared and largest-difference
-callouts, and the selected match's observed post-match trajectory.
+callouts, side-by-side tract footprint maps, and the selected match's observed post-match
+trajectory.
 
 The page repeatedly labels those outcomes as historical evidence. Similarity distance explains
 retrieval, not why prices later changed, and a historical path is not presented as a causal or

@@ -1,14 +1,31 @@
 # Application Charts and Interpretation
 
-## Map: selected tract and historical matches
+## Local neighborhood context map
 
-The map places the selected current tract in teal and historical matches in gold, with rank labels
-for the matches. Marker locations are centers of simplified display bounds. The map answers
-"where are these examples?" It does not show the exact tract boundary, prove spatial proximity,
-or contribute to the similarity distance.
+The main map now draws the selected 2020 Census tract as a teal polygon within nearby tract
+outlines. It uses the simplified Census geometry stored by the display-geometry pipeline rather
+than a point or bounding rectangle. The context window is based on an expanded display extent and
+is capped at the nearest 80 tract centers so dense urban areas cannot return an unbounded payload.
 
-The same map appears once as page context and again inside the analogue investigation. Distinct
-Streamlit keys prevent the two components from conflicting during one render.
+The surrounding polygons answer "where is this tract relative to the local tract pattern?" They
+are display context, not a claim that every visible tract is adjacent. Geometry is simplified and
+must not be used for parcel boundaries, distance, adjacency, or similarity inputs.
+
+## National historical-analogue map
+
+The analogue map uses the actual simplified polygon for the selected tract and each historical
+match. Gold polygons and text-only rank labels replace the original point markers. The national
+view answers where the examples occurred; hovering gives place, historical year, and distance.
+At a national scale, small tract shapes can still be difficult to inspect, which is why the
+selected-match section also provides locally fitted footprint maps.
+
+## Footprint comparison
+
+When a historical match is selected, two local maps show the current and matched tract outlines
+side by side. Each panel fits its own boundary so narrow or unusually shaped tracts remain
+readable. Because independent zoom can make screen size misleading, the interface also reports
+land area in square miles and explicitly tells the user to compare that value rather than apparent
+panel size.
 
 ## Housing composition
 
@@ -44,5 +61,7 @@ must not be labeled as the selected tract's predicted path.
 - Red-to-green good/bad scales are avoided because the project does not rank community quality.
 - Every percentage states whether it is a share or a percentage change in surrounding text.
 - Important charts have nearby definitions and limitations rather than relying only on tooltips.
+- Simplified geometry supports orientation and visual comparison only; it never changes a model
+  feature, match rank, or forecast.
 - Forecast intervals and drivers will get their own visual semantics after the serving contract is
   approved; they will not reuse analogue-range styling.

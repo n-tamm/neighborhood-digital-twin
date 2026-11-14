@@ -40,6 +40,8 @@ verified live data, caveats, and error handling.
 - release-manifest completeness and validated-status checks;
 - real local fixture loading and horizon availability;
 - known-answer formatting and place labels;
+- polygon-map construction and selected-boundary layering;
+- one-connection batching for the seven neighborhood result sets;
 - preservation of missing HPI observations;
 - full Streamlit startup in sample mode with no rendered exception;
 - Ruff and mypy checks for the application modules; and
@@ -75,3 +77,24 @@ the default county search, loaded 34 FHFA history rows, and loaded 20 match rows
 the one- and three-year horizons. A full Streamlit render against those live tables completed with
 no rendered exception. This verifies initial connectivity and contract compatibility; it does not
 replace the remaining manual browser, responsive-layout, and accessibility review.
+
+## Boundary-map and latency verification
+
+The boundary iteration was tested against the same warm SQL warehouse and Autauga County tract
+used for the initial live review. Before batching, repository startup took 3.11 seconds, search
+took 1.65 seconds, and neighborhood loading took 11.57 seconds. After batching and adding geometry,
+startup took 3.14 seconds, search took 1.68 seconds, and neighborhood loading took 6.22 seconds.
+The selected view returned 17 local context polygons and all 20 analogue polygons. The complete
+live Streamlit render finished in 8.92 seconds with eight Plotly figures and no exception.
+
+These are development measurements from one warm-warehouse run, not a service-level guarantee.
+They demonstrate that connection reuse more than offsets the added geometry payload. Cold app or
+warehouse startup can still take longer, while cached tab and horizon changes should be much
+faster because they do not query the warehouse again.
+
+Map construction was also exercised against Michigan, New York County, Alaska, and Honolulu
+tracts. Their context windows returned 51, 71, 80, and 31 polygons respectively without a query or
+figure error; Alaska reached the intentional 80-row cap. The New York example also confirmed that
+the local boundary map remains available when a selected analogue horizon has no matches. This is
+a structural check of framing and empty-state behavior, not a substitute for viewing each map in
+a browser.
