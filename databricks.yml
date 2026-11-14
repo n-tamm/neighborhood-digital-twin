@@ -146,6 +146,9 @@ variables:
   application_demo_state_fips:
     description: Small state scope used only for interactive application testing
     default: "04,26,42"
+  app_sql_warehouse_id:
+    description: Existing SQL warehouse used by the read-only Databricks application
+    default: 8d5085c03de0f434
   forecast_horizons:
     description: Comma-separated direct FHFA target horizons in years
     default: "1,3,5"
@@ -184,6 +187,74 @@ variables:
     default: /Shared/neighborhood-digital-twin/analogue-tree-retrieval
 
 resources:
+  apps:
+    neighborhood_housing_intelligence:
+      name: neighborhood-housing-intelligence
+      description: Map-driven neighborhood profiles, forecasts, and historical analogues.
+      source_code_path: ./app
+      permissions:
+        - level: CAN_USE
+          group_name: users
+      resources:
+        - name: sql-warehouse
+          description: Read-only application query compute.
+          sql_warehouse:
+            id: ${var.app_sql_warehouse_id}
+            permission: CAN_USE
+        - name: current-tract-profile
+          description: Current tract-level community and housing profile.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.gold_schema}.gold_tract_profile_current
+            permission: SELECT
+        - name: observed-hpi-history
+          description: Observed annual FHFA tract HPI history.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.silver_schema}.silver_fhfa_tract_year
+            permission: SELECT
+        - name: tract-display-geometry
+          description: Simplified tract geometry used only for display.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.silver_schema}.silver_tract_display_geometry_2020
+            permission: SELECT
+        - name: analogue-release-manifest
+          description: Validated serving-release manifest.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_release_manifest
+            permission: SELECT
+        - name: analogue-availability
+          description: Per-tract analogue availability and reasons.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_analogue_availability_current
+            permission: SELECT
+        - name: analogue-summary
+          description: Compact historical-analogue outcome summaries.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_analogue_summary_current
+            permission: SELECT
+        - name: analogue-matches
+          description: Approved ranked historical analogues.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_analogue_match_current
+            permission: SELECT
+        - name: analogue-explanations
+          description: Deterministic feature-family match explanations.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_analogue_explanation_current
+            permission: SELECT
+        - name: analogue-trajectories
+          description: Observed post-match historical HPI paths.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_analogue_trajectory_current
+            permission: SELECT
   jobs:
     organize_project_schemas:
       name: Neighborhood Digital Twin | 000 Setup | Organize Project Schemas

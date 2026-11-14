@@ -1,0 +1,522 @@
+# AI Assistance:
+# OpenAI ChatGPT was used for code debugging, code generation, code/repo organization,
+# and code methodological brainstorming. All final modeling, implementation,
+# validation, commentary, and interpretation were performed and verified by the authors.
+# Model used: GPT-5
+
+from __future__ import annotations
+
+from typing import Any
+
+import pandas as pd
+import streamlit as st
+from neighborhood_app.charts import (
+    analogue_map_figure,
+    feature_gap_figure,
+    housing_mix_figure,
+    hpi_history_figure,
+    trajectory_figure,
+)
+from neighborhood_app.data import AppSettings, NeighborhoodData, create_repository
+from neighborhood_app.ui import (
+    apply_styles,
+    format_currency,
+    format_integer,
+    format_percent,
+    metric_card,
+    place_label,
+    safe_float,
+    status_badge,
+)
+
+st.set_page_config(
+    page_title="Neighborhood Housing Intelligence",
+    page_icon="⌂",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+apply_styles()
+
+
+@st.cache_resource(show_spinner=False)
+def get_repository() -> Any:
+    """Create one validated repository for the current application process."""
+
+    return create_repository(AppSettings.from_environment())
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def search_places(search_text: str) -> pd.DataFrame:
+    """Cache a bounded place search without caching credentials or connections."""
+
+    return get_repository().search_places(search_text)
+
+
+@st.cache_data(ttl=900, show_spinner="Loading neighborhood evidence…")
+def load_neighborhood(geoid_2020: str) -> NeighborhoodData:
+    """Cache one compact neighborhood view by canonical tract identifier."""
+
+    return get_repository().load_neighborhood(geoid_2020)
+
+
+def selected_summary(data: NeighborhoodData, horizon_years: int) -> dict[str, Any]:
+    """Return the single published analogue summary for a selected horizon."""
+
+    rows = data.summaries.loc[data.summaries["horizon_years"] == horizon_years]
+    return rows.iloc[0].to_dict() if not rows.empty else {}
+
+
+def render_overview(data: NeighborhoodData) -> None:
+    """Render observed current state and housing-market history."""
+
+    profile = data.profile
+    st.subheader("Current neighborhood profile")
+    st.caption(
+        f"ACS {profile.get('acs_reference_period', 'reference period unavailable')} estimates. "
+        "Annual ACS releases overlap because each tract value summarizes five years."
+    )
+    row_one = st.columns(4)
+    with row_one[0]:
+        metric_card(
+            "Population",
+            format_integer(profile.get("population_total_estimate")),
+            f"±{format_integer(profile.get('population_total_moe'))} ACS margin of error",
+        )
+    with row_one[1]:
+        metric_card(
+            "Housing units",
+            format_integer(profile.get("housing_units_total_estimate")),
+            f"±{format_integer(profile.get('housing_units_total_moe'))} ACS margin of error",
+        )
+    with row_one[2]:
+        metric_card(
+            "Median household income",
+            format_currency(profile.get("median_household_income_estimate")),
+            "Nominal ACS estimate",
+        )
+    with row_one[3]:
+        metric_card(
+            "Median gross rent",
+            format_currency(profile.get("median_gross_rent_estimate")),
+            "Monthly ACS estimate",
+        )
+
+    composition_col, tenure_col = st.columns([1.55, 1])
+    with composition_col:
+        st.markdown("#### Housing composition")
+        st.plotly_chart(
+            housing_mix_figure(profile),
+            width="stretch",
+            key="overview_housing_mix",
+            config={"displayModeBar": False},
+        )
+    with tenure_col:
+        st.markdown("#### Occupancy and tenure")
+        tenure = st.columns(2)
+        with tenure[0]:
+            metric_card(
+                "Occupied",
+                format_percent(profile.get("occupancy_rate_estimate"), value_is_share=True),
+            )
+        with tenure[1]:
+            metric_card(
+                "Owner occupied",
+                format_percent(profile.get("owner_occupancy_rate_estimate"), value_is_share=True),
+            )
+        st.markdown(
+            '<div class="section-note">The profile describes the full housing stock. '
+            "The FHFA model and analogue outcomes below describe the single-family market "
+            "only.</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("#### Observed single-family housing-market history")
+    st.plotly_chart(
+        hpi_history_figure(data.history),
+        width="stretch",
+        key="overview_hpi_history",
+        config={"displayModeBar": False},
+    )
+    st.caption(
+        "FHFA tract HPI is an index of single-family price movement. It is not an individual home "
+        "value or a measure of multifamily prices. Missing annual observations are not "
+        "interpolated."
+    )
+
+
+def render_forecast_status(data: NeighborhoodData) -> None:
+    """Reserve the forecast experience without displaying an unapproved prediction."""
+
+    profile = data.profile
+    st.subheader("Forecast model")
+    st.markdown(
+        """
+        <div class="model-boundary">
+          <strong>Forecast serving output is not published yet.</strong><br>
+          The forecasting workstream is still selecting the final point model and calibrating
+          uncertainty. This application will not substitute a validation result, historical
+          analogue outcome, or fabricated number for the approved forecast.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("#### What this screen will contain")
+    items = st.columns(3)
+    with items[0]:
+        metric_card("Primary horizon", "1 year", "Cumulative FHFA tract HPI change")
+    with items[1]:
+        metric_card("Secondary horizon", "3 years", "Shown only after final evaluation")
+    with items[2]:
+        metric_card("Uncertainty", "Required", "Interval displayed beside every point estimate")
+    st.markdown("#### Current tract readiness")
+    readiness = [
+        status_badge(
+            "Current ACS profile available",
+            available=bool(profile.get("has_current_acs_profile")),
+        ),
+        status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
+        status_badge(
+            "Current forecast candidate", available=bool(profile.get("forecast_candidate"))
+        ),
+    ]
+    st.markdown(" ".join(readiness), unsafe_allow_html=True)
+    st.info(
+        "When the forecast contract is published, this view will separate the model estimate, "
+        "calibrated interval, baseline comparison, and model drivers. Historical analogues remain "
+        "a separate evidence source."
+    )
+
+
+def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
+    """Render historical matches as explanatory evidence, not as the primary forecast."""
+
+    st.subheader("Historical analogues")
+    st.caption(
+        "Earlier communities that looked similar under the approved housing-focused "
+        "representation. Their later outcomes are observed history, not a forecast for the "
+        "selected tract."
+    )
+    availability = data.availability.loc[data.availability["horizon_years"] == horizon_years]
+    if availability.empty or not bool(availability.iloc[0]["analogue_available"]):
+        reason = (
+            str(availability.iloc[0]["availability_reason"])
+            if not availability.empty
+            else "No availability record"
+        )
+        st.warning(f"Historical analogues are unavailable for this horizon: {reason}.")
+        return
+
+    summary = selected_summary(data, horizon_years)
+    summary_columns = st.columns(4)
+    with summary_columns[0]:
+        metric_card(
+            "Published matches",
+            format_integer(summary.get("analogue_match_count")),
+            "Distinct historical tracts",
+        )
+    with summary_columns[1]:
+        metric_card(
+            "Median later change",
+            format_percent(summary.get("analogue_median_cumulative_change_pct")),
+            f"Observed over {horizon_years} year{'s' if horizon_years > 1 else ''}",
+        )
+    with summary_columns[2]:
+        outcome_range = (
+            f"{format_percent(summary.get('analogue_outcome_p10_cumulative_change_pct'))} to "
+            f"{format_percent(summary.get('analogue_outcome_p90_cumulative_change_pct'))}"
+        )
+        metric_card("Historical middle 80%", outcome_range, "Descriptive, not calibrated")
+    with summary_columns[3]:
+        metric_card(
+            "Cross-state matches",
+            format_percent(summary.get("cross_state_match_share"), value_is_share=True),
+            "National comparison space",
+        )
+
+    matches = data.matches.loc[data.matches["horizon_years"] == horizon_years].copy()
+    trajectories = data.trajectories.loc[data.trajectories["horizon_years"] == horizon_years].copy()
+    map_col, list_col = st.columns([1.55, 1])
+    with map_col:
+        st.plotly_chart(
+            analogue_map_figure(data.profile, data.bounds, matches),
+            width="stretch",
+            key=f"analogue_detail_map_{horizon_years}",
+            config={"displayModeBar": False},
+        )
+    with list_col:
+        st.markdown("#### Closest historical communities")
+        if matches.empty:
+            st.warning("The release summary is available, but no local match rows were loaded.")
+        else:
+            table = matches[
+                [
+                    "match_rank",
+                    "candidate_county_name",
+                    "candidate_state_abbreviation",
+                    "candidate_origin_year",
+                    "similarity_distance",
+                ]
+            ].rename(
+                columns={
+                    "match_rank": "Rank",
+                    "candidate_county_name": "County",
+                    "candidate_state_abbreviation": "State",
+                    "candidate_origin_year": "Year",
+                    "similarity_distance": "Distance",
+                }
+            )
+            st.dataframe(
+                table,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    "Distance": st.column_config.NumberColumn(format="%.3f"),
+                },
+            )
+            if data.data_mode == "sample":
+                st.caption(
+                    "The local fixture retains one real match for layout testing. Live mode reads "
+                    "all ten published matches from Databricks."
+                )
+
+    if matches.empty:
+        return
+    options = matches["match_rank"].astype(int).tolist()
+    selected_rank = st.selectbox(
+        "Inspect one historical match",
+        options=options,
+        format_func=lambda rank: (
+            f"#{rank} · "
+            f"{matches.loc[matches['match_rank'] == rank, 'candidate_county_name'].iloc[0]}, "
+            f"{matches.loc[matches['match_rank'] == rank, 'candidate_state_abbreviation'].iloc[0]}"
+        ),
+    )
+    selected_match = matches.loc[matches["match_rank"] == selected_rank].iloc[0].to_dict()
+    explanation_col, detail_col = st.columns([1.35, 1])
+    with explanation_col:
+        st.markdown("#### Why it matched")
+        st.plotly_chart(
+            feature_gap_figure(selected_match),
+            width="stretch",
+            key=f"feature_gaps_{horizon_years}_{selected_rank}",
+            config={"displayModeBar": False},
+        )
+    with detail_col:
+        st.markdown("#### Most alike and most different")
+        metric_card(
+            "Strongest shared feature family",
+            str(selected_match.get("strongest_shared_family_display_name", "Not available")),
+            f"Standardized gap {safe_float(selected_match.get('strongest_shared_family_gap')):.2f}",
+        )
+        st.write("")
+        metric_card(
+            "Largest feature-family difference",
+            str(selected_match.get("largest_difference_family_display_name", "Not available")),
+            "Standardized gap "
+            f"{safe_float(selected_match.get('largest_difference_family_gap')):.2f}",
+        )
+        st.caption(
+            "Smaller gaps indicate closer model inputs. These differences explain the retrieval "
+            "distance; they are not causes of later housing-price changes."
+        )
+
+    st.markdown("#### What happened afterward")
+    selected_paths = trajectories.loc[trajectories["match_rank"] == selected_rank]
+    st.plotly_chart(
+        trajectory_figure(selected_paths),
+        width="stretch",
+        key=f"analogue_trajectory_{horizon_years}_{selected_rank}",
+        config={"displayModeBar": False},
+    )
+    st.caption(
+        "Observed FHFA single-family HPI path after the historical match. The app does not connect "
+        "across missing intermediate observations or treat this path as the selected tract's "
+        "future."
+    )
+
+
+def render_methods(data: NeighborhoodData) -> None:
+    """Expose lineage, definitions, and limitations inside the product."""
+
+    release = data.release
+    profile = data.profile
+    st.subheader("Methods, data, and limitations")
+    method_col, lineage_col = st.columns([1.25, 1])
+    with method_col:
+        st.markdown("#### What the application currently shows")
+        st.markdown(
+            """
+            - **Observed community profile:** ACS rolling five-year estimates for the current tract.
+            - **Observed market history:** annual FHFA single-family tract HPI where available.
+            - **Historical analogues:** ten earlier, distinct communities selected with weighted
+              standardized distance and time-safe outcomes.
+            - **Forecast:** intentionally withheld until model selection and calibrated uncertainty
+              are published through a serving contract.
+            """
+        )
+        st.markdown("#### Important boundaries")
+        st.markdown(
+            """
+            The project does not value individual properties, rank neighborhood quality, make
+            buy/sell recommendations, or claim that matched communities are causal comparisons.
+            Display geometry is used only to locate places on the map—not to calculate distance,
+            adjacency, or similarity.
+            """
+        )
+    with lineage_col:
+        st.markdown("#### Current release")
+        lineage = {
+            "Application mode": data.data_mode,
+            "Analogue release": release.get("serving_release_id"),
+            "Serving schema": release.get("serving_schema_version"),
+            "Serving as of": release.get("serving_as_of_year"),
+            "ACS release": profile.get("acs_release_year"),
+            "Profile build": profile.get("product_build_id"),
+            "Model-readiness build": release.get("source_model_readiness_build_id"),
+            "Exact retrieval run": release.get("source_analogue_tree_run_id"),
+        }
+        st.dataframe(
+            pd.DataFrame(lineage.items(), columns=["Item", "Value"]),
+            hide_index=True,
+            width="stretch",
+        )
+
+
+def main() -> None:
+    """Run the initial neighborhood explorer experience."""
+
+    st.markdown(
+        '<div class="app-kicker">Neighborhood Housing Intelligence</div>',
+        unsafe_allow_html=True,
+    )
+    st.title("A neighborhood’s history, forecast, and historical context—kept distinct.")
+    st.markdown(
+        '<div class="hero-copy">Select a Census tract to explore its current housing profile, '
+        "observed single-family market history, model readiness, and earlier communities that "
+        "looked similar. The application shows where evidence ends instead of filling gaps with "
+        "unsupported claims.</div>",
+        unsafe_allow_html=True,
+    )
+
+    try:
+        get_repository()
+    except Exception as error:
+        st.error(f"The application data contract could not be initialized: {error}")
+        st.stop()
+
+    settings = AppSettings.from_environment()
+    with st.sidebar:
+        st.markdown("## Explore a neighborhood")
+        if settings.data_mode == "sample":
+            st.markdown(
+                '<div class="sample-banner"><strong>Local sample mode</strong><br>'
+                "A reduced, real public-data fixture is loaded. Databricks deployment uses the "
+                "complete validated release.</div>",
+                unsafe_allow_html=True,
+            )
+        with st.form("place_search"):
+            search_text = st.text_input(
+                "Search by county, state, or 11-digit tract GEOID",
+                value=st.session_state.get("place_search_text", "Autauga"),
+                placeholder="Oakland County or 26125144200",
+            )
+            submitted = st.form_submit_button("Find neighborhoods", width="stretch")
+        if submitted or "place_results" not in st.session_state:
+            try:
+                st.session_state["place_results"] = search_places(search_text)
+                st.session_state["place_search_text"] = search_text
+            except Exception as error:
+                st.error(f"Place search failed: {error}")
+                st.stop()
+        results = st.session_state["place_results"]
+        if results.empty:
+            st.warning("No current tracts matched that search.")
+            st.stop()
+        option_rows = results.to_dict(orient="records")
+        option_map = {place_label(row): str(row["geoid_2020"]) for row in option_rows}
+        selected_label = st.selectbox("Neighborhood", options=list(option_map))
+        selected_geoid = option_map[selected_label]
+        st.markdown("---")
+        horizon_years = st.radio(
+            "Historical outcome horizon",
+            options=[1, 3],
+            index=1,
+            horizontal=True,
+            format_func=lambda value: f"{value} year" if value == 1 else f"{value} years",
+        )
+        st.caption(
+            "This control changes the historical analogue evidence. It does not select a forecast."
+        )
+        st.markdown("---")
+        st.caption("Map interaction is for display and tract selection only.")
+
+    try:
+        data = load_neighborhood(selected_geoid)
+    except Exception as error:
+        st.error(f"Neighborhood evidence could not be loaded: {error}")
+        st.stop()
+
+    profile = data.profile
+    st.markdown(
+        f'<div class="place-title">{profile["county_name"]}, {profile["state_abbreviation"]} · '
+        f'{profile["tract_name"]}</div><div class="place-subtitle">2020 Census tract '
+        f"{profile['geoid_2020']} · current ACS release "
+        f"{profile.get('acs_release_year', '—')}</div>",
+        unsafe_allow_html=True,
+    )
+    map_matches = data.matches.loc[data.matches["horizon_years"] == horizon_years]
+    map_col, context_col = st.columns([1.6, 1])
+    with map_col:
+        st.plotly_chart(
+            analogue_map_figure(profile, data.bounds, map_matches),
+            width="stretch",
+            key=f"neighborhood_context_map_{horizon_years}",
+            config={"displayModeBar": False},
+        )
+    with context_col:
+        st.markdown("### Evidence at a glance")
+        status_html = [
+            status_badge(
+                "Current profile",
+                available=bool(profile.get("has_current_acs_profile")),
+            ),
+            status_badge("FHFA history", available=bool(profile.get("has_fhfa_history"))),
+            status_badge(
+                f"{horizon_years}-year analogues",
+                available=data.horizon_available(horizon_years),
+            ),
+            status_badge("Forecast pending", available=False),
+        ]
+        st.markdown(" ".join(status_html), unsafe_allow_html=True)
+        st.write("")
+        metric_card(
+            "Latest observed FHFA movement",
+            format_percent(profile.get("latest_hpi_annual_change_pct")),
+            f"Single-family HPI · {profile.get('latest_hpi_year', 'year unavailable')}",
+        )
+        st.write("")
+        metric_card(
+            "Single-family share",
+            format_percent(profile.get("single_family_share_estimate"), value_is_share=True),
+            "Share of current ACS housing units",
+        )
+        st.markdown(
+            '<div class="section-note">A tract can have a useful profile even when one of the '
+            "models is unavailable. Missing analytical results remain visible and explained.</div>",
+            unsafe_allow_html=True,
+        )
+
+    overview_tab, forecast_tab, analogue_tab, methods_tab = st.tabs(
+        ["Overview", "Forecast", "Historical analogues", "Methods & limitations"]
+    )
+    with overview_tab:
+        render_overview(data)
+    with forecast_tab:
+        render_forecast_status(data)
+    with analogue_tab:
+        render_analogues(data, horizon_years)
+    with methods_tab:
+        render_methods(data)
+
+
+main()

@@ -1,0 +1,20 @@
+# AI Assistance:
+# OpenAI ChatGPT was used for code debugging, code generation, code/repo organization,
+# and code methodological brainstorming. All final modeling, implementation,
+# validation, commentary, and interpretation were performed and verified by the authors.
+# Model used: GPT-5
+
+[theme]
+base = "light"
+primaryColor = "#147D72"
+backgroundColor = "#F5F7F4"
+secondaryBackgroundColor = "#E9EFEA"
+textColor = "#18312E"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+runOnSave = true
