@@ -2,11 +2,11 @@
 
 ## Current reviewed build
 
-- **Build ID:** `20261113T193948450115Z`
+- **Build ID:** `20261114T204019949707Z`
 - **Databricks job:** `800 Presentation | Similarity Communication Figures`
-- **Job run:** `626327765918889` (successful in 58 seconds)
+- **Job run:** `336408681381236` (successful in 60 seconds)
 - **Managed volume:**
-  `/Volumes/workspace/neighborhood_twin_evaluation/similarity_evaluation_figures/build_id=20261113T193948450115Z/`
+  `/Volumes/workspace/neighborhood_twin_evaluation/similarity_evaluation_figures/build_id=20261114T204019949707Z/`
 - **Manifest:**
   `workspace.neighborhood_twin_evaluation.similarity_evaluation_figure_manifest`
 - **Case study:** Oakland County, Michigan, tract `26125144200`, three-year horizon
@@ -43,12 +43,11 @@ performance; figures 2 through 4 provide the broader evaluation and coverage evi
 
 ## Visual review
 
-All five images were inspected at full resolution after the live job. The first render exposed an
-unclear final workflow transition and a coverage annotation that overlapped a stacked bar. Those
-layouts were corrected and the complete governed job was rerun. The accepted build has readable
-titles, legends, scales, notes, and color contrast. Labels were also checked against the manifest
-and source-table results. Job 900 then applied the table description and comments to all 14
-manifest columns.
+The latest visual revision replaced crowded vertical utility labels with two horizontal horizon
+comparisons and moved case-study rank labels inside larger map markers. The governed build then
+passed its five-file identity, lineage, and minimum-size gates; files range from 150,932 to
+352,266 bytes. Labels were checked against the manifest and source-table results. Job 900 run
+`882753226732037` then completed successfully and reapplied table and column metadata.
 
 ## Standup walkthrough
 
@@ -59,8 +58,9 @@ method order, and includes short speaking callouts. It does not retrain the mode
 second retrieval path.
 
 The recommended sequence is: research question and boundary, five-table serving contract,
-feature representation, time-safety, representation selection, outcome utility, current
-coverage, exact batch scale, Michigan example, and interpretation limits.
+feature representation and preprocessing, the weighted-distance algorithm, time-safety, the
+evaluation framework, representation selection, outcome utility, current coverage, exact batch
+scale, Michigan example, and interpretation limits.
 
 ## Reproduce or refresh
 

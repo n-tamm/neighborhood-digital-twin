@@ -311,7 +311,7 @@ dimension of lived experience are already represented.
 - Preserve the deterministic explanation and trajectory contracts in schema 1.1. The application
   should read their stored family gaps, highlighted values, annual paths, and missingness flags;
   it should not reconstruct model logic or interpolate missing points during a request.
-- Preserve job-800 build `20261113T193948450115Z` as the current reviewed communication baseline.
+- Preserve job-800 build `20261114T204019949707Z` as the current reviewed communication baseline.
   Its five figures cover the workflow, stability and representation choice, later-outcome utility,
   current availability, and an Oakland County example. The standup notebook reads those governed
   outputs in sequence and does not retrain the method.

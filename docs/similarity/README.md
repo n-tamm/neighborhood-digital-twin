@@ -232,7 +232,7 @@ period.
 ## Visual evidence status
 
 Job 800 now publishes a reviewed five-figure communication package from the governed audit,
-selection, exact-retrieval, and serving outputs. Build `20261113T193948450115Z` contains:
+selection, exact-retrieval, and serving outputs. Build `20261114T204019949707Z` contains:
 
 1. the complete method workflow;
 2. stability and weighted-versus-PCA selection evidence;

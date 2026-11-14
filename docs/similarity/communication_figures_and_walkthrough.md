@@ -87,8 +87,8 @@ records one coherent set of lineage IDs. Run job 900 afterward to apply metadata
 
 ## Validated live result
 
-Job 800 run `626327765918889` completed successfully in 58 seconds and published build
-`20261113T193948450115Z`. The manifest contains the expected five rows and one coherent set of
+Job 800 run `336408681381236` completed successfully in 60 seconds and published build
+`20261114T204019949707Z`. The manifest contains the expected five rows and one coherent set of
 source identifiers:
 
 - audit run `a7f7d2c018214708a955a4ac9b9ec0c4`;
@@ -96,12 +96,12 @@ source identifiers:
 - exact-tree run `fae78721154347039d41864bad2e871a`; and
 - serving release `analogue-20261113T132155097077Z`.
 
-The files range from 148,449 to 364,326 bytes, so each passed the publication-size guard. Full-
-resolution review found two layout issues in the first render: the final workflow transitions
-were ambiguous, and the coverage explanation overlapped the bar. Both were corrected and the
-governed job was rerun. The accepted five-figure set was then inspected for titles, labels,
-legends, scales, color contrast, and consistency with the underlying evidence. Job 900 completed
-successfully and confirmed comments on all 14 manifest columns.
+The files range from 150,932 to 352,266 bytes, so each passed the publication-size guard. The
+current render replaces crowded vertical bar labels with horizon-specific horizontal comparisons
+and places case-study rank labels inside larger map markers. The publication notebook also
+revalidated titles, identities, lineage, file sizes, and source-table consistency. Job 900 run
+`882753226732037` completed successfully and confirmed metadata across the governed tables,
+including all 14 manifest columns.
 
 The final set makes four project decisions visible: weighted matching is the default; bounded
 weight changes are stable but family ablations are not minor changes; analogue outcomes are useful

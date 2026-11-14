@@ -693,19 +693,6 @@ case_figure = make_subplots(
 )
 
 query_lon, query_lat = centroids[case_query_geoid]
-case_figure.add_trace(
-    go.Scattergeo(
-        lon=[query_lon],
-        lat=[query_lat],
-        text=[f"Selected: {query_label}"],
-        mode="markers",
-        marker={"size": 16, "color": "#C43C39", "symbol": "star", "line": {"width": 1}},
-        name="Selected neighborhood",
-        hovertemplate="%{text}<extra></extra>",
-    ),
-    row=1,
-    col=1,
-)
 candidate_lons = [centroids[str(row["candidate_geoid_2020"])][0] for row in case_matches]
 candidate_lats = [centroids[str(row["candidate_geoid_2020"])][1] for row in case_matches]
 candidate_text = [
@@ -732,6 +719,24 @@ case_figure.add_trace(
         name="Historical matches",
         hovertemplate="%{customdata}<extra></extra>",
         customdata=candidate_text,
+    ),
+    row=1,
+    col=1,
+)
+case_figure.add_trace(
+    go.Scattergeo(
+        lon=[query_lon],
+        lat=[query_lat],
+        text=[f"Selected: {query_label}"],
+        mode="markers",
+        marker={
+            "size": 22,
+            "color": "#C43C39",
+            "symbol": "star",
+            "line": {"width": 1.4, "color": "white"},
+        },
+        name="Selected neighborhood",
+        hovertemplate="%{text}<extra></extra>",
     ),
     row=1,
     col=1,
@@ -846,11 +851,11 @@ case_figure.update_layout(
         "xanchor": "left",
     },
     template="plotly_white",
-    height=980,
+    height=1020,
     width=1600,
-    margin={"l": 70, "r": 45, "t": 120, "b": 95},
+    margin={"l": 70, "r": 45, "t": 120, "b": 135},
     font={"family": "Arial", "size": 13, "color": TEXT},
-    legend={"orientation": "h", "y": -0.08, "x": 0.5, "xanchor": "center"},
+    legend={"orientation": "h", "y": -0.09, "x": 0.5, "xanchor": "center"},
     annotations=[
         *list(case_figure.layout.annotations),
         {
@@ -859,7 +864,7 @@ case_figure.update_layout(
                 "inputs; they do not identify causal drivers."
             ),
             "x": 0,
-            "y": -0.12,
+            "y": -0.18,
             "xref": "paper",
             "yref": "paper",
             "showarrow": False,
