@@ -2,10 +2,15 @@
 
 ## Local neighborhood context map
 
-The main map now draws the selected 2020 Census tract as a teal polygon within nearby tract
-outlines. It uses the simplified Census geometry stored by the display-geometry pipeline rather
-than a point or bounding rectangle. The context window is based on an expanded display extent and
-is capped at the nearest 80 tract centers so dense urban areas cannot return an unbounded payload.
+The main map draws the selected 2020 Census tract as a teal polygon within nearby tract outlines
+and places a dark point at its center. The point remains visible at a wider zoom; the boundary
+shows the tract's actual footprint after the user zooms in. The surrounding outlines use stronger
+contrast over an OpenStreetMap basemap so the selected tract remains legible without hiding the
+local street and place context.
+
+The geometry comes from the simplified Census display-geometry pipeline rather than a bounding
+rectangle. The context window is based on an expanded display extent and is capped at the nearest
+80 tract centers so dense urban areas cannot return an unbounded payload.
 
 The surrounding polygons answer "where is this tract relative to the local tract pattern?" They
 are display context, not a claim that every visible tract is adjacent. Geometry is simplified and
@@ -13,11 +18,21 @@ must not be used for parcel boundaries, distance, adjacency, or similarity input
 
 ## National historical-analogue map
 
-The analogue map uses the actual simplified polygon for the selected tract and each historical
-match. Gold polygons and text-only rank labels replace the original point markers. The national
-view answers where the examples occurred; hovering gives place, historical year, and distance.
-At a national scale, small tract shapes can still be difficult to inspect, which is why the
-selected-match section also provides locally fitted footprint maps.
+The analogue map uses two coordinated layers. Numbered gold points keep every match visible at the
+national extent, while lightly filled gold polygons reveal the exact tract footprints as the user
+zooms closer. The selected neighborhood uses the same point-plus-polygon treatment in navy and
+teal. Hovering provides place, historical year, and similarity distance.
+
+Selecting a numbered map point or a county row updates the same selected-match state as the
+dropdown. The footprint comparison, feature-gap explanation, and observed later trajectory below
+the map therefore stay synchronized. At a national scale, tract shapes remain too small to inspect
+directly, which is why the selected-match section also provides locally fitted footprint maps.
+
+The maps are implemented with Plotly's documented
+[`scattermap`](https://plotly.com/python/reference/scattermap/) and
+[`choroplethmap`](https://plotly.com/python/reference/choroplethmap/) layers over
+[OpenStreetMap](https://www.openstreetmap.org/) tiles. No mapping code was copied from another
+application.
 
 ## Footprint comparison
 
@@ -56,8 +71,8 @@ must not be labeled as the selected tract's predicted path.
 
 ## Shared visual rules
 
-- Teal identifies the current selection or primary observed series; gold identifies historical
-  analogue evidence; orange flags the largest explanatory gap.
+- Teal and navy identify the current selection or primary observed series; gold identifies
+  historical analogue evidence; orange flags the largest explanatory gap.
 - Red-to-green good/bad scales are avoided because the project does not rank community quality.
 - Every percentage states whether it is a share or a percentage change in surrounding text.
 - Important charts have nearby definitions and limitations rather than relying only on tooltips.
