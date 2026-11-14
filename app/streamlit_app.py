@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
@@ -16,6 +17,7 @@ from neighborhood_app.charts import (
     housing_mix_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
+    state_browser_map_figure,
     tract_outline_figure,
     trajectory_figure,
 )
@@ -29,8 +31,9 @@ from neighborhood_app.ui import (
     metric_card,
     place_label,
     safe_float,
-    selected_rank_from_map_event,
+    selected_geoid_from_map_event,
     selected_rank_from_table_event,
+    selected_state_from_map_event,
     status_badge,
 )
 
@@ -55,6 +58,27 @@ def search_places(search_text: str) -> pd.DataFrame:
     """Cache a bounded place search without caching credentials or connections."""
 
     return get_repository().search_places(search_text)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_states() -> pd.DataFrame:
+    """Cache the compact state navigation summary for the active release."""
+
+    return get_repository().list_states()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_counties(state_abbreviation: str) -> pd.DataFrame:
+    """Cache counties for one state without loading neighborhood evidence."""
+
+    return get_repository().list_counties(state_abbreviation)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_tracts(county_geoid: str) -> pd.DataFrame:
+    """Cache tract identities for one county without loading analytical outputs."""
+
+    return get_repository().list_tracts(county_geoid)
 
 
 @st.cache_data(ttl=900, show_spinner="Loading neighborhood evidence…")
@@ -241,21 +265,18 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     matches = data.matches.loc[data.matches["horizon_years"] == horizon_years].copy()
     trajectories = data.trajectories.loc[data.trajectories["horizon_years"] == horizon_years].copy()
     map_col, list_col = st.columns([1.55, 1])
-    map_event: Any = None
     table_event: Any = None
     table = pd.DataFrame()
     with map_col:
-        map_event = st.plotly_chart(
+        st.plotly_chart(
             analogue_map_figure(data.profile, data.bounds, data.map_context, matches),
             width="stretch",
             key=f"analogue_detail_map_{horizon_years}",
             config={"displayModeBar": False},
-            on_select="rerun",
-            selection_mode="points",
         )
         st.caption(
             "Gold numbered points keep all matches visible nationally. Zoom in to inspect the "
-            "actual tract outlines, or select a point to update the comparison below."
+            "actual tract outlines; select a county row to update the comparison below."
         )
     with list_col:
         st.markdown("#### Closest historical communities")
@@ -300,25 +321,20 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     if matches.empty:
         return
     options = matches["match_rank"].astype(int).tolist()
-    selector_key = f"selected_analogue_rank_{horizon_years}"
-    event_rank = selected_rank_from_map_event(map_event)
     table_rank = selected_rank_from_table_event(table_event, table)
-    requested_rank = table_rank or event_rank
-    if requested_rank in options:
-        st.session_state[selector_key] = requested_rank
-    if st.session_state.get(selector_key) not in options:
-        st.session_state[selector_key] = options[0]
-    selected_rank = st.selectbox(
-        "Inspect one historical match",
-        options=options,
-        key=selector_key,
-        format_func=lambda rank: (
-            f"#{rank} · "
-            f"{matches.loc[matches['match_rank'] == rank, 'candidate_county_name'].iloc[0]}, "
-            f"{matches.loc[matches['match_rank'] == rank, 'candidate_state_abbreviation'].iloc[0]}"
-        ),
-    )
+    selector_key = f"selected_analogue_rank_{horizon_years}"
+    if table_rank in options:
+        st.session_state[selector_key] = table_rank
+    selected_rank = int(st.session_state.get(selector_key, options[0]))
+    if selected_rank not in options:
+        selected_rank = options[0]
+        st.session_state[selector_key] = selected_rank
     selected_match = matches.loc[matches["match_rank"] == selected_rank].iloc[0].to_dict()
+    selected_label = (
+        f"#{selected_rank} · {selected_match['candidate_county_name']}, "
+        f"{selected_match['candidate_state_abbreviation']}"
+    )
+    st.markdown(f"#### Inspecting {selected_label}")
     selected_geometry = data.map_context.loc[
         data.map_context.get("geoid_2020", pd.Series(dtype=str)).astype(str)
         == str(data.profile["geoid_2020"])
@@ -477,6 +493,78 @@ def render_methods(data: NeighborhoodData) -> None:
         )
 
 
+def render_geography_browser(profile: Mapping[str, Any]) -> None:
+    """Render state-map, county, and tract navigation without loading model outputs early."""
+
+    states = load_states()
+    if states.empty:
+        st.warning("State navigation is unavailable for the active release.")
+        return
+    state_options = set(states["state_abbreviation"].astype(str))
+    current_state = str(st.session_state.get("browse_state", profile.get("state_abbreviation", "")))
+    if current_state not in state_options:
+        current_state = str(states.iloc[0]["state_abbreviation"])
+        st.session_state["browse_state"] = current_state
+
+    state_event = st.plotly_chart(
+        state_browser_map_figure(states, current_state),
+        width="stretch",
+        key=f"state_browser_map_{current_state}",
+        config={"displayModeBar": False},
+        on_select="rerun",
+        selection_mode="points",
+    )
+    clicked_state = selected_state_from_map_event(state_event)
+    if clicked_state in state_options and clicked_state != current_state:
+        st.session_state["browse_state"] = clicked_state
+        st.rerun()
+
+    state_row = states.loc[states["state_abbreviation"] == current_state].iloc[0]
+    st.markdown(
+        f"**{state_row['state_name']} selected** · "
+        f"{int(state_row['analogue_ready_tract_count']):,} of "
+        f"{int(state_row['tract_count']):,} current tracts support historical analogues"
+    )
+    counties = load_counties(current_state)
+    if counties.empty:
+        st.warning("No counties were returned for the selected state.")
+        return
+    county_records = counties.to_dict(orient="records")
+    county_labels = {
+        (
+            f"{row['county_name']} · {int(row['tract_count']):,} tracts · "
+            f"{int(row['analogue_ready_tract_count']):,} analogue-ready"
+        ): str(row["county_geoid"])
+        for row in county_records
+    }
+    county_label = st.selectbox(
+        "County",
+        options=list(county_labels),
+        key=f"browse_county_{current_state}",
+    )
+    county_geoid = county_labels[county_label]
+    tracts = load_tracts(county_geoid)
+    if tracts.empty:
+        st.warning("No current tracts were returned for the selected county.")
+        return
+    tract_records = tracts.to_dict(orient="records")
+    tract_labels = {
+        (
+            f"{row['tract_name']} · {row['geoid_2020']}"
+            + (" · analogues available" if bool(row["analogue_available"]) else "")
+        ): str(row["geoid_2020"])
+        for row in tract_records
+    }
+    tract_label = st.selectbox(
+        "Neighborhood",
+        options=list(tract_labels),
+        key=f"browse_tract_{county_geoid}",
+    )
+    if st.button("Open this neighborhood", key=f"open_browse_{county_geoid}"):
+        st.session_state["selected_geoid"] = tract_labels[tract_label]
+        st.rerun()
+
+
 def main() -> None:
     """Run the initial neighborhood explorer experience."""
 
@@ -529,8 +617,17 @@ def main() -> None:
             st.stop()
         option_rows = results.to_dict(orient="records")
         option_map = {place_label(row): str(row["geoid_2020"]) for row in option_rows}
-        selected_label = st.selectbox("Neighborhood", options=list(option_map))
-        selected_geoid = option_map[selected_label]
+        selected_label = st.selectbox(
+            "Search results",
+            options=list(option_map),
+            key="search_result_selection",
+        )
+        if "selected_geoid" not in st.session_state:
+            st.session_state["selected_geoid"] = option_map[selected_label]
+        if st.button("Open search result", width="stretch"):
+            st.session_state["selected_geoid"] = option_map[selected_label]
+            st.rerun()
+        selected_geoid = str(st.session_state["selected_geoid"])
         st.markdown("---")
         horizon_years = st.radio(
             "Historical outcome horizon",
@@ -543,7 +640,9 @@ def main() -> None:
             "This control changes the historical analogue evidence. It does not select a forecast."
         )
         st.markdown("---")
-        st.caption("Map interaction is for display and tract selection only.")
+        st.caption(
+            "Use search, click a nearby tract, or browse from state to county to change place."
+        )
 
     try:
         data = load_neighborhood(selected_geoid)
@@ -561,16 +660,32 @@ def main() -> None:
     )
     map_col, context_col = st.columns([1.6, 1])
     with map_col:
-        st.plotly_chart(
-            neighborhood_context_map_figure(profile, data.bounds, data.map_context),
-            width="stretch",
-            key=f"neighborhood_context_map_{horizon_years}",
-            config={"displayModeBar": False},
+        map_view = st.segmented_control(
+            "Map view",
+            options=["Neighborhood map", "Browse U.S."],
+            default="Neighborhood map",
+            key="primary_map_view",
+            label_visibility="collapsed",
         )
-        st.caption(
-            "The selected tract is outlined in teal within nearby 2020 Census tracts. Boundaries "
-            "are simplified for display and are not used as similarity inputs."
-        )
+        if map_view == "Neighborhood map":
+            context_event = st.plotly_chart(
+                neighborhood_context_map_figure(profile, data.bounds, data.map_context),
+                width="stretch",
+                key=f"neighborhood_context_map_{selected_geoid}_{horizon_years}",
+                config={"displayModeBar": False},
+                on_select="rerun",
+                selection_mode="points",
+            )
+            clicked_geoid = selected_geoid_from_map_event(context_event)
+            if clicked_geoid and clicked_geoid != selected_geoid:
+                st.session_state["selected_geoid"] = clicked_geoid
+                st.rerun()
+            st.caption(
+                "The selected tract is outlined in teal. Select a nearby tract to open it. "
+                "Simplified boundaries are for display and are not similarity inputs."
+            )
+        else:
+            render_geography_browser(profile)
     with context_col:
         st.markdown("### Evidence at a glance")
         status_html = [

@@ -16,14 +16,16 @@ from neighborhood_app.charts import (
     analogue_map_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
+    state_browser_map_figure,
 )
 from neighborhood_app.ui import (
     format_currency,
     format_percent,
     format_square_miles,
     place_label,
-    selected_rank_from_map_event,
+    selected_geoid_from_map_event,
     selected_rank_from_table_event,
+    selected_state_from_map_event,
 )
 from streamlit.testing.v1 import AppTest
 
@@ -155,15 +157,46 @@ def test_analogue_map_keeps_national_points_and_local_tract_outlines() -> None:
     assert figure.layout.map.zoom < 2.2
 
 
-def test_selection_events_resolve_to_the_same_match_rank() -> None:
-    """Map points and county rows should drive one shared detailed comparison."""
+def test_table_selection_resolves_to_one_match_rank() -> None:
+    """The county table should be the only detailed-match selection authority."""
 
-    map_event = {"selection": {"points": [{"customdata": [4, "Wayne County", "MI"]}]}}
     table = pd.DataFrame([{"Rank": 2}, {"Rank": 4}])
     table_event = {"selection": {"rows": [1]}}
 
-    assert selected_rank_from_map_event(map_event) == 4
     assert selected_rank_from_table_event(table_event, table) == 4
+
+
+def test_geography_map_events_resolve_state_and_tract_identifiers() -> None:
+    """Map navigation should accept governed state and tract identifiers only."""
+
+    state_event = {"selection": {"points": [{"location": "MI"}]}}
+    tract_event = {"selection": {"points": [{"customdata": ["26125144200", "Oakland County"]}]}}
+
+    assert selected_state_from_map_event(state_event) == "MI"
+    assert selected_geoid_from_map_event(tract_event) == "26125144200"
+
+
+def test_state_browser_map_encodes_coverage_without_scoring_quality() -> None:
+    """The navigation map color should describe model coverage, not neighborhood quality."""
+
+    states = pd.DataFrame(
+        [
+            {
+                "state_abbreviation": "MI",
+                "state_name": "Michigan",
+                "tract_count": 100,
+                "analogue_ready_tract_count": 55,
+                "analogue_ready_share": 0.55,
+            }
+        ]
+    )
+
+    figure = state_browser_map_figure(states, "MI")
+
+    assert [trace.type for trace in figure.data] == ["choropleth", "choropleth"]
+    assert figure.data[0].locations == ("MI",)
+    assert figure.data[0].z == (55.00000000000001,)
+    assert figure.data[1].marker.line.width == 3.2
 
 
 def test_place_label_keeps_geography_and_identifier_visible() -> None:

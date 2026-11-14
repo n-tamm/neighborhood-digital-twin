@@ -18,14 +18,16 @@ from typing import Any
 import pandas as pd
 import plotly.graph_objects as go  # type: ignore[import-untyped]
 
-NAVY = "#173E4F"
-TEAL = "#147D72"
-TEAL_LIGHT = "#72B7AE"
-GOLD = "#D49A2A"
-ORANGE = "#C96A3D"
-PURPLE = "#7562A8"
-MUTED = "#667A76"
-GRID = "#DDE5E1"
+TEXT = "#E8F0F2"
+NAVY = "#63B3D1"
+TEAL = "#2DD4BF"
+TEAL_LIGHT = "#5FB3A9"
+GOLD = "#F2B84B"
+ORANGE = "#F28C5B"
+PURPLE = "#A78BFA"
+MUTED = "#9FB0BC"
+GRID = "#2A3A49"
+SURFACE = "#101D2B"
 
 
 def _geometry_feature(
@@ -75,7 +77,7 @@ def _map_view(
     visual_span = max(longitude_span, latitude_span * 1.35)
     zoom = min(12.5, max(minimum_zoom, math.log2(360.0 / visual_span) - 2.2))
     return {
-        "style": "open-street-map",
+        "style": "carto-darkmatter",
         "center": {
             "lon": (minimum_longitude + maximum_longitude) / 2.0,
             "lat": (minimum_latitude + maximum_latitude) / 2.0,
@@ -125,8 +127,8 @@ def _layout(figure: go.Figure, *, height: int, margin_top: int = 35) -> go.Figur
         margin={"l": 18, "r": 18, "t": margin_top, "b": 24},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font={"family": "Inter, ui-sans-serif, system-ui", "color": "#18312E"},
-        hoverlabel={"bgcolor": "white", "font_color": "#18312E"},
+        font={"family": "Inter, ui-sans-serif, system-ui", "color": TEXT},
+        hoverlabel={"bgcolor": SURFACE, "font_color": TEXT, "bordercolor": "#395064"},
         showlegend=False,
     )
     return figure
@@ -176,7 +178,7 @@ def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
         y=available["hpi"],
         mode="lines+markers",
         line={"color": NAVY, "width": 3},
-        marker={"color": TEAL, "size": 7, "line": {"color": "white", "width": 1}},
+        marker={"color": TEAL, "size": 7, "line": {"color": SURFACE, "width": 1}},
         hovertemplate="%{x}: HPI %{y:.1f}<extra></extra>",
     )
     figure.update_xaxes(showgrid=False, title=None, dtick=2)
@@ -212,11 +214,11 @@ def neighborhood_context_map_figure(
             geojson={"type": "FeatureCollection", "features": features},
             locations=context["geoid_2020"].astype(str),
             z=[0.0] * len(context),
-            colorscale=_constant_colorscale("rgba(236,240,237,0.34)"),
-            marker={"line": {"color": "#78908A", "width": 1.15}},
-            customdata=context[["county_name", "tract_name"]],
+            colorscale=_constant_colorscale("rgba(86,109,126,0.22)"),
+            marker={"line": {"color": "#8FA8B8", "width": 1.15}},
+            customdata=context[["geoid_2020", "county_name", "tract_name"]],
             hovertemplate=(
-                "%{customdata[1]}<br>%{customdata[0]}<br>"
+                "%{customdata[2]}<br>%{customdata[1]}<br>"
                 "2020 tract %{location}<extra>Surrounding tract</extra>"
             ),
             showscale=False,
@@ -232,8 +234,8 @@ def neighborhood_context_map_figure(
             geojson={"type": "FeatureCollection", "features": [selected_feature]},
             locations=[str(selected.iloc[0]["geoid_2020"])],
             z=[1.0],
-            colorscale=_constant_colorscale("rgba(30,150,136,0.44)"),
-            marker={"line": {"color": "#083E3A", "width": 3.2}},
+            colorscale=_constant_colorscale("rgba(45,212,191,0.32)"),
+            marker={"line": {"color": TEAL, "width": 3.2}},
             hovertemplate=(
                 f"{profile['tract_name']}<br>{profile['county_name']}, "
                 f"{profile['state_abbreviation']}<br>2020 tract %{{location}}"
@@ -254,7 +256,7 @@ def neighborhood_context_map_figure(
             lon=[selected_longitude],
             lat=[selected_latitude],
             mode="markers",
-            marker={"size": 15, "color": "#083E3A"},
+            marker={"size": 15, "color": TEAL},
             customdata=[[str(profile["geoid_2020"])]],
             hovertemplate=(
                 f"{profile['tract_name']}<br>{profile['county_name']}, "
@@ -277,7 +279,8 @@ def neighborhood_context_map_figure(
             "orientation": "h",
             "y": 0.01,
             "x": 0.01,
-            "bgcolor": "rgba(255,255,255,.92)",
+            "font": {"color": TEXT},
+            "bgcolor": "rgba(10,22,34,.92)",
         },
     )
     return _layout(figure, height=510, margin_top=5)
@@ -318,8 +321,8 @@ def analogue_map_figure(
                 geojson={"type": "FeatureCollection", "features": match_features},
                 locations=outlined["candidate_geoid_2020"].astype(str),
                 z=[1.0] * len(outlined),
-                colorscale=_constant_colorscale("rgba(245,188,66,0.24)"),
-                marker={"line": {"color": "#76520B", "width": 1.8}},
+                colorscale=_constant_colorscale("rgba(242,184,75,0.22)"),
+                marker={"line": {"color": GOLD, "width": 1.8}},
                 customdata=outlined[
                     [
                         "match_rank",
@@ -347,7 +350,7 @@ def analogue_map_figure(
                 marker={"size": 24, "color": GOLD},
                 text=located["match_rank"].astype(int).astype(str),
                 textposition="middle center",
-                textfont={"color": "#2F240C", "size": 11, "weight": 800},
+                textfont={"color": "#1A1407", "size": 11, "weight": 800},
                 customdata=located[
                     [
                         "match_rank",
@@ -375,7 +378,7 @@ def analogue_map_figure(
             geojson={"type": "FeatureCollection", "features": [selected_feature]},
             locations=[str(profile["geoid_2020"])],
             z=[1.0],
-            colorscale=_constant_colorscale("rgba(20,125,114,0.30)"),
+            colorscale=_constant_colorscale("rgba(45,212,191,0.28)"),
             marker={"line": {"color": NAVY, "width": 2.5}},
             hovertemplate=(
                 f"{profile['tract_name']}<br>{profile['county_name']}, "
@@ -412,9 +415,80 @@ def analogue_map_figure(
             minimum_zoom=0.6,
         ),
         showlegend=True,
-        legend={"orientation": "h", "y": 0.01, "x": 0.01, "bgcolor": "rgba(255,255,255,.9)"},
+        legend={
+            "orientation": "h",
+            "y": 0.01,
+            "x": 0.01,
+            "font": {"color": TEXT},
+            "bgcolor": "rgba(10,22,34,.92)",
+        },
     )
     return _layout(figure, height=490, margin_top=5)
+
+
+def state_browser_map_figure(
+    states: pd.DataFrame,
+    selected_state: str | None,
+) -> go.Figure:
+    """Render a selectable U.S. state map with analogue-readiness context."""
+
+    figure = go.Figure()
+    if states.empty:
+        return _layout(figure, height=455, margin_top=8)
+    plotted = states.copy()
+    plotted["analogue_ready_pct"] = plotted["analogue_ready_share"].astype(float) * 100.0
+    figure.add_trace(
+        go.Choropleth(
+            locationmode="USA-states",
+            locations=plotted["state_abbreviation"],
+            z=plotted["analogue_ready_pct"],
+            zmin=0,
+            zmax=100,
+            colorscale=[
+                [0.0, "#203142"],
+                [0.45, "#226B70"],
+                [1.0, TEAL],
+            ],
+            marker={"line": {"color": "#07111D", "width": 1.2}},
+            customdata=plotted[["state_name", "tract_count", "analogue_ready_tract_count"]],
+            hovertemplate=(
+                "%{customdata[0]}<br>%{customdata[2]:,} of %{customdata[1]:,} tracts "
+                "support analogues<br>%{z:.1f}% ready<extra>Select state</extra>"
+            ),
+            colorbar={
+                "title": {"text": "Analogue-ready<br>tract share", "font": {"color": TEXT}},
+                "tickfont": {"color": TEXT},
+                "ticksuffix": "%",
+                "thickness": 12,
+                "len": 0.62,
+            },
+            name="State coverage",
+        )
+    )
+    if selected_state and selected_state in set(plotted["state_abbreviation"].astype(str)):
+        figure.add_trace(
+            go.Choropleth(
+                locationmode="USA-states",
+                locations=[selected_state],
+                z=[1.0],
+                colorscale=_constant_colorscale("rgba(242,184,75,0.18)"),
+                marker={"line": {"color": GOLD, "width": 3.2}},
+                hoverinfo="skip",
+                showscale=False,
+                name="Selected state",
+            )
+        )
+    figure.update_geos(
+        scope="usa",
+        projection_type="albers usa",
+        bgcolor="rgba(0,0,0,0)",
+        showland=True,
+        landcolor="#152433",
+        showlakes=True,
+        lakecolor="#07111D",
+    )
+    figure.update_layout(showlegend=False)
+    return _layout(figure, height=455, margin_top=8)
 
 
 def tract_outline_figure(

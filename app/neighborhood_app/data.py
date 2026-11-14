@@ -115,6 +115,15 @@ class NeighborhoodRepository(Protocol):
     def search_places(self, search_text: str, limit: int = 12) -> pd.DataFrame:
         """Return matching current tract identities in display order."""
 
+    def list_states(self) -> pd.DataFrame:
+        """Return current state coverage used by the geographic browser."""
+
+    def list_counties(self, state_abbreviation: str) -> pd.DataFrame:
+        """Return counties and tract coverage for one selected state."""
+
+    def list_tracts(self, county_geoid: str) -> pd.DataFrame:
+        """Return current tract identities for one selected county."""
+
     def load_neighborhood(self, geoid_2020: str) -> NeighborhoodData:
         """Return the complete approved application evidence for one tract."""
 
@@ -249,6 +258,100 @@ class DatabricksNeighborhoodRepository:
                 "release_id": self._release["serving_release_id"],
                 "exact_text": cleaned,
                 "search_pattern": f"%{cleaned.lower()}%",
+            },
+        )
+
+    def list_states(self) -> pd.DataFrame:
+        """Summarize current tract and analogue coverage for state-map navigation."""
+
+        availability_table = self._table(
+            self._settings.serving_schema,
+            "serving_analogue_availability_current",
+        )
+        return self._executor.fetch_frame(
+            f"""
+            SELECT
+              state_fips,
+              state_abbreviation,
+              state_name,
+              count(DISTINCT geoid_2020) AS tract_count,
+              count(DISTINCT CASE WHEN analogue_available THEN geoid_2020 END)
+                AS analogue_ready_tract_count,
+              count(DISTINCT CASE WHEN analogue_available THEN geoid_2020 END)
+                / count(DISTINCT geoid_2020) AS analogue_ready_share
+            FROM {availability_table}
+            WHERE serving_release_id = :release_id
+              AND horizon_years = 1
+              AND state_abbreviation IS NOT NULL
+              AND state_name IS NOT NULL
+              AND CAST(state_fips AS INT) <= 56
+            GROUP BY state_fips, state_abbreviation, state_name
+            ORDER BY state_name
+            """,
+            {"release_id": self._release["serving_release_id"]},
+        )
+
+    def list_counties(self, state_abbreviation: str) -> pd.DataFrame:
+        """List counties within a state without loading tract geometry or model outputs."""
+
+        cleaned = state_abbreviation.strip().upper()
+        if len(cleaned) != 2 or not cleaned.isalpha():
+            raise ValueError("A state abbreviation must contain exactly two letters.")
+        availability_table = self._table(
+            self._settings.serving_schema,
+            "serving_analogue_availability_current",
+        )
+        return self._executor.fetch_frame(
+            f"""
+            SELECT
+              county_geoid,
+              county_name,
+              state_abbreviation,
+              count(DISTINCT geoid_2020) AS tract_count,
+              count(DISTINCT CASE WHEN analogue_available THEN geoid_2020 END)
+                AS analogue_ready_tract_count
+            FROM {availability_table}
+            WHERE serving_release_id = :release_id
+              AND horizon_years = 1
+              AND state_abbreviation = :state_abbreviation
+            GROUP BY county_geoid, county_name, state_abbreviation
+            ORDER BY county_name, county_geoid
+            """,
+            {
+                "release_id": self._release["serving_release_id"],
+                "state_abbreviation": cleaned,
+            },
+        )
+
+    def list_tracts(self, county_geoid: str) -> pd.DataFrame:
+        """List current tracts within one county for explicit neighborhood selection."""
+
+        cleaned = county_geoid.strip()
+        if len(cleaned) != 5 or not cleaned.isdigit():
+            raise ValueError("A county GEOID must contain exactly five digits.")
+        availability_table = self._table(
+            self._settings.serving_schema,
+            "serving_analogue_availability_current",
+        )
+        return self._executor.fetch_frame(
+            f"""
+            SELECT DISTINCT
+              geoid_2020,
+              state_abbreviation,
+              state_name,
+              county_geoid,
+              county_name,
+              tract_name,
+              analogue_available
+            FROM {availability_table}
+            WHERE serving_release_id = :release_id
+              AND horizon_years = 1
+              AND county_geoid = :county_geoid
+            ORDER BY tract_name, geoid_2020
+            """,
+            {
+                "release_id": self._release["serving_release_id"],
+                "county_geoid": cleaned,
             },
         )
 
@@ -449,6 +552,61 @@ class SampleNeighborhoodRepository:
             ).str.lower()
             places = places.loc[labels.str.contains(cleaned, regex=False)]
         return places.head(limit).reset_index(drop=True)
+
+    def list_states(self) -> pd.DataFrame:
+        """Return the one-state coverage represented by the reduced local fixture."""
+
+        profile = self._payload["profile"]
+        return pd.DataFrame(
+            [
+                {
+                    "state_fips": profile["state_fips"],
+                    "state_abbreviation": profile["state_abbreviation"],
+                    "state_name": profile["state_name"],
+                    "tract_count": 1,
+                    "analogue_ready_tract_count": 1,
+                    "analogue_ready_share": 1.0,
+                }
+            ]
+        )
+
+    def list_counties(self, state_abbreviation: str) -> pd.DataFrame:
+        """Return the one county represented by the reduced local fixture."""
+
+        profile = self._payload["profile"]
+        if state_abbreviation.upper() != profile["state_abbreviation"]:
+            return pd.DataFrame()
+        return pd.DataFrame(
+            [
+                {
+                    "county_geoid": profile["county_geoid"],
+                    "county_name": profile["county_name"],
+                    "state_abbreviation": profile["state_abbreviation"],
+                    "tract_count": 1,
+                    "analogue_ready_tract_count": 1,
+                }
+            ]
+        )
+
+    def list_tracts(self, county_geoid: str) -> pd.DataFrame:
+        """Return the one tract represented by the reduced local fixture."""
+
+        profile = self._payload["profile"]
+        if county_geoid != profile["county_geoid"]:
+            return pd.DataFrame()
+        return pd.DataFrame(
+            [
+                {
+                    "geoid_2020": profile["geoid_2020"],
+                    "state_abbreviation": profile["state_abbreviation"],
+                    "state_name": profile["state_name"],
+                    "county_geoid": profile["county_geoid"],
+                    "county_name": profile["county_name"],
+                    "tract_name": profile["tract_name"],
+                    "analogue_available": True,
+                }
+            ]
+        )
 
     def load_neighborhood(self, geoid_2020: str) -> NeighborhoodData:
         """Load the demonstration tract and preserve its reduced-fixture status."""

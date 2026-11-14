@@ -5,11 +5,11 @@
 # Model used: GPT-5
 
 [theme]
-base = "light"
-primaryColor = "#147D72"
-backgroundColor = "#F5F7F4"
-secondaryBackgroundColor = "#E9EFEA"
-textColor = "#18312E"
+base = "dark"
+primaryColor = "#2DD4BF"
+backgroundColor = "#07111D"
+secondaryBackgroundColor = "#101D2B"
+textColor = "#E8F0F2"
 font = "sans serif"
 
 [browser]

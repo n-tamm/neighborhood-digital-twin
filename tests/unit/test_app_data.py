@@ -92,9 +92,15 @@ def test_sample_settings_and_repository_load_real_fixture() -> None:
     repository = SampleNeighborhoodRepository(SAMPLE_PATH)
 
     places = repository.search_places("Autauga")
+    states = repository.list_states()
+    counties = repository.list_counties("AL")
+    tracts = repository.list_tracts("01001")
     neighborhood = repository.load_neighborhood("01001020300")
 
     assert places["geoid_2020"].tolist() == ["01001020300"]
+    assert states["state_abbreviation"].tolist() == ["AL"]
+    assert counties["county_geoid"].tolist() == ["01001"]
+    assert tracts["geoid_2020"].tolist() == ["01001020300"]
     assert neighborhood.profile["county_name"] == "Autauga County"
     assert neighborhood.horizon_available(1)
     assert neighborhood.horizon_available(3)
@@ -167,3 +173,18 @@ def test_live_repository_batches_neighborhood_queries_and_loads_geometry() -> No
     assert "st_asgeojson" in executor.batch_queries[1][0].lower()
     assert neighborhood.bounds["minimum_longitude"] == -86.5
     assert neighborhood.map_context["geoid_2020"].tolist() == ["01001020300"]
+
+
+def test_geographic_browser_rejects_unsafe_or_malformed_identifiers() -> None:
+    """Browser filters must remain parameterized and reject malformed geography keys."""
+
+    executor = RecordingExecutor()
+    repository = DatabricksNeighborhoodRepository(
+        AppSettings(data_mode="live", warehouse_id="warehouse-1"),
+        executor,
+    )
+
+    with pytest.raises(ValueError, match="state abbreviation"):
+        repository.list_counties("MI' OR 1=1")
+    with pytest.raises(ValueError, match="county GEOID"):
+        repository.list_tracts("26125; DROP TABLE")

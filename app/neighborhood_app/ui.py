@@ -60,27 +60,6 @@ def safe_float(value: Any, default: float = 0.0) -> float:
     return default if math.isnan(numeric) else numeric
 
 
-def selected_rank_from_map_event(event: Any) -> int | None:
-    """Return a historical-match rank from a Plotly point-selection event."""
-
-    selection = getattr(event, "selection", None)
-    if selection is None and isinstance(event, dict):
-        selection = event.get("selection", {})
-    points = getattr(selection, "points", None)
-    if points is None and isinstance(selection, dict):
-        points = selection.get("points", [])
-    for point in points or []:
-        customdata = point.get("customdata") if isinstance(point, dict) else None
-        if isinstance(customdata, (list, tuple)) and customdata:
-            try:
-                rank = int(customdata[0])
-            except (TypeError, ValueError):
-                continue
-            if rank > 0:
-                return rank
-    return None
-
-
 def selected_rank_from_table_event(event: Any, table: pd.DataFrame) -> int | None:
     """Return the match rank represented by one selected table row."""
 
@@ -96,6 +75,47 @@ def selected_rank_from_table_event(event: Any, table: pd.DataFrame) -> int | Non
     if row_index < 0 or row_index >= len(table):
         return None
     return int(table.iloc[row_index]["Rank"])
+
+
+def selected_geoid_from_map_event(event: Any) -> str | None:
+    """Return an eleven-digit tract GEOID from a local map-selection event."""
+
+    selection = getattr(event, "selection", None)
+    if selection is None and isinstance(event, dict):
+        selection = event.get("selection", {})
+    points = getattr(selection, "points", None)
+    if points is None and isinstance(selection, dict):
+        points = selection.get("points", [])
+    for point in points or []:
+        if not isinstance(point, dict):
+            continue
+        candidates = [point.get("location")]
+        customdata = point.get("customdata")
+        if isinstance(customdata, (list, tuple)) and customdata:
+            candidates.insert(0, customdata[0])
+        for candidate in candidates:
+            geoid = str(candidate or "")
+            if len(geoid) == 11 and geoid.isdigit():
+                return geoid
+    return None
+
+
+def selected_state_from_map_event(event: Any) -> str | None:
+    """Return a two-letter state abbreviation from a state-map selection event."""
+
+    selection = getattr(event, "selection", None)
+    if selection is None and isinstance(event, dict):
+        selection = event.get("selection", {})
+    points = getattr(selection, "points", None)
+    if points is None and isinstance(selection, dict):
+        points = selection.get("points", [])
+    for point in points or []:
+        if not isinstance(point, dict):
+            continue
+        abbreviation = str(point.get("location") or "").upper()
+        if len(abbreviation) == 2 and abbreviation.isalpha():
+            return abbreviation
+    return None
 
 
 def place_label(row: Mapping[str, Any]) -> str:
@@ -131,24 +151,25 @@ def status_badge(label: str, *, available: bool) -> str:
 
 
 def apply_styles() -> None:
-    """Apply the first application design system without hiding Streamlit accessibility controls."""
+    """Apply the midnight application design without hiding accessibility controls."""
 
     st.markdown(
         """
         <style>
         :root {
-          --ink: #18312e;
-          --muted: #667a76;
-          --teal: #147d72;
-          --teal-soft: #dcece8;
-          --navy: #173e4f;
-          --gold: #d49a2a;
-          --surface: #ffffff;
-          --line: #d9e2de;
+          --ink: #e8f0f2;
+          --muted: #9fb0bc;
+          --teal: #2dd4bf;
+          --teal-soft: #123b3b;
+          --navy: #63b3d1;
+          --gold: #f2b84b;
+          --surface: #101d2b;
+          --surface-raised: #142536;
+          --line: #2a3a49;
         }
-        .stApp { background: #f5f7f4; color: var(--ink); }
+        .stApp { background: #07111d; color: var(--ink); }
         .block-container { max-width: 1500px; padding-top: 1.4rem; padding-bottom: 4rem; }
-        [data-testid="stSidebar"] { background: #eef3ef; border-right: 1px solid var(--line); }
+        [data-testid="stSidebar"] { background: #0b1724; border-right: 1px solid var(--line); }
         [data-testid="stSidebar"] .block-container { padding-top: 1.6rem; }
         h1, h2, h3 { color: var(--ink); letter-spacing: -0.025em; }
         h1 { font-size: clamp(2rem, 3.2vw, 3.4rem) !important; line-height: 1.02 !important; }
@@ -161,7 +182,7 @@ def apply_styles() -> None:
         .place-subtitle { color: var(--muted); margin-top: .15rem; }
         .metric-card { background: var(--surface); border: 1px solid var(--line);
                        border-radius: 14px; padding: 1rem 1.05rem; min-height: 112px;
-                       box-shadow: 0 8px 24px rgba(23,62,79,.045); }
+                       box-shadow: 0 12px 30px rgba(0,0,0,.20); }
         .metric-label { color: var(--muted); text-transform: uppercase; font-size: .72rem;
                         letter-spacing: .07em; font-weight: 700; }
         .metric-value { color: var(--ink); font-size: 1.5rem; font-weight: 760;
@@ -169,20 +190,21 @@ def apply_styles() -> None:
         .metric-note { color: var(--muted); font-size: .78rem; margin-top: .35rem; }
         .status-badge { display: inline-block; border-radius: 999px; padding: .32rem .66rem;
                         margin: .15rem .25rem .15rem 0; font-size: .78rem; font-weight: 700; }
-        .status-badge.available { background: var(--teal-soft); color: #0b665c; }
-        .status-badge.unavailable { background: #f4e8df; color: #8b4b2e; }
+        .status-badge.available { background: var(--teal-soft); color: #72eadb; }
+        .status-badge.unavailable { background: #3a2927; color: #f1a17f; }
         .section-note { border-left: 3px solid var(--gold); padding: .75rem 1rem;
-                        background: #fffaf0; color: #5f5a4c; border-radius: 0 10px 10px 0; }
-        .model-boundary { background: #edf3f5; border: 1px solid #cfdee3; border-radius: 14px;
+                        background: #282418; color: #e4d7b7; border-radius: 0 10px 10px 0; }
+        .model-boundary { background: #102431; border: 1px solid #294655; border-radius: 14px;
                           padding: 1rem 1.1rem; }
-        .sample-banner { background: #fff7e6; border: 1px solid #ead39f; border-radius: 10px;
-                         padding: .7rem .85rem; color: #6c582b; font-size: .87rem; }
-        [data-testid="stPlotlyChart"] { background: white; border: 1px solid var(--line);
+        .sample-banner { background: #2c2617; border: 1px solid #665127; border-radius: 10px;
+                         padding: .7rem .85rem; color: #eed59c; font-size: .87rem; }
+        [data-testid="stPlotlyChart"] { background: var(--surface); border: 1px solid var(--line);
                                         border-radius: 14px; overflow: hidden;
-                                        box-shadow: 0 8px 24px rgba(23,62,79,.04); }
+                                        box-shadow: 0 12px 30px rgba(0,0,0,.18); }
         [data-baseweb="tab-list"] { gap: .35rem; }
         [data-baseweb="tab"] { border-radius: 9px 9px 0 0; padding: .65rem 1rem; }
         [data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 12px; }
+        [data-testid="stForm"] { background: rgba(16,29,43,.55); border-color: var(--line); }
         @media (max-width: 800px) {
           .block-container { padding-left: 1rem; padding-right: 1rem; }
           .metric-card { min-height: 96px; }
