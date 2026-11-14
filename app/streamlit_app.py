@@ -29,6 +29,8 @@ from neighborhood_app.ui import (
     metric_card,
     place_label,
     safe_float,
+    selected_rank_from_map_event,
+    selected_rank_from_table_event,
     status_badge,
 )
 
@@ -239,12 +241,21 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     matches = data.matches.loc[data.matches["horizon_years"] == horizon_years].copy()
     trajectories = data.trajectories.loc[data.trajectories["horizon_years"] == horizon_years].copy()
     map_col, list_col = st.columns([1.55, 1])
+    map_event: Any = None
+    table_event: Any = None
+    table = pd.DataFrame()
     with map_col:
-        st.plotly_chart(
+        map_event = st.plotly_chart(
             analogue_map_figure(data.profile, data.bounds, data.map_context, matches),
             width="stretch",
             key=f"analogue_detail_map_{horizon_years}",
             config={"displayModeBar": False},
+            on_select="rerun",
+            selection_mode="points",
+        )
+        st.caption(
+            "Gold numbered points keep all matches visible nationally. Zoom in to inspect the "
+            "actual tract outlines, or select a point to update the comparison below."
         )
     with list_col:
         st.markdown("#### Closest historical communities")
@@ -268,14 +279,18 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
                     "similarity_distance": "Distance",
                 }
             )
-            st.dataframe(
+            table_event = st.dataframe(
                 table,
                 hide_index=True,
                 width="stretch",
                 column_config={
                     "Distance": st.column_config.NumberColumn(format="%.3f"),
                 },
+                on_select="rerun",
+                selection_mode="single-row",
+                key=f"analogue_match_table_{horizon_years}",
             )
+            st.caption("Select a county row to update the detailed comparison below.")
             if data.data_mode == "sample":
                 st.caption(
                     "The local fixture retains one real match for layout testing. Live mode reads "
@@ -285,9 +300,18 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     if matches.empty:
         return
     options = matches["match_rank"].astype(int).tolist()
+    selector_key = f"selected_analogue_rank_{horizon_years}"
+    event_rank = selected_rank_from_map_event(map_event)
+    table_rank = selected_rank_from_table_event(table_event, table)
+    requested_rank = table_rank or event_rank
+    if requested_rank in options:
+        st.session_state[selector_key] = requested_rank
+    if st.session_state.get(selector_key) not in options:
+        st.session_state[selector_key] = options[0]
     selected_rank = st.selectbox(
         "Inspect one historical match",
         options=options,
+        key=selector_key,
         format_func=lambda rank: (
             f"#{rank} · "
             f"{matches.loc[matches['match_rank'] == rank, 'candidate_county_name'].iloc[0]}, "

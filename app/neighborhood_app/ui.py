@@ -60,6 +60,44 @@ def safe_float(value: Any, default: float = 0.0) -> float:
     return default if math.isnan(numeric) else numeric
 
 
+def selected_rank_from_map_event(event: Any) -> int | None:
+    """Return a historical-match rank from a Plotly point-selection event."""
+
+    selection = getattr(event, "selection", None)
+    if selection is None and isinstance(event, dict):
+        selection = event.get("selection", {})
+    points = getattr(selection, "points", None)
+    if points is None and isinstance(selection, dict):
+        points = selection.get("points", [])
+    for point in points or []:
+        customdata = point.get("customdata") if isinstance(point, dict) else None
+        if isinstance(customdata, (list, tuple)) and customdata:
+            try:
+                rank = int(customdata[0])
+            except (TypeError, ValueError):
+                continue
+            if rank > 0:
+                return rank
+    return None
+
+
+def selected_rank_from_table_event(event: Any, table: pd.DataFrame) -> int | None:
+    """Return the match rank represented by one selected table row."""
+
+    selection = getattr(event, "selection", None)
+    if selection is None and isinstance(event, dict):
+        selection = event.get("selection", {})
+    rows = getattr(selection, "rows", None)
+    if rows is None and isinstance(selection, dict):
+        rows = selection.get("rows", [])
+    if not rows:
+        return None
+    row_index = int(rows[0])
+    if row_index < 0 or row_index >= len(table):
+        return None
+    return int(table.iloc[row_index]["Rank"])
+
+
 def place_label(row: Mapping[str, Any]) -> str:
     """Build one consistent tract label for search results and page headings."""
 

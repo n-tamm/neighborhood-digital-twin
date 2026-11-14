@@ -12,12 +12,18 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from neighborhood_app.charts import hpi_history_figure, neighborhood_context_map_figure
+from neighborhood_app.charts import (
+    analogue_map_figure,
+    hpi_history_figure,
+    neighborhood_context_map_figure,
+)
 from neighborhood_app.ui import (
     format_currency,
     format_percent,
     format_square_miles,
     place_label,
+    selected_rank_from_map_event,
+    selected_rank_from_table_event,
 )
 from streamlit.testing.v1 import AppTest
 
@@ -51,8 +57,8 @@ def test_formatters_preserve_interpretable_units() -> None:
     assert format_currency(None) == "Not available"
 
 
-def test_context_map_uses_boundaries_instead_of_point_markers() -> None:
-    """The main geography view should render tract polygons and surrounding context."""
+def test_context_map_combines_visible_point_with_boundary_context() -> None:
+    """The main view should retain a point at high level and boundaries after zooming."""
 
     geometry = (
         '{"type":"Polygon","coordinates":[['
@@ -83,8 +89,81 @@ def test_context_map_uses_boundaries_instead_of_point_markers() -> None:
 
     figure = neighborhood_context_map_figure(profile, bounds, context)
 
-    assert [trace.type for trace in figure.data] == ["choroplethmap", "choroplethmap"]
+    assert [trace.type for trace in figure.data] == [
+        "choroplethmap",
+        "choroplethmap",
+        "scattermap",
+    ]
     assert figure.data[1].locations == ("01001020300",)
+    assert figure.data[2].marker.size == 15
+
+
+def test_analogue_map_keeps_national_points_and_local_tract_outlines() -> None:
+    """Historical matches must remain visible before their small polygons can be resolved."""
+
+    geometry = (
+        '{"type":"Polygon","coordinates":[['
+        "[-86.5,32.4],[-86.4,32.4],[-86.4,32.5],[-86.5,32.5],[-86.5,32.4]"
+        "]] }"
+    )
+    context = pd.DataFrame(
+        [
+            {
+                "geoid_2020": "01001020300",
+                "county_name": "Autauga County",
+                "tract_name": "Census Tract 203",
+                "minimum_longitude": -86.5,
+                "minimum_latitude": 32.4,
+                "maximum_longitude": -86.4,
+                "maximum_latitude": 32.5,
+                "geometry_geojson": geometry,
+            }
+        ]
+    )
+    profile = {
+        "geoid_2020": "01001020300",
+        "county_name": "Autauga County",
+        "state_abbreviation": "AL",
+        "tract_name": "Census Tract 203",
+    }
+    matches = pd.DataFrame(
+        [
+            {
+                "candidate_geoid_2020": "06001000100",
+                "candidate_county_name": "Alameda County",
+                "candidate_state_abbreviation": "CA",
+                "candidate_origin_year": 2019,
+                "candidate_longitude": -122.25,
+                "candidate_latitude": 37.80,
+                "candidate_geometry_geojson": geometry,
+                "similarity_distance": 0.72,
+                "match_rank": 1,
+            }
+        ]
+    )
+
+    figure = analogue_map_figure(profile, context.iloc[0], context, matches)
+
+    assert [trace.type for trace in figure.data] == [
+        "choroplethmap",
+        "scattermap",
+        "choroplethmap",
+        "scattermap",
+    ]
+    assert figure.data[1].mode == "markers+text"
+    assert figure.data[1].customdata[0][0] == 1
+    assert figure.layout.map.zoom < 2.2
+
+
+def test_selection_events_resolve_to_the_same_match_rank() -> None:
+    """Map points and county rows should drive one shared detailed comparison."""
+
+    map_event = {"selection": {"points": [{"customdata": [4, "Wayne County", "MI"]}]}}
+    table = pd.DataFrame([{"Rank": 2}, {"Rank": 4}])
+    table_event = {"selection": {"rows": [1]}}
+
+    assert selected_rank_from_map_event(map_event) == 4
+    assert selected_rank_from_table_event(table_event, table) == 4
 
 
 def test_place_label_keeps_geography_and_identifier_visible() -> None:

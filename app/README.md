@@ -7,9 +7,11 @@ approved historical analogues. Forecasting has a deliberate unavailable state un
 forecasting workstream publishes a selected model, calibrated interval, and versioned serving
 contract.
 
-The primary map uses the selected tract's simplified boundary and nearby tract outlines. The
-analogue experience uses actual matched-tract polygons and side-by-side footprint comparisons
-rather than point markers.
+The primary map combines a high-visibility selected-tract point with its simplified boundary and
+nearby tract outlines. The analogue experience layers numbered points over actual matched-tract
+polygons: points remain visible at the national extent, while the boundaries become useful after
+zooming. Selecting a match point, county row, or dropdown option updates the same footprint,
+explanation, and trajectory comparison.
 
 The interface is intentionally thin. It does not train models, rebuild features, download source
 data, or query `gold_modeling_panel`. Live mode uses a Databricks App service principal and reads

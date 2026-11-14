@@ -65,15 +65,17 @@ def _map_view(
     minimum_latitude: float,
     maximum_longitude: float,
     maximum_latitude: float,
+    *,
+    minimum_zoom: float = 0.6,
 ) -> dict[str, Any]:
     """Calculate a bounded MapLibre center and zoom from an extent."""
 
     longitude_span = max(maximum_longitude - minimum_longitude, 0.005)
     latitude_span = max(maximum_latitude - minimum_latitude, 0.005)
     visual_span = max(longitude_span, latitude_span * 1.35)
-    zoom = min(12.5, max(2.2, math.log2(360.0 / visual_span) - 2.2))
+    zoom = min(12.5, max(minimum_zoom, math.log2(360.0 / visual_span) - 2.2))
     return {
-        "style": "carto-positron",
+        "style": "open-street-map",
         "center": {
             "lon": (minimum_longitude + maximum_longitude) / 2.0,
             "lat": (minimum_latitude + maximum_latitude) / 2.0,
@@ -187,7 +189,7 @@ def neighborhood_context_map_figure(
     bounds: Mapping[str, Any],
     map_context: pd.DataFrame,
 ) -> go.Figure:
-    """Show the selected tract boundary within nearby display-only tract outlines."""
+    """Show a visible selected point and boundary within nearby tract outlines."""
 
     selected = _selected_geometry_frame(profile, bounds, map_context)
     context = (
@@ -210,8 +212,8 @@ def neighborhood_context_map_figure(
             geojson={"type": "FeatureCollection", "features": features},
             locations=context["geoid_2020"].astype(str),
             z=[0.0] * len(context),
-            colorscale=_constant_colorscale("rgba(217,225,221,0.38)"),
-            marker={"line": {"color": "#FFFFFF", "width": 1.1}},
+            colorscale=_constant_colorscale("rgba(236,240,237,0.34)"),
+            marker={"line": {"color": "#78908A", "width": 1.15}},
             customdata=context[["county_name", "tract_name"]],
             hovertemplate=(
                 "%{customdata[1]}<br>%{customdata[0]}<br>"
@@ -230,8 +232,8 @@ def neighborhood_context_map_figure(
             geojson={"type": "FeatureCollection", "features": [selected_feature]},
             locations=[str(selected.iloc[0]["geoid_2020"])],
             z=[1.0],
-            colorscale=_constant_colorscale("rgba(20,125,114,0.67)"),
-            marker={"line": {"color": NAVY, "width": 3}},
+            colorscale=_constant_colorscale("rgba(30,150,136,0.44)"),
+            marker={"line": {"color": "#083E3A", "width": 3.2}},
             hovertemplate=(
                 f"{profile['tract_name']}<br>{profile['county_name']}, "
                 f"{profile['state_abbreviation']}<br>2020 tract %{{location}}"
@@ -241,12 +243,34 @@ def neighborhood_context_map_figure(
             name="Selected tract",
         )
     )
+    selected_longitude = (
+        float(selected.iloc[0]["minimum_longitude"]) + float(selected.iloc[0]["maximum_longitude"])
+    ) / 2.0
+    selected_latitude = (
+        float(selected.iloc[0]["minimum_latitude"]) + float(selected.iloc[0]["maximum_latitude"])
+    ) / 2.0
+    figure.add_trace(
+        go.Scattermap(
+            lon=[selected_longitude],
+            lat=[selected_latitude],
+            mode="markers",
+            marker={"size": 15, "color": "#083E3A"},
+            customdata=[[str(profile["geoid_2020"])]],
+            hovertemplate=(
+                f"{profile['tract_name']}<br>{profile['county_name']}, "
+                f"{profile['state_abbreviation']}<extra>Selected neighborhood</extra>"
+            ),
+            showlegend=False,
+            name="Selected neighborhood point",
+        )
+    )
     figure.update_layout(
         map=_map_view(
             float(context["minimum_longitude"].min()),
             float(context["minimum_latitude"].min()),
             float(context["maximum_longitude"].max()),
             float(context["maximum_latitude"].max()),
+            minimum_zoom=3.0,
         ),
         showlegend=True,
         legend={
@@ -265,7 +289,7 @@ def analogue_map_figure(
     map_context: pd.DataFrame,
     matches: pd.DataFrame,
 ) -> go.Figure:
-    """Map actual query and match footprints with text-only rank labels."""
+    """Layer high-visibility points over tract footprints for national-to-local review."""
 
     selected = _selected_geometry_frame(profile, bounds, map_context)
     query_lon = (
@@ -294,20 +318,20 @@ def analogue_map_figure(
                 geojson={"type": "FeatureCollection", "features": match_features},
                 locations=outlined["candidate_geoid_2020"].astype(str),
                 z=[1.0] * len(outlined),
-                colorscale=_constant_colorscale("rgba(212,154,42,0.70)"),
-                marker={"line": {"color": "#8E6415", "width": 1.6}},
+                colorscale=_constant_colorscale("rgba(245,188,66,0.24)"),
+                marker={"line": {"color": "#76520B", "width": 1.8}},
                 customdata=outlined[
                     [
+                        "match_rank",
                         "candidate_county_name",
                         "candidate_state_abbreviation",
                         "candidate_origin_year",
                         "similarity_distance",
-                        "match_rank",
                     ]
                 ],
                 hovertemplate=(
-                    "#%{customdata[4]} %{customdata[0]}, %{customdata[1]}<br>"
-                    "Historical year %{customdata[2]}<br>Distance %{customdata[3]:.3f}"
+                    "#%{customdata[0]} %{customdata[1]}, %{customdata[2]}<br>"
+                    "Historical year %{customdata[3]}<br>Distance %{customdata[4]:.3f}"
                     "<extra>Historical match</extra>"
                 ),
                 showscale=False,
@@ -319,11 +343,27 @@ def analogue_map_figure(
             go.Scattermap(
                 lon=located["candidate_longitude"],
                 lat=located["candidate_latitude"],
-                mode="text",
+                mode="markers+text",
+                marker={"size": 24, "color": GOLD},
                 text=located["match_rank"].astype(int).astype(str),
-                textfont={"color": "#6D4B0D", "size": 12, "weight": 750},
-                hoverinfo="skip",
+                textposition="middle center",
+                textfont={"color": "#2F240C", "size": 11, "weight": 800},
+                customdata=located[
+                    [
+                        "match_rank",
+                        "candidate_county_name",
+                        "candidate_state_abbreviation",
+                        "candidate_origin_year",
+                        "similarity_distance",
+                    ]
+                ],
+                hovertemplate=(
+                    "#%{customdata[0]} %{customdata[1]}, %{customdata[2]}<br>"
+                    "Historical year %{customdata[3]}<br>Distance %{customdata[4]:.3f}"
+                    "<extra>Historical match</extra>"
+                ),
                 showlegend=False,
+                name="Historical match points",
             )
         )
     selected_feature = _geometry_feature(
@@ -335,7 +375,7 @@ def analogue_map_figure(
             geojson={"type": "FeatureCollection", "features": [selected_feature]},
             locations=[str(profile["geoid_2020"])],
             z=[1.0],
-            colorscale=_constant_colorscale("rgba(20,125,114,0.78)"),
+            colorscale=_constant_colorscale("rgba(20,125,114,0.30)"),
             marker={"line": {"color": NAVY, "width": 2.5}},
             hovertemplate=(
                 f"{profile['tract_name']}<br>{profile['county_name']}, "
@@ -346,6 +386,21 @@ def analogue_map_figure(
             name="Selected neighborhood",
         )
     )
+    figure.add_trace(
+        go.Scattermap(
+            lon=[query_lon],
+            lat=[query_lat],
+            mode="markers",
+            marker={"size": 18, "color": NAVY},
+            customdata=[[0, profile["county_name"], profile["state_abbreviation"]]],
+            hovertemplate=(
+                f"{profile['tract_name']}<br>{profile['county_name']}, "
+                f"{profile['state_abbreviation']}<extra>Selected neighborhood</extra>"
+            ),
+            showlegend=False,
+            name="Selected neighborhood point",
+        )
+    )
     all_longitudes = [query_lon, *located["candidate_longitude"].astype(float).tolist()]
     all_latitudes = [query_lat, *located["candidate_latitude"].astype(float).tolist()]
     figure.update_layout(
@@ -354,6 +409,7 @@ def analogue_map_figure(
             min(all_latitudes) - 0.35,
             max(all_longitudes) + 0.5,
             max(all_latitudes) + 0.35,
+            minimum_zoom=0.6,
         ),
         showlegend=True,
         legend={"orientation": "h", "y": 0.01, "x": 0.01, "bgcolor": "rgba(255,255,255,.9)"},

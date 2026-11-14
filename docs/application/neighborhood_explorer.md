@@ -20,9 +20,10 @@ uses its own data contracts, language, component design, and model boundaries.
    evidence only. They do not change or imply a forecast.
 3. **Check evidence availability.** Status badges show whether the current profile, FHFA history,
    analogue result, and forecast are available. Text and symbols accompany color.
-4. **Orient on the map.** The selected tract is shown as an actual simplified outline within
-   nearby tract boundaries. Historical matches use gold outlines and rank labels in the analogue
-   view. All geometry remains display-only rather than a model input.
+4. **Orient on the map.** The selected tract is shown with both a visible point and its actual
+   simplified outline within nearby tract boundaries. Historical matches use numbered gold points
+   at national extent and gold tract outlines at close zoom. All geometry remains display-only
+   rather than a model input.
 5. **Open a focused tab.** Overview, Forecast, Historical analogues, and Methods & limitations keep
    different evidence types from being blended together.
 
@@ -50,6 +51,11 @@ diversity of matches, the descriptive distribution of their observed later outco
 match table, five feature-family gaps, plain-language strongest-shared and largest-difference
 callouts, side-by-side tract footprint maps, and the selected match's observed post-match
 trajectory.
+
+The national map, ranked county table, and explicit match selector share one selected-match state.
+Selecting a numbered point or county row changes the footprint, feature-gap explanation, and
+observed trajectory below it. This keeps the map and analytical panels coordinated without using
+map clicks to retrain or rerun the model.
 
 The page repeatedly labels those outcomes as historical evidence. Similarity distance explains
 retrieval, not why prices later changed, and a historical path is not presented as a causal or
