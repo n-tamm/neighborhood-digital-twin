@@ -12,8 +12,13 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from neighborhood_app.charts import hpi_history_figure
-from neighborhood_app.ui import format_currency, format_percent, place_label
+from neighborhood_app.charts import hpi_history_figure, neighborhood_context_map_figure
+from neighborhood_app.ui import (
+    format_currency,
+    format_percent,
+    format_square_miles,
+    place_label,
+)
 from streamlit.testing.v1 import AppTest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -42,7 +47,44 @@ def test_formatters_preserve_interpretable_units() -> None:
     assert format_currency(63939) == "$63,939"
     assert format_percent(0.66559, value_is_share=True) == "66.6%"
     assert format_percent(3.24) == "3.2%"
+    assert format_square_miles(2_589_988.110336) == "1.0 sq mi"
     assert format_currency(None) == "Not available"
+
+
+def test_context_map_uses_boundaries_instead_of_point_markers() -> None:
+    """The main geography view should render tract polygons and surrounding context."""
+
+    geometry = (
+        '{"type":"Polygon","coordinates":[['
+        "[-86.5,32.4],[-86.4,32.4],[-86.4,32.5],[-86.5,32.5],[-86.5,32.4]"
+        "]]}"
+    )
+    context = pd.DataFrame(
+        [
+            {
+                "geoid_2020": "01001020300",
+                "county_name": "Autauga County",
+                "tract_name": "Census Tract 203",
+                "minimum_longitude": -86.5,
+                "minimum_latitude": 32.4,
+                "maximum_longitude": -86.4,
+                "maximum_latitude": 32.5,
+                "geometry_geojson": geometry,
+            }
+        ]
+    )
+    profile = {
+        "geoid_2020": "01001020300",
+        "county_name": "Autauga County",
+        "state_abbreviation": "AL",
+        "tract_name": "Census Tract 203",
+    }
+    bounds = {str(key): value for key, value in context.iloc[0].to_dict().items()}
+
+    figure = neighborhood_context_map_figure(profile, bounds, context)
+
+    assert [trace.type for trace in figure.data] == ["choroplethmap", "choroplethmap"]
+    assert figure.data[1].locations == ("01001020300",)
 
 
 def test_place_label_keeps_geography_and_identifier_visible() -> None:

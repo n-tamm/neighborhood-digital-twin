@@ -92,6 +92,7 @@ class NeighborhoodData:
     release: Mapping[str, Any]
     profile: Mapping[str, Any]
     bounds: Mapping[str, Any]
+    map_context: pd.DataFrame
     history: pd.DataFrame
     availability: pd.DataFrame
     summaries: pd.DataFrame
@@ -126,6 +127,12 @@ class QueryExecutor(Protocol):
     ) -> pd.DataFrame:
         """Execute a read-only statement and return named columns."""
 
+    def fetch_frames(
+        self,
+        queries: Sequence[tuple[str, Mapping[str, Any] | None]],
+    ) -> list[pd.DataFrame]:
+        """Execute several read-only statements over one warehouse connection."""
+
 
 class DatabricksSqlExecutor:
     """Read-only Databricks SQL executor using the app service principal when deployed."""
@@ -138,12 +145,21 @@ class DatabricksSqlExecutor:
     ) -> pd.DataFrame:
         """Execute parameterized SQL and convert rows to a pandas frame."""
 
+        return self.fetch_frames([(statement, parameters)])[0]
+
+    def fetch_frames(
+        self,
+        queries: Sequence[tuple[str, Mapping[str, Any] | None]],
+    ) -> list[pd.DataFrame]:
+        """Execute a query group on one connection to avoid repeated startup latency."""
+
         from databricks import sql
         from databricks.sdk.core import Config
 
         config = Config()
         hostname = config.host.removeprefix("https://").removeprefix("http://")
         http_path = f"/sql/1.0/warehouses/{self._warehouse_id}"
+        frames: list[pd.DataFrame] = []
         with sql.connect(
             server_hostname=hostname,
             http_path=http_path,
@@ -151,13 +167,15 @@ class DatabricksSqlExecutor:
             _use_arrow_native_complex_types=False,
         ) as connection:
             with connection.cursor() as cursor:
-                cursor.execute(statement, parameters=parameters or {})
-                rows = cursor.fetchall()
-                description = cursor.description
-                if description is None:
-                    raise RuntimeError("The Databricks SQL query did not return a result set.")
-                columns = [item[0] for item in description]
-        return pd.DataFrame.from_records(rows, columns=columns)
+                for statement, parameters in queries:
+                    cursor.execute(statement, parameters=parameters or {})
+                    rows = cursor.fetchall()
+                    description = cursor.description
+                    if description is None:
+                        raise RuntimeError("The Databricks SQL query did not return a result set.")
+                    columns = [item[0] for item in description]
+                    frames.append(pd.DataFrame.from_records(rows, columns=columns))
+        return frames
 
 
 class DatabricksNeighborhoodRepository:
@@ -257,55 +275,75 @@ class DatabricksNeighborhoodRepository:
             self._settings.silver_schema,
             "silver_tract_display_geometry_2020",
         )
-        profile = self._executor.fetch_frame(
-            f"""
+        profile_query = f"""
             SELECT *
             FROM {self._table(self._settings.gold_schema, "gold_tract_profile_current")}
             WHERE geoid_2020 = :geoid
-            """,
-            {"geoid": geoid_2020},
-        )
-        if len(profile) != 1:
-            raise LookupError(f"No unique current profile exists for tract {geoid_2020}.")
-        bounds = self._executor.fetch_frame(
-            f"""
-            SELECT geoid_2020, minimum_longitude, minimum_latitude,
-                   maximum_longitude, maximum_latitude, geography_build_id
-            FROM {self._table(self._settings.silver_schema, "silver_tract_display_geometry_2020")}
-            WHERE geoid_2020 = :geoid
-            """,
-            {"geoid": geoid_2020},
-        )
-        history = self._executor.fetch_frame(
-            f"""
+            """
+        map_context_query = f"""
+            WITH selected AS (
+              SELECT
+                minimum_longitude,
+                minimum_latitude,
+                maximum_longitude,
+                maximum_latitude,
+                (minimum_longitude + maximum_longitude) / 2.0 AS center_longitude,
+                (minimum_latitude + maximum_latitude) / 2.0 AS center_latitude
+              FROM {geometry_table}
+              WHERE geoid_2020 = :geoid
+            )
+            SELECT
+              g.geoid_2020,
+              g.state_abbreviation,
+              g.county_name,
+              g.tract_name,
+              g.land_area_sqm,
+              g.minimum_longitude,
+              g.minimum_latitude,
+              g.maximum_longitude,
+              g.maximum_latitude,
+              g.geography_build_id,
+              st_asgeojson(st_geomfromwkb(g.geometry_wkb, 4326)) AS geometry_geojson
+            FROM {geometry_table} g
+            CROSS JOIN selected s
+            WHERE g.maximum_longitude >= s.minimum_longitude
+                    - greatest((s.maximum_longitude - s.minimum_longitude) * 2.0, 0.03)
+              AND g.minimum_longitude <= s.maximum_longitude
+                    + greatest((s.maximum_longitude - s.minimum_longitude) * 2.0, 0.03)
+              AND g.maximum_latitude >= s.minimum_latitude
+                    - greatest((s.maximum_latitude - s.minimum_latitude) * 2.0, 0.03)
+              AND g.minimum_latitude <= s.maximum_latitude
+                    + greatest((s.maximum_latitude - s.minimum_latitude) * 2.0, 0.03)
+            ORDER BY
+              pow(
+                ((g.minimum_longitude + g.maximum_longitude) / 2.0) - s.center_longitude,
+                2
+              ) + pow(
+                ((g.minimum_latitude + g.maximum_latitude) / 2.0) - s.center_latitude,
+                2
+              )
+            LIMIT 80
+            """
+        history_query = f"""
             SELECT observation_year, annual_change_pct, hpi, hpi_available,
                    annual_change_available, silver_build_id
             FROM {self._table(self._settings.silver_schema, "silver_fhfa_tract_year")}
             WHERE geoid = :geoid
             ORDER BY observation_year
-            """,
-            {"geoid": geoid_2020},
-        )
-        availability = self._executor.fetch_frame(
-            f"""
+            """
+        availability_query = f"""
             SELECT *
             FROM {availability_table}
             WHERE geoid_2020 = :geoid AND serving_release_id = :release_id
             ORDER BY horizon_years
-            """,
-            common,
-        )
-        summaries = self._executor.fetch_frame(
-            f"""
+            """
+        summary_query = f"""
             SELECT *
             FROM {self._table(self._settings.serving_schema, "serving_analogue_summary_current")}
             WHERE query_geoid_2020 = :geoid AND serving_release_id = :release_id
             ORDER BY horizon_years
-            """,
-            common,
-        )
-        matches = self._executor.fetch_frame(
-            f"""
+            """
+        match_query = f"""
             SELECT
               m.horizon_years, m.candidate_geoid_2020, m.candidate_origin_year,
               m.candidate_target_end_year, m.candidate_state_abbreviation,
@@ -324,7 +362,13 @@ class DatabricksNeighborhoodRepository:
               e.largest_difference_query_value, e.largest_difference_candidate_value,
               e.query_imputed_feature_count, e.candidate_imputed_feature_count,
               (g.minimum_longitude + g.maximum_longitude) / 2.0 AS candidate_longitude,
-              (g.minimum_latitude + g.maximum_latitude) / 2.0 AS candidate_latitude
+              (g.minimum_latitude + g.maximum_latitude) / 2.0 AS candidate_latitude,
+              g.land_area_sqm AS candidate_land_area_sqm,
+              g.minimum_longitude AS candidate_minimum_longitude,
+              g.minimum_latitude AS candidate_minimum_latitude,
+              g.maximum_longitude AS candidate_maximum_longitude,
+              g.maximum_latitude AS candidate_maximum_latitude,
+              st_asgeojson(st_geomfromwkb(g.geometry_wkb, 4326)) AS candidate_geometry_geojson
             FROM {match_table} m
             LEFT JOIN {explanation_table} e
               ON m.serving_release_id = e.serving_release_id
@@ -337,26 +381,41 @@ class DatabricksNeighborhoodRepository:
               ON m.candidate_geoid_2020 = g.geoid_2020
             WHERE m.query_geoid_2020 = :geoid AND m.serving_release_id = :release_id
             ORDER BY m.horizon_years, m.match_rank
-            """,
-            common,
-        )
-        trajectories = self._executor.fetch_frame(
-            f"""
+            """
+        trajectory_query = f"""
             SELECT *
             FROM {self._table(self._settings.serving_schema, "serving_analogue_trajectory_current")}
             WHERE query_geoid_2020 = :geoid AND serving_release_id = :release_id
             ORDER BY horizon_years, match_rank, trajectory_year_offset
-            """,
-            common,
+            """
+        (
+            profile,
+            map_context,
+            history,
+            availability,
+            summaries,
+            matches,
+            trajectories,
+        ) = self._executor.fetch_frames(
+            [
+                (profile_query, {"geoid": geoid_2020}),
+                (map_context_query, {"geoid": geoid_2020}),
+                (history_query, {"geoid": geoid_2020}),
+                (availability_query, common),
+                (summary_query, common),
+                (match_query, common),
+                (trajectory_query, common),
+            ]
         )
+        if len(profile) != 1:
+            raise LookupError(f"No unique current profile exists for tract {geoid_2020}.")
+        selected_geometry = map_context.loc[map_context["geoid_2020"] == geoid_2020]
+        bounds = selected_geometry.iloc[0].to_dict() if not selected_geometry.empty else {}
         return NeighborhoodData(
             release=dict(self._release),
             profile={str(key): value for key, value in profile.iloc[0].to_dict().items()},
-            bounds=(
-                {str(key): value for key, value in bounds.iloc[0].to_dict().items()}
-                if not bounds.empty
-                else {}
-            ),
+            bounds=({str(key): value for key, value in bounds.items()} if bounds else {}),
+            map_context=map_context,
             history=history,
             availability=availability,
             summaries=summaries,
@@ -400,6 +459,7 @@ class SampleNeighborhoodRepository:
             release=self._payload["release"],
             profile=self._payload["profile"],
             bounds=self._payload["bounds"],
+            map_context=pd.DataFrame(),
             history=pd.DataFrame(self._payload["history"]),
             availability=pd.DataFrame(self._payload["availability"]),
             summaries=pd.DataFrame(self._payload["summaries"]),

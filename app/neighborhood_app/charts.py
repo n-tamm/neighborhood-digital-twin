@@ -10,6 +10,8 @@ Plotly figures for the initial Neighborhood Digital Twin application.
 
 from __future__ import annotations
 
+import json
+import math
 from collections.abc import Mapping
 from typing import Any
 
@@ -24,6 +26,95 @@ ORANGE = "#C96A3D"
 PURPLE = "#7562A8"
 MUTED = "#667A76"
 GRID = "#DDE5E1"
+
+
+def _geometry_feature(
+    feature_id: str,
+    geometry_json: str,
+    properties: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Convert one stored GeoJSON geometry into a Plotly feature."""
+
+    return {
+        "type": "Feature",
+        "id": feature_id,
+        "properties": dict(properties or {}),
+        "geometry": json.loads(geometry_json),
+    }
+
+
+def _bounds_geometry(bounds: Mapping[str, Any]) -> str:
+    """Build a rectangular local-fixture fallback when exact geometry is unavailable."""
+
+    minimum_longitude = float(bounds["minimum_longitude"])
+    minimum_latitude = float(bounds["minimum_latitude"])
+    maximum_longitude = float(bounds["maximum_longitude"])
+    maximum_latitude = float(bounds["maximum_latitude"])
+    coordinates = [
+        [minimum_longitude, minimum_latitude],
+        [maximum_longitude, minimum_latitude],
+        [maximum_longitude, maximum_latitude],
+        [minimum_longitude, maximum_latitude],
+        [minimum_longitude, minimum_latitude],
+    ]
+    return json.dumps({"type": "Polygon", "coordinates": [coordinates]})
+
+
+def _map_view(
+    minimum_longitude: float,
+    minimum_latitude: float,
+    maximum_longitude: float,
+    maximum_latitude: float,
+) -> dict[str, Any]:
+    """Calculate a bounded MapLibre center and zoom from an extent."""
+
+    longitude_span = max(maximum_longitude - minimum_longitude, 0.005)
+    latitude_span = max(maximum_latitude - minimum_latitude, 0.005)
+    visual_span = max(longitude_span, latitude_span * 1.35)
+    zoom = min(12.5, max(2.2, math.log2(360.0 / visual_span) - 2.2))
+    return {
+        "style": "carto-positron",
+        "center": {
+            "lon": (minimum_longitude + maximum_longitude) / 2.0,
+            "lat": (minimum_latitude + maximum_latitude) / 2.0,
+        },
+        "zoom": zoom,
+    }
+
+
+def _constant_colorscale(color: str) -> list[list[Any]]:
+    """Return a one-color Plotly colorscale without a visible numeric meaning."""
+
+    return [[0.0, color], [1.0, color]]
+
+
+def _selected_geometry_frame(
+    profile: Mapping[str, Any],
+    bounds: Mapping[str, Any],
+    map_context: pd.DataFrame,
+) -> pd.DataFrame:
+    """Return the exact selected geometry or an explicit local-fixture extent fallback."""
+
+    geoid = str(profile["geoid_2020"])
+    if not map_context.empty and "geometry_geojson" in map_context:
+        selected = map_context.loc[map_context["geoid_2020"].astype(str) == geoid]
+        if not selected.empty and selected.iloc[0]["geometry_geojson"]:
+            return selected.copy()
+    return pd.DataFrame(
+        [
+            {
+                "geoid_2020": geoid,
+                "county_name": profile["county_name"],
+                "state_abbreviation": profile["state_abbreviation"],
+                "tract_name": profile["tract_name"],
+                "minimum_longitude": bounds["minimum_longitude"],
+                "minimum_latitude": bounds["minimum_latitude"],
+                "maximum_longitude": bounds["maximum_longitude"],
+                "maximum_latitude": bounds["maximum_latitude"],
+                "geometry_geojson": _bounds_geometry(bounds),
+            }
+        ]
+    )
 
 
 def _layout(figure: go.Figure, *, height: int, margin_top: int = 35) -> go.Figure:
@@ -91,65 +182,216 @@ def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
     return _layout(figure, height=330)
 
 
+def neighborhood_context_map_figure(
+    profile: Mapping[str, Any],
+    bounds: Mapping[str, Any],
+    map_context: pd.DataFrame,
+) -> go.Figure:
+    """Show the selected tract boundary within nearby display-only tract outlines."""
+
+    selected = _selected_geometry_frame(profile, bounds, map_context)
+    context = (
+        map_context.dropna(subset=["geometry_geojson"]).copy()
+        if "geometry_geojson" in map_context
+        else pd.DataFrame()
+    )
+    if context.empty:
+        context = selected.copy()
+
+    features = [
+        _geometry_feature(
+            str(row["geoid_2020"]),
+            str(row["geometry_geojson"]),
+        )
+        for _, row in context.iterrows()
+    ]
+    figure = go.Figure(
+        go.Choroplethmap(
+            geojson={"type": "FeatureCollection", "features": features},
+            locations=context["geoid_2020"].astype(str),
+            z=[0.0] * len(context),
+            colorscale=_constant_colorscale("rgba(217,225,221,0.38)"),
+            marker={"line": {"color": "#FFFFFF", "width": 1.1}},
+            customdata=context[["county_name", "tract_name"]],
+            hovertemplate=(
+                "%{customdata[1]}<br>%{customdata[0]}<br>"
+                "2020 tract %{location}<extra>Surrounding tract</extra>"
+            ),
+            showscale=False,
+            name="Surrounding tracts",
+        )
+    )
+    selected_feature = _geometry_feature(
+        str(selected.iloc[0]["geoid_2020"]),
+        str(selected.iloc[0]["geometry_geojson"]),
+    )
+    figure.add_trace(
+        go.Choroplethmap(
+            geojson={"type": "FeatureCollection", "features": [selected_feature]},
+            locations=[str(selected.iloc[0]["geoid_2020"])],
+            z=[1.0],
+            colorscale=_constant_colorscale("rgba(20,125,114,0.67)"),
+            marker={"line": {"color": NAVY, "width": 3}},
+            hovertemplate=(
+                f"{profile['tract_name']}<br>{profile['county_name']}, "
+                f"{profile['state_abbreviation']}<br>2020 tract %{{location}}"
+                "<extra>Selected neighborhood</extra>"
+            ),
+            showscale=False,
+            name="Selected tract",
+        )
+    )
+    figure.update_layout(
+        map=_map_view(
+            float(context["minimum_longitude"].min()),
+            float(context["minimum_latitude"].min()),
+            float(context["maximum_longitude"].max()),
+            float(context["maximum_latitude"].max()),
+        ),
+        showlegend=True,
+        legend={
+            "orientation": "h",
+            "y": 0.01,
+            "x": 0.01,
+            "bgcolor": "rgba(255,255,255,.92)",
+        },
+    )
+    return _layout(figure, height=510, margin_top=5)
+
+
 def analogue_map_figure(
     profile: Mapping[str, Any],
     bounds: Mapping[str, Any],
+    map_context: pd.DataFrame,
     matches: pd.DataFrame,
 ) -> go.Figure:
-    """Map the selected tract and available historical matches using display-only centers."""
+    """Map actual query and match footprints with text-only rank labels."""
 
-    query_lon = (float(bounds["minimum_longitude"]) + float(bounds["maximum_longitude"])) / 2
-    query_lat = (float(bounds["minimum_latitude"]) + float(bounds["maximum_latitude"])) / 2
+    selected = _selected_geometry_frame(profile, bounds, map_context)
+    query_lon = (
+        float(selected.iloc[0]["minimum_longitude"]) + float(selected.iloc[0]["maximum_longitude"])
+    ) / 2
+    query_lat = (
+        float(selected.iloc[0]["minimum_latitude"]) + float(selected.iloc[0]["maximum_latitude"])
+    ) / 2
     figure = go.Figure()
-    usable = matches.dropna(subset=["candidate_longitude", "candidate_latitude"]).copy()
-    if not usable.empty:
+    outlined = (
+        matches.dropna(subset=["candidate_geometry_geojson"]).copy()
+        if "candidate_geometry_geojson" in matches
+        else pd.DataFrame()
+    )
+    located = matches.dropna(subset=["candidate_longitude", "candidate_latitude"]).copy()
+    if not outlined.empty:
+        match_features = [
+            _geometry_feature(
+                str(row["candidate_geoid_2020"]),
+                str(row["candidate_geometry_geojson"]),
+            )
+            for _, row in outlined.iterrows()
+        ]
         figure.add_trace(
-            go.Scattermap(
-                lon=usable["candidate_longitude"],
-                lat=usable["candidate_latitude"],
-                mode="markers+text",
-                text=usable["match_rank"].astype(int).astype(str),
-                textposition="top center",
-                marker={"size": 13, "color": GOLD, "opacity": 0.9},
-                customdata=usable[
+            go.Choroplethmap(
+                geojson={"type": "FeatureCollection", "features": match_features},
+                locations=outlined["candidate_geoid_2020"].astype(str),
+                z=[1.0] * len(outlined),
+                colorscale=_constant_colorscale("rgba(212,154,42,0.70)"),
+                marker={"line": {"color": "#8E6415", "width": 1.6}},
+                customdata=outlined[
                     [
                         "candidate_county_name",
                         "candidate_state_abbreviation",
                         "candidate_origin_year",
                         "similarity_distance",
+                        "match_rank",
                     ]
                 ],
                 hovertemplate=(
-                    "#%{text} %{customdata[0]}, %{customdata[1]}<br>"
+                    "#%{customdata[4]} %{customdata[0]}, %{customdata[1]}<br>"
                     "Historical year %{customdata[2]}<br>Distance %{customdata[3]:.3f}"
                     "<extra>Historical match</extra>"
                 ),
+                showscale=False,
                 name="Historical matches",
             )
         )
+    if not located.empty:
+        figure.add_trace(
+            go.Scattermap(
+                lon=located["candidate_longitude"],
+                lat=located["candidate_latitude"],
+                mode="text",
+                text=located["match_rank"].astype(int).astype(str),
+                textfont={"color": "#6D4B0D", "size": 12, "weight": 750},
+                hoverinfo="skip",
+                showlegend=False,
+            )
+        )
+    selected_feature = _geometry_feature(
+        str(selected.iloc[0]["geoid_2020"]),
+        str(selected.iloc[0]["geometry_geojson"]),
+    )
     figure.add_trace(
-        go.Scattermap(
-            lon=[query_lon],
-            lat=[query_lat],
-            mode="markers",
-            marker={"size": 19, "color": TEAL, "symbol": "circle"},
+        go.Choroplethmap(
+            geojson={"type": "FeatureCollection", "features": [selected_feature]},
+            locations=[str(profile["geoid_2020"])],
+            z=[1.0],
+            colorscale=_constant_colorscale("rgba(20,125,114,0.78)"),
+            marker={"line": {"color": NAVY, "width": 2.5}},
             hovertemplate=(
                 f"{profile['tract_name']}<br>{profile['county_name']}, "
-                f"{profile['state_abbreviation']}<extra>Selected neighborhood</extra>"
+                f"{profile['state_abbreviation']}<br>2020 tract %{{location}}"
+                "<extra>Selected neighborhood</extra>"
             ),
+            showscale=False,
             name="Selected neighborhood",
         )
     )
+    all_longitudes = [query_lon, *located["candidate_longitude"].astype(float).tolist()]
+    all_latitudes = [query_lat, *located["candidate_latitude"].astype(float).tolist()]
     figure.update_layout(
-        map={
-            "style": "carto-positron",
-            "center": {"lon": query_lon, "lat": query_lat},
-            "zoom": 3.2 if not usable.empty else 10.5,
-        },
+        map=_map_view(
+            min(all_longitudes) - 0.5,
+            min(all_latitudes) - 0.35,
+            max(all_longitudes) + 0.5,
+            max(all_latitudes) + 0.35,
+        ),
         showlegend=True,
         legend={"orientation": "h", "y": 0.01, "x": 0.01, "bgcolor": "rgba(255,255,255,.9)"},
     )
     return _layout(figure, height=490, margin_top=5)
+
+
+def tract_outline_figure(
+    geometry_geojson: str | None,
+    *,
+    bounds: Mapping[str, Any],
+    color: str,
+    hover_label: str,
+) -> go.Figure:
+    """Render one tract footprint at a local zoom for side-by-side shape comparison."""
+
+    geometry = geometry_geojson or _bounds_geometry(bounds)
+    feature = _geometry_feature("tract", geometry)
+    figure = go.Figure(
+        go.Choroplethmap(
+            geojson={"type": "FeatureCollection", "features": [feature]},
+            locations=["tract"],
+            z=[1.0],
+            colorscale=_constant_colorscale(color),
+            marker={"line": {"color": NAVY, "width": 2.5}},
+            hovertemplate=f"{hover_label}<extra></extra>",
+            showscale=False,
+        )
+    )
+    figure.update_layout(
+        map=_map_view(
+            float(bounds["minimum_longitude"]),
+            float(bounds["minimum_latitude"]),
+            float(bounds["maximum_longitude"]),
+            float(bounds["maximum_latitude"]),
+        )
+    )
+    return _layout(figure, height=315, margin_top=4)
 
 
 def trajectory_figure(trajectories: pd.DataFrame) -> go.Figure:

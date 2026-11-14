@@ -15,6 +15,8 @@ from neighborhood_app.charts import (
     feature_gap_figure,
     housing_mix_figure,
     hpi_history_figure,
+    neighborhood_context_map_figure,
+    tract_outline_figure,
     trajectory_figure,
 )
 from neighborhood_app.data import AppSettings, NeighborhoodData, create_repository
@@ -23,6 +25,7 @@ from neighborhood_app.ui import (
     format_currency,
     format_integer,
     format_percent,
+    format_square_miles,
     metric_card,
     place_label,
     safe_float,
@@ -238,7 +241,7 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     map_col, list_col = st.columns([1.55, 1])
     with map_col:
         st.plotly_chart(
-            analogue_map_figure(data.profile, data.bounds, matches),
+            analogue_map_figure(data.profile, data.bounds, data.map_context, matches),
             width="stretch",
             key=f"analogue_detail_map_{horizon_years}",
             config={"displayModeBar": False},
@@ -292,6 +295,70 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
         ),
     )
     selected_match = matches.loc[matches["match_rank"] == selected_rank].iloc[0].to_dict()
+    selected_geometry = data.map_context.loc[
+        data.map_context.get("geoid_2020", pd.Series(dtype=str)).astype(str)
+        == str(data.profile["geoid_2020"])
+    ]
+    candidate_geometry = selected_match.get("candidate_geometry_geojson")
+    candidate_bounds_fields = {
+        "minimum_longitude": selected_match.get("candidate_minimum_longitude"),
+        "minimum_latitude": selected_match.get("candidate_minimum_latitude"),
+        "maximum_longitude": selected_match.get("candidate_maximum_longitude"),
+        "maximum_latitude": selected_match.get("candidate_maximum_latitude"),
+    }
+    candidate_bounds_available = all(
+        value is not None and not pd.isna(value) for value in candidate_bounds_fields.values()
+    )
+    if candidate_geometry and candidate_bounds_available:
+        st.markdown("#### Compare neighborhood footprints")
+        st.caption(
+            "These maps show the actual simplified tract outlines. Each panel fits its own "
+            "boundary, so use the area labels—not apparent screen size—to compare scale."
+        )
+        query_shape, match_shape = st.columns(2)
+        with query_shape:
+            st.markdown("**Selected neighborhood today**")
+            query_geometry = (
+                str(selected_geometry.iloc[0]["geometry_geojson"])
+                if not selected_geometry.empty
+                else None
+            )
+            st.plotly_chart(
+                tract_outline_figure(
+                    query_geometry,
+                    bounds=data.bounds,
+                    color="#147D72",
+                    hover_label=(
+                        f"{data.profile['tract_name']} · {data.profile['county_name']}, "
+                        f"{data.profile['state_abbreviation']}"
+                    ),
+                ),
+                width="stretch",
+                key=f"query_footprint_{horizon_years}_{selected_rank}",
+                config={"displayModeBar": False},
+            )
+            st.caption(format_square_miles(data.bounds.get("land_area_sqm")))
+        with match_shape:
+            st.markdown(
+                f"**Historical match #{selected_rank} · {selected_match['candidate_origin_year']}**"
+            )
+            st.plotly_chart(
+                tract_outline_figure(
+                    str(candidate_geometry),
+                    bounds=candidate_bounds_fields,
+                    color="#D49A2A",
+                    hover_label=(
+                        f"{selected_match['candidate_tract_name']} · "
+                        f"{selected_match['candidate_county_name']}, "
+                        f"{selected_match['candidate_state_abbreviation']}"
+                    ),
+                ),
+                width="stretch",
+                key=f"match_footprint_{horizon_years}_{selected_rank}",
+                config={"displayModeBar": False},
+            )
+            st.caption(format_square_miles(selected_match.get("candidate_land_area_sqm")))
+
     explanation_col, detail_col = st.columns([1.35, 1])
     with explanation_col:
         st.markdown("#### Why it matched")
@@ -468,14 +535,17 @@ def main() -> None:
         f"{profile.get('acs_release_year', '—')}</div>",
         unsafe_allow_html=True,
     )
-    map_matches = data.matches.loc[data.matches["horizon_years"] == horizon_years]
     map_col, context_col = st.columns([1.6, 1])
     with map_col:
         st.plotly_chart(
-            analogue_map_figure(profile, data.bounds, map_matches),
+            neighborhood_context_map_figure(profile, data.bounds, data.map_context),
             width="stretch",
             key=f"neighborhood_context_map_{horizon_years}",
             config={"displayModeBar": False},
+        )
+        st.caption(
+            "The selected tract is outlined in teal within nearby 2020 Census tracts. Boundaries "
+            "are simplified for display and are not used as similarity inputs."
         )
     with context_col:
         st.markdown("### Evidence at a glance")

@@ -34,6 +34,14 @@ def format_currency(value: Any) -> str:
     return f"${float(value):,.0f}"
 
 
+def format_square_miles(square_meters: Any) -> str:
+    """Format land area in a familiar unit without overstating boundary precision."""
+
+    if square_meters is None or pd.isna(square_meters):
+        return "Area not available"
+    return f"{float(square_meters) / 2_589_988.110336:,.1f} sq mi"
+
+
 def format_percent(value: Any, *, value_is_share: bool = False, digits: int = 1) -> str:
     """Format a percentage from either a proportion or a percentage-point value."""
 
