@@ -189,7 +189,7 @@ variables:
 resources:
   apps:
     neighborhood_housing_intelligence:
-      name: neighborhood-housing-intelligence
+      name: neighborhood-intelligence
       description: Map-driven neighborhood profiles, forecasts, and historical analogues.
       source_code_path: ./app
       resources:
