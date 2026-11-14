@@ -192,9 +192,6 @@ resources:
       name: neighborhood-housing-intelligence
       description: Map-driven neighborhood profiles, forecasts, and historical analogues.
       source_code_path: ./app
-      permissions:
-        - level: CAN_USE
-          group_name: users
       resources:
         - name: sql-warehouse
           description: Read-only application query compute.
