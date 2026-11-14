@@ -18,6 +18,10 @@
 # MAGIC **Speaking callout:** Start with the distinction between *a forecast* and *an analogue*.
 # MAGIC The forecast produces the primary numerical estimate. The analogue system finds earlier
 # MAGIC communities that looked similar and shows what happened afterward as historical context.
+# MAGIC
+# MAGIC **Walkthrough route:** published evidence -> model inputs -> preprocessing and distance ->
+# MAGIC time-safe retrieval -> evaluation -> current coverage and scale -> one application result.
+# MAGIC The route follows the actual implementation rather than beginning with the finished map.
 
 # COMMAND ----------
 
@@ -81,9 +85,7 @@ dbutils.widgets.text(
 )
 dbutils.widgets.text("tree_scale_table", "analogue_tree_scale_benchmark", "Tree scale evidence")
 dbutils.widgets.text("case_query_geoid", DEFAULT_CASE_QUERY_GEOID, "Case-study query GEOID")
-dbutils.widgets.text(
-    "case_horizon_years", str(DEFAULT_CASE_HORIZON_YEARS), "Case-study horizon"
-)
+dbutils.widgets.text("case_horizon_years", str(DEFAULT_CASE_HORIZON_YEARS), "Case-study horizon")
 
 catalog = dbutils.widgets.get("catalog").strip()
 evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
@@ -100,12 +102,8 @@ tree_scale_table = dbutils.widgets.get("tree_scale_table").strip()
 case_query_geoid = dbutils.widgets.get("case_query_geoid").strip()
 case_horizon_years = int(dbutils.widgets.get("case_horizon_years"))
 
-figure_manifest = spark.table(
-    qualified_name(catalog, evaluation_schema, figure_manifest_table)
-)
-release_manifest = spark.table(
-    qualified_name(catalog, serving_schema, release_manifest_table)
-)
+figure_manifest = spark.table(qualified_name(catalog, evaluation_schema, figure_manifest_table))
+release_manifest = spark.table(qualified_name(catalog, serving_schema, release_manifest_table))
 latest_figure_build = (
     figure_manifest.orderBy(functions.col("similarity_figure_built_at_utc").desc())
     .select("similarity_figure_build_id")
@@ -114,9 +112,7 @@ latest_figure_build = (
 if latest_figure_build is None:
     raise RuntimeError("Run job 800 before using the walkthrough")
 figure_build_id = str(latest_figure_build["similarity_figure_build_id"])
-figures = figure_manifest.where(
-    functions.col("similarity_figure_build_id") == figure_build_id
-)
+figures = figure_manifest.where(functions.col("similarity_figure_build_id") == figure_build_id)
 if figures.count() != SIMILARITY_FIGURE_COUNT:
     raise RuntimeError("The current similarity figure build is incomplete")
 serving_release_ids = [
@@ -131,13 +127,16 @@ serving_release_id = serving_release_ids[0]
 def show_figure(sequence: int) -> None:
     """Display one reviewed PNG from the current governed similarity build."""
 
-    row = figures.where(functions.col("figure_sequence") == sequence).select(
-        "figure_path", "figure_title"
-    ).first()
+    row = (
+        figures.where(functions.col("figure_sequence") == sequence)
+        .select("figure_path", "figure_title")
+        .first()
+    )
     if row is None:
         raise RuntimeError(f"Similarity figure {sequence} is unavailable")
     print(str(row["figure_title"]))
     display_ipython(Image(filename=str(row["figure_path"])))
+
 
 # COMMAND ----------
 
@@ -169,12 +168,19 @@ display(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2. What does “similar” mean?
+# MAGIC ## 2. What does “similar” mean, and how is it calculated?
 # MAGIC
-# MAGIC Twelve features are organized into five families. Imputation and standardization are fit
-# MAGIC only on point-model training rows. Each family receives equal total influence before exact
-# MAGIC Euclidean distance is calculated, preventing a family with more columns from dominating
-# MAGIC simply because it has more columns.
+# MAGIC The model represents each tract-year with twelve features in five housing-focused
+# MAGIC families. Population and housing-unit counts are log transformed; missing values use
+# MAGIC training-set medians; and every feature is centered and scaled with training-set statistics.
+# MAGIC These steps put counts, rates, affordability ratios, and market changes on comparable
+# MAGIC scales without learning anything from the query or test rows.
+# MAGIC
+# MAGIC Each family receives the same total squared-distance influence. Within a family, that
+# MAGIC influence is divided evenly across its features. The production method then calculates
+# MAGIC weighted Euclidean distance: it squares the standardized difference for each feature,
+# MAGIC applies the family-balanced weights, adds the results, and takes the square root. Smaller
+# MAGIC distance means closer under this declared representation.
 # MAGIC
 # MAGIC **Speaking callout:** Similarity is conditional on this declared representation. It is not
 # MAGIC a universal statement that two neighborhoods are alike in every lived-experience dimension.
@@ -188,9 +194,17 @@ for family, features in ANALOGUE_FEATURE_FAMILIES.items():
             (
                 ANALOGUE_FAMILY_DISPLAY_NAMES[family],
                 ANALOGUE_FEATURE_DISPLAY_NAMES[feature],
+                len(features),
+                f"1/{len(features)} of family squared-distance weight",
             )
         )
-display(spark.createDataFrame(family_rows, "feature_family string, feature string"))
+display(
+    spark.createDataFrame(
+        family_rows,
+        "feature_family string, feature string, family_feature_count int, "
+        "within_family_weight string",
+    )
+)
 
 # COMMAND ----------
 
@@ -201,17 +215,46 @@ show_figure(1)
 # MAGIC %md
 # MAGIC ## 3. How are future information and duplicate communities avoided?
 # MAGIC
-# MAGIC For a historical query year, candidates must come from an earlier tract-year state and
-# MAGIC their later FHFA outcome must already be knowable at that query date. Locked temporal-test
-# MAGIC candidates and the query tract itself are excluded. Retrieval then keeps ten distinct
-# MAGIC physical tracts, so the result cannot fill the list with several years from one community.
+# MAGIC For a historical query year, the algorithm builds a candidate pool of earlier tract-year
+# MAGIC states. A candidate is allowed only when its full one- or three-year FHFA outcome would
+# MAGIC already have been known at the query date. Locked temporal-test rows and the query tract
+# MAGIC itself are excluded. The exact nearest-neighbor search ranks candidates by the distance
+# MAGIC above and then keeps ten distinct physical tracts, so several years from one community
+# MAGIC cannot fill the result.
 # MAGIC
-# MAGIC These rules were evaluated retrospectively before the method was applied to 2025 queries.
+# MAGIC For current 2025 neighborhoods, the same frozen preprocessing and distance definition are
+# MAGIC applied to an exact KD-tree index of valid historical candidates. Retrieval returns the
+# MAGIC matches; their already-observed later outcomes are joined only after ranking. These rules
+# MAGIC were evaluated retrospectively before the method was applied to current queries.
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 4. Is the match list stable, and why is weighted matching the default?
+# MAGIC ### Evaluation framework used before publication
+# MAGIC
+# MAGIC 1. **Substantive closeness:** review feature-family gaps and concrete cases. Shared
+# MAGIC    characteristics should be understandable and important differences must remain visible.
+# MAGIC 2. **Stability:** measure top-ten overlap after 20% family-weight changes, family removals,
+# MAGIC    PCA changes, and the distinct-tract rule. Small changes should retain most neighbors;
+# MAGIC    larger representation changes may reveal real dependence on the feature choice.
+# MAGIC 3. **Representation selection:** compare weighted standardized matching with PCA using MAE
+# MAGIC    on the same time-safe queries. The default should be useful and straightforward to
+# MAGIC    explain.
+# MAGIC 4. **Later-outcome utility:** compare MAE, RMSE, and mean error with zero change,
+# MAGIC    state trend, and regularized linear forecasts. Analogues become a primary forecast only
+# MAGIC    if they beat the stronger forecast comparators. They currently do not.
+# MAGIC 5. **Production readiness:** measure eligible-tract coverage, unavailable reasons,
+# MAGIC    exact-rank agreement, and query throughput. Results should be exact, scalable, and
+# MAGIC    explicit about unsupported tracts.
+# MAGIC
+# MAGIC **Speaking callout:** There is no single ground-truth list of similar neighborhoods. We
+# MAGIC therefore evaluate closeness, stability, historical outcome usefulness, coverage, and
+# MAGIC retrieval correctness together rather than claiming one unsupervised score proves quality.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 4. What did stability and representation evaluation show?
 # MAGIC
 # MAGIC Small 20% family-weight adjustments retain most of the original top ten. Full family
 # MAGIC removals are much more disruptive, especially when recent market trajectory is removed.
@@ -258,6 +301,11 @@ show_figure(2)
 # MAGIC do not beat the state-trend or regularized-linear forecast. That result sets the product
 # MAGIC boundary: analogues provide understandable historical evidence and a secondary comparison;
 # MAGIC they do not replace the primary forecast.
+# MAGIC
+# MAGIC **How to read the metrics:** MAE is the average absolute miss and is the clearest overall
+# MAGIC comparison. RMSE penalizes large misses more heavily. Mean error shows whether a method
+# MAGIC systematically predicts too much or too little appreciation. Every method below is scored
+# MAGIC on the same point-in-time queries and targets, so the comparison is like-for-like.
 
 # COMMAND ----------
 
@@ -361,9 +409,7 @@ matches = spark.table(qualified_name(catalog, serving_schema, match_table)).wher
     & (functions.col("query_geoid_2020") == case_query_geoid)
     & (functions.col("horizon_years") == case_horizon_years)
 )
-explanations = spark.table(
-    qualified_name(catalog, serving_schema, explanation_table)
-).where(
+explanations = spark.table(qualified_name(catalog, serving_schema, explanation_table)).where(
     (functions.col("serving_release_id") == serving_release_id)
     & (functions.col("query_geoid_2020") == case_query_geoid)
     & (functions.col("horizon_years") == case_horizon_years)

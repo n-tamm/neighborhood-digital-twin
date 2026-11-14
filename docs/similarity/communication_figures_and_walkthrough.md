@@ -63,10 +63,11 @@ presentation basemap; no map code was copied from another project.
 is designed to be opened during a standup. It proceeds through:
 
 1. the five-table release contract;
-2. feature families and training-only preprocessing;
-3. time-safety and distinct-community rules;
-4. stability and representation choice;
-5. analogue-versus-forecast utility;
+2. the twelve features, training-only imputation and scaling, family balancing, and weighted
+   Euclidean distance;
+3. the time-safe candidate pool, exact nearest-neighbor retrieval, and distinct-community rule;
+4. the combined evaluation framework and stability and representation evidence;
+5. MAE, RMSE, and bias evidence for analogue-versus-forecast utility;
 6. national current availability;
 7. exact indexed scale;
 8. one application-style case; and
