@@ -123,6 +123,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 77. [`serving_release_manifest`](77_serving_release_manifest.md)
 78. [`serving_analogue_explanation_current`](78_serving_analogue_explanation_current.md)
 79. [`serving_analogue_trajectory_current`](79_serving_analogue_trajectory_current.md)
+80. [`similarity_evaluation_figure_manifest`](80_evaluation_similarity_figure_manifest.md)
 
 ### Gold exploration and readiness
 
@@ -216,4 +217,6 @@ tract-horizon summaries, 171,056 availability rows, 934,380 deterministic explan
 2,803,140 annual trajectory rows, and a five-row activation manifest. It covers 46,719 model-ready
 current tracts at both one and three years while retaining an explicit availability state for all
 85,528 canonical tract profiles at each horizon. Job 900 confirmed comments on all 43 explanation
-and 26 trajectory columns. Forecasts and calibrated intervals are not yet serving tables.
+and 26 trajectory columns. Job 800 also publishes a five-row similarity figure manifest for the
+reviewed report and standup build; job 900 confirmed comments on all 14 of its columns. Forecasts
+and calibrated intervals are not yet serving tables.

@@ -18,6 +18,7 @@ Current and planned module boundaries:
 - `analogue_serving`: implemented versioned application tables, availability states, release
   lineage, and publication gates for current historical analogues;
 - `analogue_serving_enrichment`: deterministic match explanations and aligned historical paths;
+- `similarity_visuals`: governed figure identities and publication validators;
 - `simulation`: scenario definitions, support checks, and distribution generation;
 - `evaluation`: backtesting, metrics, slices, ablations, and visual diagnostics;
 - `app_data`: serving-bundle construction and contract validation;

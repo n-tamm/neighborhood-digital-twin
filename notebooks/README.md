@@ -64,4 +64,10 @@ release containing ranked matches, descriptive summaries, explicit availability,
 match explanations, aligned annual outcome paths, and lineage. It writes the release manifest
 last so partial outputs cannot become active application data.
 
+`08_final_analysis/00_render_similarity_communication.py` is job 800. It reads governed audit,
+selection, exact-tree, and serving outputs and publishes five lineage-linked similarity figures.
+It does not retrain or retrieve matches. `08_final_analysis/01_similarity_model_walkthrough.py`
+then reads that manifest and the same governed tables in a standup-ready sequence; it is a
+communication notebook rather than a second analytical workflow.
+
 Clear outputs before committing unless visible output is needed to review a result. Do not embed secrets, raw national data, or machine-specific absolute paths.

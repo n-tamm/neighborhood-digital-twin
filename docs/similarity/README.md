@@ -229,38 +229,30 @@ The five-year analogue evaluation is intentionally unavailable. There is not eno
 model-ready history to produce leakage-safe five-year candidates for the existing validation
 period.
 
-## Visual evidence status and plan
+## Visual evidence status
 
-The project currently has one generated similarity figure:
-`06_similarity_representation_diagnostics.png`. It was useful for the initial current-state
-baseline because it showed distance spread, geographic reach, and raw-versus-PCA overlap. It is
-not enough for the final report or application story. It predates the historical analogue audit,
-expanded evaluation, selected weighted representation, and current-neighborhood retrieval.
+Job 800 now publishes a reviewed five-figure communication package from the governed audit,
+selection, exact-retrieval, and serving outputs. Build `20261113T193948450115Z` contains:
 
-The final similarity visual package should cover three different needs:
+1. the complete method workflow;
+2. stability and weighted-versus-PCA selection evidence;
+3. analogue later-outcome error beside forecast comparators;
+4. current availability and explicit unavailable-result coverage; and
+5. an Oakland County, Michigan case combining a map, feature-family gaps, and observed later
+   trajectories.
 
-1. **Explain the method:** a compact workflow diagram should show the five feature families,
-   training-only preprocessing, equal family weighting, time-safe candidate filtering, distinct
-   top-ten retrieval, and later-outcome summary.
-2. **Evaluate the method:** figures should show stability under reasonable weight changes,
-   weighted-versus-PCA selection evidence, analogue error beside forecast comparators, and current
-   eligibility coverage. These visuals must use the governed evaluation tables rather than a few
-   hand-picked examples.
-3. **Present the result:** a polished case study should combine the selected tract, a map of its
-   historical matches, the strongest shared characteristics and largest differences, and aligned
-   later trajectories. It should make the analogue year and descriptive—not causal or
-   calibrated—interpretation impossible to miss.
+The companion Databricks notebook presents the same evidence in a standup-ready sequence without
+retraining or reimplementing retrieval. The example was selected through a declared completeness
+and geographic-diversity rule rather than its later outcome. Full-resolution review caught and
+corrected two layout issues before the accepted build was documented. The early
+`06_similarity_representation_diagnostics.png` remains useful development evidence, but it is no
+longer the main similarity story.
 
-The first raw-versus-PCA figure can remain as development evidence, but it should not be the only
-similarity figure or the main final-report visual. New figures must be versioned in Databricks,
-linked to their source run IDs, documented one per file, and visually reviewed for legibility and
-interpretation before report use.
-
-The historical method, current-year lookup contract, and exact indexed retrieval are implemented
-and evaluated. Job 700 now applies the KD-tree nationally and publishes versioned matches,
-descriptive summaries, availability reasons, target-scope warnings, deterministic match
-explanations, aligned annual trajectories, and release lineage for the application. The final
-visual package, communication walkthrough, and application integration remain.
+The historical method, current-year lookup contract, exact indexed retrieval, national serving
+release, explanations, annual paths, visual package, and walkthrough are implemented and
+evaluated. The remaining similarity work is application integration: render the approved serving
+release, keep analogue evidence visually separate from the primary forecast, show explicit
+unavailable states and path gaps, and add application contract and display tests.
 
 ## Detailed documentation
 
@@ -299,3 +291,5 @@ visual package, communication walkthrough, and application integration remain.
 15. [Analogue explanations and historical trajectories](analogue_explanations_and_trajectories.md)
     explains the family-level gap method, annual path construction, interpretation limits, and
     serving checks.
+16. [Similarity communication figures and walkthrough](communication_figures_and_walkthrough.md)
+    defines the five-figure set, case-study rule, lineage gates, and standup sequence.

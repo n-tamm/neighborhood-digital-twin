@@ -137,6 +137,12 @@ variables:
   evaluation_figure_manifest_table:
     description: Current manifest of rendered model-evaluation figures
     default: model_evaluation_figure_manifest
+  similarity_figure_volume:
+    description: Managed volume for versioned similarity communication figures
+    default: similarity_evaluation_figures
+  similarity_figure_manifest_table:
+    description: Current manifest of rendered similarity communication figures
+    default: similarity_evaluation_figure_manifest
   application_demo_state_fips:
     description: Small state scope used only for interactive application testing
     default: "04,26,42"
@@ -951,6 +957,50 @@ resources:
               query_batch_size: "250"
               scale_sample_size: "1000"
               mlflow_experiment: ${var.analogue_tree_mlflow_experiment}
+    similarity_communication_figures:
+      name: Neighborhood Digital Twin | 800 Presentation | Similarity Communication Figures
+      description: Renders five versioned similarity method, evaluation, coverage, and case-study figures.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: presentation
+        run_order: "800"
+        lifecycle: report_refresh
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: render_similarity_communication_figures
+          notebook_task:
+            notebook_path: ./notebooks/08_final_analysis/00_render_similarity_communication.py
+            base_parameters:
+              catalog: ${var.catalog}
+              silver_schema: ${var.silver_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              serving_schema: ${var.serving_schema}
+              stability_table: historical_analogue_stability_summary
+              selection_scorecard_table: historical_analogue_selection_scorecard
+              tree_scale_table: analogue_tree_scale_benchmark
+              release_manifest_table: serving_release_manifest
+              availability_table: serving_analogue_availability_current
+              match_table: serving_analogue_match_current
+              explanation_table: serving_analogue_explanation_current
+              trajectory_table: serving_analogue_trajectory_current
+              geometry_table: ${var.tract_display_geometry_table}
+              figure_volume: ${var.similarity_figure_volume}
+              figure_manifest_table: ${var.similarity_figure_manifest_table}
+              case_query_geoid: "26125144200"
+              case_horizon_years: "3"
+              case_top_k: "10"
+          environment_key: similarity_figures
+      environments:
+        - environment_key: similarity_figures
+          spec:
+            environment_version: "2"
+            dependencies:
+              - matplotlib==3.9.2
+              - plotly==5.24.1
+              - kaleido==0.2.1
+              - shapely==2.0.6
     analogue_serving_products:
       name: Neighborhood Digital Twin | 700 Serving | Current Analogue Products
       description: Publishes validated national current-analogue products behind a versioned serving contract.
