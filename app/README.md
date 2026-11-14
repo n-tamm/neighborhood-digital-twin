@@ -7,11 +7,16 @@ approved historical analogues. Forecasting has a deliberate unavailable state un
 forecasting workstream publishes a selected model, calibrated interval, and versioned serving
 contract.
 
-The primary map combines a high-visibility selected-tract point with its simplified boundary and
-nearby tract outlines. The analogue experience layers numbered points over actual matched-tract
-polygons: points remain visible at the national extent, while the boundaries become useful after
-zooming. Selecting a match point, county row, or dropdown option updates the same footprint,
-explanation, and trajectory comparison.
+The interface uses a deep navy theme with high-contrast teal, blue, and gold semantics across the
+application and its maps. The primary map combines a visible selected-tract point with its
+simplified boundary and nearby tract outlines; selecting a nearby tract opens it. A separate
+`Browse U.S.` map lets a user select a state, then narrow through county and tract controls without
+loading model outputs for every place in advance.
+
+The analogue experience layers numbered points over actual matched-tract polygons: points remain
+visible at the national extent, while boundaries become useful after zooming. Its selectable
+county table is the single detailed-match control, so persistent table selection cannot conflict
+with a second dropdown.
 
 The interface is intentionally thin. It does not train models, rebuild features, download source
 data, or query `gold_modeling_panel`. Live mode uses a Databricks App service principal and reads
@@ -78,6 +83,8 @@ until access is explicitly granted after live validation.
   distance claims.
 - Live neighborhood result sets share one warehouse connection and are cached by tract so richer
   boundary maps do not require repeated SQL startup on tab or horizon changes.
+- State, county, and tract navigation lists are compact, parameterized, and cached separately. The
+  state browser is loaded only when the user switches away from the default neighborhood map.
 
 The implementation and interpretation details are in
 [the application documentation](../docs/application/README.md).

@@ -14,16 +14,17 @@ uses its own data contracts, language, component design, and model boundaries.
 
 ## Implemented user flow
 
-1. **Search for a tract.** The left panel accepts county, state, or an exact 11-digit 2020 tract
-   GEOID. Search returns a bounded list with county, state, tract label, and identifier visible.
+1. **Choose how to find a tract.** The left panel accepts county, state, or an exact 11-digit 2020
+   tract GEOID. The main geography panel also supports two map paths: select a nearby tract from
+   the local map, or open `Browse U.S.`, select a state, and narrow to county and tract.
 2. **Choose the analogue horizon.** One-year and three-year controls affect historical outcome
    evidence only. They do not change or imply a forecast.
 3. **Check evidence availability.** Status badges show whether the current profile, FHFA history,
    analogue result, and forecast are available. Text and symbols accompany color.
-4. **Orient on the map.** The selected tract is shown with both a visible point and its actual
-   simplified outline within nearby tract boundaries. Historical matches use numbered gold points
-   at national extent and gold tract outlines at close zoom. All geometry remains display-only
-   rather than a model input.
+4. **Orient and navigate on the map.** The selected tract is shown with both a visible point and
+   its simplified outline within nearby tract boundaries. A local tract click changes the active
+   neighborhood. The state map colors only the share of tracts that support the complete analogue
+   method; it does not score housing markets or neighborhood quality.
 5. **Open a focused tab.** Overview, Forecast, Historical analogues, and Methods & limitations keep
    different evidence types from being blended together.
 
@@ -52,10 +53,9 @@ match table, five feature-family gaps, plain-language strongest-shared and large
 callouts, side-by-side tract footprint maps, and the selected match's observed post-match
 trajectory.
 
-The national map, ranked county table, and explicit match selector share one selected-match state.
-Selecting a numbered point or county row changes the footprint, feature-gap explanation, and
-observed trajectory below it. This keeps the map and analytical panels coordinated without using
-map clicks to retrain or rerun the model.
+The ranked county table is the one detailed-match selector. Selecting a row changes the footprint,
+feature-gap explanation, and observed trajectory below it. The national map remains available for
+zoom and hover context, but it does not compete with the table for selection state.
 
 The page repeatedly labels those outcomes as historical evidence. Similarity distance explains
 retrieval, not why prices later changed, and a historical path is not presented as a causal or
@@ -73,3 +73,12 @@ The interface uses Streamlit's responsive columns and a compact breakpoint for s
 Central status messages do not rely on color alone. Charts retain hover labels and the application
 does not hide Streamlit's accessibility controls. Formal keyboard, screen-reader, contrast, and
 mobile visual review are still required before a final release.
+
+## Visual system
+
+The current design uses a dark navy background rather than pure black. Raised surfaces remain
+visibly separate, primary text stays near white, and muted text retains contrast. Teal identifies
+the current neighborhood, gold identifies historical analogue evidence, and blue identifies an
+observed primary series. Dark Carto map tiles retain roads and place context beneath brighter tract
+outlines. Color is paired with labels, ranks, status symbols, and hover text rather than carrying
+meaning by itself.

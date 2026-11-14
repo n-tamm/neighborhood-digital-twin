@@ -2,11 +2,11 @@
 
 ## Local neighborhood context map
 
-The main map draws the selected 2020 Census tract as a teal polygon within nearby tract outlines
-and places a dark point at its center. The point remains visible at a wider zoom; the boundary
-shows the tract's actual footprint after the user zooms in. The surrounding outlines use stronger
-contrast over an OpenStreetMap basemap so the selected tract remains legible without hiding the
-local street and place context.
+The main map draws the selected 2020 Census tract as a bright teal polygon within nearby tract
+outlines and places a visible point at its center. The point remains visible at a wider zoom; the
+boundary shows the tract's footprint after the user zooms in. The surrounding outlines use
+restrained contrast over a dark Carto basemap so the selected tract remains legible without hiding
+local street and place context. Selecting a surrounding tract opens that neighborhood.
 
 The geometry comes from the simplified Census display-geometry pipeline rather than a bounding
 rectangle. The context window is based on an expanded display extent and is capped at the nearest
@@ -23,16 +23,26 @@ national extent, while lightly filled gold polygons reveal the exact tract footp
 zooms closer. The selected neighborhood uses the same point-plus-polygon treatment in navy and
 teal. Hovering provides place, historical year, and similarity distance.
 
-Selecting a numbered map point or a county row updates the same selected-match state as the
-dropdown. The footprint comparison, feature-gap explanation, and observed later trajectory below
-the map therefore stay synchronized. At a national scale, tract shapes remain too small to inspect
-directly, which is why the selected-match section also provides locally fitted footprint maps.
+The ranked county table is the single detailed-match selector. The footprint comparison,
+feature-gap explanation, and observed later trajectory below it therefore cannot conflict with a
+second persistent control. At a national scale, tract shapes remain too small to inspect directly,
+which is why the selected-match section also provides locally fitted footprint maps.
 
 The maps are implemented with Plotly's documented
 [`scattermap`](https://plotly.com/python/reference/scattermap/) and
-[`choroplethmap`](https://plotly.com/python/reference/choroplethmap/) layers over
-[OpenStreetMap](https://www.openstreetmap.org/) tiles. No mapping code was copied from another
-application.
+[`choroplethmap`](https://plotly.com/python/reference/choroplethmap/) layers over Carto's dark
+basemap tiles. No mapping code was copied from another application.
+
+## State-to-county browser
+
+The `Browse U.S.` view uses Plotly's built-in state polygons. State color represents the share of
+current tracts that support the complete historical-analogue method, not appreciation,
+desirability, or community quality. Clicking a state updates a county selector; selecting a county
+loads its tract identities; and the explicit open button changes the active neighborhood. This
+staged flow keeps navigation queries compact and avoids downloading national tract geometry into
+the browser. The map contains the 50 states and District of Columbia supported by Plotly's state
+geometry. Territories remain discoverable through text search rather than being placed
+incorrectly on this map.
 
 ## Footprint comparison
 

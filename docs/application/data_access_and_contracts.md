@@ -12,7 +12,8 @@ The application never silently falls back between data modes.
   startup rather than falling back to sample values.
 
 Schema and catalog environment values are restricted to safe SQL identifiers. Tract input must be
-exactly 11 digits, search text is length-limited, and user values are passed as query parameters.
+exactly 11 digits, county GEOIDs must contain five digits, state abbreviations must contain two
+letters, search text is length-limited, and user values are passed as query parameters.
 
 ## Live read boundary
 
@@ -22,7 +23,7 @@ exactly 11 digits, search text is length-limited, and user values are passed as 
 | `silver_fhfa_tract_year` | Observed annual single-family HPI history |
 | `silver_tract_display_geometry_2020` | Simplified selected, nearby-context, and matched tract outlines plus display bounds |
 | `serving_release_manifest` | Select one complete validated analogue release |
-| `serving_analogue_availability_current` | Search universe, horizon availability, and unavailable reason |
+| `serving_analogue_availability_current` | Search universe, state/county/tract navigation, horizon availability, and unavailable reason |
 | `serving_analogue_summary_current` | Match count and descriptive outcome distribution |
 | `serving_analogue_match_current` | Approved top-ten ranked historical matches |
 | `serving_analogue_explanation_current` | Stored feature-family and feature-level comparisons |
@@ -45,6 +46,16 @@ horizons.
 The seven result sets needed for one neighborhood are executed over one SQL connection instead of
 opening one connection per table. Streamlit then caches the assembled neighborhood for 15 minutes,
 so switching tabs, horizons, or inspected matches does not rerun warehouse queries.
+
+The geographic browser issues small aggregate or identity queries in sequence: state coverage,
+counties for one state, and tracts for one county. Each result is cached for one hour. These
+queries run only after the user switches from the default neighborhood map to `Browse U.S.`, so
+the additional navigation does not slow the normal tract page load.
+
+The state map requires one canonical named state identity. Its aggregation excludes availability
+rows with missing state labels and limits the mapped view to the 50 states and District of
+Columbia. Text search remains the access path for territories and for records that cannot be
+placed on Plotly's state geometry.
 
 ## Release-selection rule
 
