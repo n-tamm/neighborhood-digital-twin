@@ -40,6 +40,7 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | National analogue serving contract and publication, November 12, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Deterministic analogue explanations and historical trajectories, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Similarity communication figures and standup walkthrough, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Initial Streamlit application, data contract, tests, and Databricks App configuration, November 14, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -361,6 +362,23 @@ selection, tree, and serving lineage set. Job 900 then succeeded, and read-only 
 table description and comments on all 14 manifest columns. The walkthrough reads these governed
 outputs rather than reproducing model logic, and the case-study rule uses completeness and
 geographic diversity rather than later outcome performance.
+
+The initial application foundation was evaluated with Ruff, mypy, nine focused unit and contract
+tests, a full Streamlit startup test, bundle validation, and inspection of the created Databricks
+App resources. The startup test found that the same map rendered in two locations received a
+duplicate automatic element ID; explicit keys were added and the complete app then rendered
+without an exception. Dependency review also exposed Plotly's retired Mapbox trace, which was
+replaced with its current MapLibre equivalent. The first bundle deployment rejected an app name
+over Databricks' 30-character limit, so the source-controlled name was shortened and revalidated.
+The deployed definition was then checked to confirm one `CAN_USE` warehouse permission and
+`SELECT` access only to the nine declared tables. Workspace-wide app access was deliberately
+removed before deployment rather than being granted as an incidental convenience.
+The private app then reached a successful snapshot deployment and returned HTTP 200. The exact
+repository path and a full Streamlit render were run against the national tables: they selected
+one validated release, returned the full ten matches at each horizon, and produced no rendered
+exception. That live render did expose a non-fatal Arrow warning caused by mixed numeric and text
+lineage values. The UI now converts those display values explicitly instead of relying on
+Streamlit's automatic type repair.
 
 ## Maintenance requirements
 

@@ -99,7 +99,7 @@ flowchart TB
     EV --> PR
     SV --> PR
     NF -.->|planned output| SV
-    SV -.-> APP["Interactive Databricks<br/>Streamlit application"]
+    SV --> APP["Interactive Databricks<br/>Streamlit application"]
     PR -.->|communication design| APP
 
     classDef control fill:#EEF2F7,stroke:#455A64,color:#263238,stroke-width:1.4px;
@@ -108,8 +108,8 @@ flowchart TB
     classDef planned fill:#FFF4DD,stroke:#D99035,color:#263238,stroke-width:1.5px,stroke-dasharray:5 4;
     class GIT,DAB,JOBS control;
     class SRC source;
-    class B,SS,SG,GC,GH,GR,EDA,FM,SM,HA,AR,MO,MLF,EV,QM,SV,PR implemented;
-    class NF,APP planned;
+    class B,SS,SG,GC,GH,GR,EDA,FM,SM,HA,AR,MO,MLF,EV,QM,SV,PR,APP implemented;
+    class NF planned;
 ```
 
 Teal nodes are implemented; gold nodes with dashed borders are the next planned delivery stages.
@@ -121,11 +121,12 @@ evidence rather than retraining models. Quality checks run throughout the pipeli
 reapplies table and column metadata after schema-overwriting jobs.
 
 Databricks Free Edition is the shared environment for source snapshots, Delta tables,
-transformations, MLflow experiments, figures, and the planned primary Streamlit application.
-GitHub remains the source of truth for code and review. The application will read compact serving
-tables rather than downloading national data or training models during a session. Because
-Databricks Apps require authenticated access, a separate public mirror remains a deployment
-fallback if the capstone needs an anonymous portfolio URL.
+transformations, MLflow experiments, figures, and the primary private Streamlit application.
+GitHub remains the source of truth for code and review. The application reads the approved
+analogue serving release and narrow profile, history, and geometry tables rather than downloading
+national data or training models during a session. Because Databricks Apps require authenticated
+access, a separate public mirror remains a deployment fallback if the capstone needs an anonymous
+portfolio URL.
 
 ## Initial data scope
 
@@ -179,10 +180,11 @@ Start with:
 5. [Forecasting documentation](docs/forecasting/README.md)
 6. [Similarity documentation](docs/similarity/README.md)
 7. [Model-evaluation documentation](docs/model_evaluation/README.md)
-8. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
-9. [Data guide and per-table documentation](docs/data/README.md)
-10. [Implementation sequence](docs/implementation/README.md)
-11. [System architecture](docs/ARCHITECTURE.md)
+8. [Application documentation](docs/application/README.md)
+9. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
+10. [Data guide and per-table documentation](docs/data/README.md)
+11. [Implementation sequence](docs/implementation/README.md)
+12. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
@@ -195,9 +197,10 @@ The repository has two execution environments:
 - **Databricks serverless jobs** run acquisition, ETL, validation, modeling, MLflow tracking, and
   figure generation against the shared Unity Catalog tables.
 
-The interactive application, calibrated uncertainty workflow, application-serving analogue
-lookup, and locked-test release have not been implemented yet. There is currently no
-application-start command to run.
+The initial Streamlit application is implemented with current neighborhood profiles, observed FHFA
+history, and the validated historical-analogue release. Forecast serving, calibrated uncertainty,
+scenario sensitivity, and the locked-test release remain incomplete. The forecast view therefore
+shows an explicit unavailable state instead of a mock or validation prediction.
 
 ### Prerequisites
 
@@ -222,9 +225,9 @@ Set-Location neighborhood-digital-twin
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,app]"
 python -m ruff check .
-python -m mypy src
+python -m mypy src app/neighborhood_app
 python -m pytest
 ```
 
@@ -236,16 +239,33 @@ cd neighborhood-digital-twin
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,app]"
 python -m ruff check .
-python -m mypy src
+python -m mypy src app/neighborhood_app
 python -m pytest
 ```
 
 A successful local check requires all three commandsâ€”Ruff, mypy, and pytestâ€”to pass. The tests use
 small committed fixtures; they do not download or process the national datasets.
 
-### 2. Authenticate and deploy the Databricks jobs
+### 2. Run the application locally
+
+The default local mode is an explicit reduced sample made from real public project data. It does
+not require Databricks credentials:
+
+```powershell
+python -m streamlit run app/streamlit_app.py
+```
+
+The banner identifies sample mode, which contains one tract and one historical match for interface
+testing. It is not the national application release. Run the focused contract and startup tests
+with:
+
+```powershell
+python -m pytest tests/unit/test_app_data.py tests/unit/test_app_presentation.py
+```
+
+### 3. Authenticate and deploy Databricks jobs and the application
 
 The bundle deploys source files and job definitions from the local Git checkout. Do not create a
 second repository clone inside the Databricks workspace.
@@ -270,7 +290,19 @@ Deployment updates code and job definitions; it does not run a job or rebuild a 
 the deployment window with the other teammate so two branches do not replace the same shared job
 definitions.
 
-### 3. Reproduce the current EDA, model results, and figures
+To deploy the private SQL-backed Streamlit app after bundle deployment:
+
+```powershell
+databricks bundle run neighborhood_housing_intelligence --profile neighborhood-twin -t team
+databricks apps get neighborhood-intelligence --profile neighborhood-twin --output json
+```
+
+The app uses its own service principal, one `CAN_USE` SQL warehouse resource, and `SELECT` access
+only to the nine declared profile, history, geometry, manifest, and analogue tables. Sharing app
+access is a separate deliberate workspace action; source deployment does not grant the entire
+workspace access.
+
+### 4. Reproduce the current EDA, model results, and figures
 
 The following sequence assumes the shared bronze, silver, gold, and model-readiness tables already
 exist and have passed their quality checks. It reproduces the implemented report inputs without
@@ -308,7 +340,7 @@ figure job currently waits for forecast and current-state similarity. Job 800 re
 analogue audit, selection, exact-retrieval, and serving outputs; it does not retrain the method.
 These are development runs; they do not open or score the locked temporal test outcomes.
 
-### 4. Run only the stage affected by a change
+### 5. Run only the stage affected by a change
 
 Routine development should start at the first changed stage rather than rerunning the national
 pipeline:

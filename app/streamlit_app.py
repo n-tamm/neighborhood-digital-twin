@@ -375,8 +375,12 @@ def render_methods(data: NeighborhoodData) -> None:
             "Model-readiness build": release.get("source_model_readiness_build_id"),
             "Exact retrieval run": release.get("source_analogue_tree_run_id"),
         }
+        lineage_rows = [
+            {"Item": item, "Value": "Not available" if value is None else str(value)}
+            for item, value in lineage.items()
+        ]
         st.dataframe(
-            pd.DataFrame(lineage.items(), columns=["Item", "Value"]),
+            pd.DataFrame(lineage_rows),
             hide_index=True,
             width="stretch",
         )
