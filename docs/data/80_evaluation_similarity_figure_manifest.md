@@ -20,9 +20,10 @@ The case GEOID and horizon are repeated on every row because the fifth figure is
 communication example. They do not imply that the other four figures were calculated from that
 one tract.
 
-The current reviewed build is `20261113T193948450115Z`. It contains five files totaling about
-1.17 MB and points to analogue audit run `a7f7d2c018214708a955a4ac9b9ec0c4`, selection run
+The current reviewed build is `20261114T204019949707Z`. It contains five files ranging from
+150,932 to 352,266 bytes and points to analogue audit run
+`a7f7d2c018214708a955a4ac9b9ec0c4`, selection run
 `f161ff3938b34032afe3634ef3de38df`, exact-tree run
 `fae78721154347039d41864bad2e871a`, and serving release
-`analogue-20261113T132155097077Z`. Job 900 confirmed a table description and comments on all 14
-columns.
+`analogue-20261113T132155097077Z`. Job 900 run `882753226732037` confirmed table and column
+metadata after publication.

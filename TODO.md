@@ -311,7 +311,7 @@ dimension of lived experience are already represented.
 - Preserve the deterministic explanation and trajectory contracts in schema 1.1. The application
   should read their stored family gaps, highlighted values, annual paths, and missingness flags;
   it should not reconstruct model logic or interpolate missing points during a request.
-- Preserve job-800 build `20261113T193948450115Z` as the current reviewed communication baseline.
+- Preserve job-800 build `20261114T204019949707Z` as the current reviewed communication baseline.
   Its five figures cover the workflow, stability and representation choice, later-outcome utility,
   current availability, and an Oakland County example. The standup notebook reads those governed
   outputs in sequence and does not retrain the method.
@@ -323,20 +323,34 @@ dimension of lived experience are already represented.
   paths, keep intermediate gaps visible, and show the stored unavailable reason when no complete
   result exists.
 
-### 3. Descriptive application shell
+### 3. Application foundation: implemented, review and extend deliberately
 
-- Start a thin Streamlit application using current profiles, display geometry, housing
-  composition, source dates, FHFA history, and explicit coverage warnings.
-- Keep app data access behind a small serving interface so later forecast and analogue tables can
-  be added without rewriting pages.
-- Do not read `gold_modeling_panel` directly from the UI.
-- Show unavailable forecasts as an explained state while preserving the descriptive profile.
-- Begin with tract search and map selection, community profile, housing composition, historical
-  ACS/FHFA charts, source dates, uncertainty, and explicit coverage messages.
-- Read approved analogue results from one complete job-700 release ID. Use clear unavailable-result
-  placeholders until forecast serving tables exist; do not demonstrate mocked analytical claims.
-- Defer the optional conversational or AI layer until the analytical application and serving
-  contracts work. It may explain stored results but should not produce the underlying analysis.
+- The first Streamlit neighborhood explorer is implemented in `app/` with tract search, a map-first
+  profile, housing composition, observed FHFA history, evidence-availability states, historical
+  analogue summaries and matches, stored explanations, observed post-match paths, and release
+  lineage.
+- The UI reads one complete validated job-700 release and never reads `gold_modeling_panel`.
+  Profiles, FHFA history, and display geometry currently use narrow read-only gold/silver table
+  resources until their serving products are versioned.
+- Forecasting is intentionally unavailable in the UI. Do not replace it with analogue statistics,
+  validation predictions, or demonstration values while forecast selection and interval
+  calibration remain open.
+- The local default uses a visibly labeled reduced real-data fixture. The private Databricks App
+  `neighborhood-intelligence` is the live target and uses a dedicated service principal with one
+  `CAN_USE` warehouse resource and `SELECT` access only to the declared tables.
+- The focused app contract and startup suite passes locally. The private live app reached running
+  state, returned HTTP 200, selected the validated release, and rendered all ten matches per
+  horizon without an exception. Manual exact-GEOID search, unavailable-state, desktop and narrow
+  layout, legend, caveat, and accessibility review remain.
+- The first map refinement replaces point markers with actual simplified tract polygons. The main
+  map shows the selected tract within a capped local tract context; analogue results use matched
+  outlines, rank labels, and side-by-side footprint views with land-area labels. Live neighborhood
+  loading fell from 11.57 to 6.22 seconds in a warm-warehouse comparison after seven result sets
+  were moved onto one connection. Visual review across dense urban, rural, coastal, Alaska, and
+  Hawaii examples remains necessary before the map design is final.
+- Next app work should integrate the approved forecast serving contract, then compare forecast and
+  historical-analogue evidence without blending their interpretation. Scenario sensitivity and an
+  optional conversational layer remain deferred.
 
 ### 4. Model and product decisions
 

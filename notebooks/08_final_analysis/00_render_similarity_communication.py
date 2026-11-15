@@ -83,9 +83,7 @@ dbutils.widgets.text(
 dbutils.widgets.text(
     "geometry_table", "silver_tract_display_geometry_2020", "Display-only tract geometry"
 )
-dbutils.widgets.text(
-    "figure_volume", "similarity_evaluation_figures", "Similarity figure volume"
-)
+dbutils.widgets.text("figure_volume", "similarity_evaluation_figures", "Similarity figure volume")
 dbutils.widgets.text(
     "figure_manifest_table",
     "similarity_evaluation_figure_manifest",
@@ -135,9 +133,7 @@ def _single_string(frame, column: str, label: str) -> str:
 stability = spark.table(qualified_name(catalog, evaluation_schema, stability_table))
 scorecard = spark.table(qualified_name(catalog, evaluation_schema, selection_scorecard_table))
 tree_scale = spark.table(qualified_name(catalog, evaluation_schema, tree_scale_table))
-release_manifest = spark.table(
-    qualified_name(catalog, serving_schema, release_manifest_table)
-)
+release_manifest = spark.table(qualified_name(catalog, serving_schema, release_manifest_table))
 availability_all = spark.table(qualified_name(catalog, serving_schema, availability_table))
 matches_all = spark.table(qualified_name(catalog, serving_schema, match_table))
 explanations_all = spark.table(qualified_name(catalog, serving_schema, explanation_table))
@@ -145,9 +141,7 @@ trajectories_all = spark.table(qualified_name(catalog, serving_schema, trajector
 geometry = spark.table(qualified_name(catalog, silver_schema, geometry_table))
 
 audit_run_id = _single_string(stability, "analogue_audit_run_id", "Stability table")
-selection_run_id = _single_string(
-    scorecard, "analogue_selection_run_id", "Selection scorecard"
-)
+selection_run_id = _single_string(scorecard, "analogue_selection_run_id", "Selection scorecard")
 tree_run_id = _single_string(tree_scale, "analogue_tree_run_id", "Tree scale table")
 
 complete_releases = (
@@ -164,16 +158,10 @@ release_row = complete_releases.first()
 if release_row is None:
     raise RuntimeError("No complete schema-1.1 analogue serving release is available")
 serving_release_id = str(release_row["serving_release_id"])
-availability = availability_all.where(
-    functions.col("serving_release_id") == serving_release_id
-)
+availability = availability_all.where(functions.col("serving_release_id") == serving_release_id)
 matches = matches_all.where(functions.col("serving_release_id") == serving_release_id)
-explanations = explanations_all.where(
-    functions.col("serving_release_id") == serving_release_id
-)
-trajectories = trajectories_all.where(
-    functions.col("serving_release_id") == serving_release_id
-)
+explanations = explanations_all.where(functions.col("serving_release_id") == serving_release_id)
+trajectories = trajectories_all.where(functions.col("serving_release_id") == serving_release_id)
 
 # COMMAND ----------
 
@@ -181,11 +169,7 @@ build_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
 built_at_utc = datetime.now(UTC).isoformat()
 spark.sql(f"CREATE VOLUME IF NOT EXISTS `{catalog}`.`{evaluation_schema}`.`{figure_volume}`")
 figure_directory = (
-    Path("/Volumes")
-    / catalog
-    / evaluation_schema
-    / figure_volume
-    / f"build_id={build_id}"
+    Path("/Volumes") / catalog / evaluation_schema / figure_volume / f"build_id={build_id}"
 )
 figure_directory.mkdir(parents=True, exist_ok=False)
 
@@ -508,11 +492,9 @@ utility_labels = [
     "Analogue distance-weighted",
 ]
 utility_colors = ["#9AA6AC", TEAL, NAVY, GOLD, ORANGE]
-figure, axis = plt.subplots(figsize=(13.5, 7))
-width = 0.15
-for index, (method, label, color) in enumerate(
-    zip(utility_methods, utility_labels, utility_colors, strict=True)
-):
+figure, axes = plt.subplots(1, 2, figsize=(15, 7.2), sharey=True)
+maximum_error = max(scorecard_pdf["mae_log_change"].astype(float))
+for axis, horizon in zip(axes, horizons, strict=True):
     values = [
         float(
             scorecard_pdf.loc[
@@ -521,26 +503,32 @@ for index, (method, label, color) in enumerate(
                 "mae_log_change",
             ].iloc[0]
         )
-        for horizon in horizons
+        for method in utility_methods
     ]
-    offset = (index - 2) * width
-    bars = axis.bar(x_positions + offset, values, width=width, color=color, label=label)
-    axis.bar_label(bars, fmt="%.3f", padding=2, fontsize=8, rotation=90)
-axis.set_xticks(x_positions, ["1-year later outcome", "3-year later outcome"])
-axis.set_ylabel("Mean absolute cumulative log-change error")
-axis.set_title("Analogues beat zero change, but not the stronger forecast comparators")
-axis.legend(frameon=False, ncol=3, loc="upper left")
-axis.set_ylim(0, max(scorecard_pdf["mae_log_change"].astype(float)) * 1.08)
-clean_axis(axis)
-axis.text(
-    0.99,
-    0.96,
-    "Lower is better",
-    transform=axis.transAxes,
-    ha="right",
-    va="top",
-    fontsize=9,
-    color=MUTED,
+    positions = np.arange(len(utility_labels))
+    bars = axis.barh(positions, values, color=utility_colors, height=0.64)
+    axis.set_yticks(positions, utility_labels)
+    axis.invert_yaxis()
+    axis.set_xlim(0, maximum_error * 1.22)
+    axis.set_xlabel("Mean absolute cumulative log-change error")
+    axis.set_title(f"{horizon}-year later outcome")
+    axis.bar_label(bars, fmt="%.3f", padding=5, fontsize=9)
+    clean_axis(axis, grid_axis="x")
+    axis.text(
+        0.98,
+        0.03,
+        "Lower is better",
+        transform=axis.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=9,
+        color=MUTED,
+    )
+figure.suptitle(
+    "Analogues beat zero change, but not the stronger forecast comparators",
+    fontsize=17,
+    fontweight="bold",
+    y=0.98,
 )
 add_note(
     figure,
@@ -548,7 +536,7 @@ add_note(
     "Historical "
     "analogues remain descriptive context and a secondary estimate, not the primary forecast.",
 )
-figure.subplots_adjust(bottom=0.16)
+figure.subplots_adjust(bottom=0.16, top=0.86, wspace=0.12, left=0.19)
 save_matplotlib(3, figure)
 
 # COMMAND ----------
@@ -585,9 +573,7 @@ figure, axis = plt.subplots(figsize=(13.5, 6.8))
 left = np.zeros(2)
 totals = []
 for horizon in horizons:
-    totals.append(
-        int(coverage_pdf.loc[coverage_pdf["horizon_years"] == horizon, "count"].sum())
-    )
+    totals.append(int(coverage_pdf.loc[coverage_pdf["horizon_years"] == horizon, "count"].sum()))
 for reason in reason_order:
     values = np.array(
         [
@@ -673,9 +659,11 @@ validate_case_records(
 )
 
 case_geoids = [case_query_geoid, *[str(row["candidate_geoid_2020"]) for row in case_matches]]
-geometry_rows = geometry.where(functions.col("geoid_2020").isin(case_geoids)).select(
-    "geoid_2020", "geometry_wkb"
-).collect()
+geometry_rows = (
+    geometry.where(functions.col("geoid_2020").isin(case_geoids))
+    .select("geoid_2020", "geometry_wkb")
+    .collect()
+)
 centroids = {}
 for row in geometry_rows:
     shape = wkb.loads(bytes(row["geometry_wkb"]))
@@ -705,19 +693,6 @@ case_figure = make_subplots(
 )
 
 query_lon, query_lat = centroids[case_query_geoid]
-case_figure.add_trace(
-    go.Scattergeo(
-        lon=[query_lon],
-        lat=[query_lat],
-        text=[f"Selected: {query_label}"],
-        mode="markers",
-        marker={"size": 16, "color": "#C43C39", "symbol": "star", "line": {"width": 1}},
-        name="Selected neighborhood",
-        hovertemplate="%{text}<extra></extra>",
-    ),
-    row=1,
-    col=1,
-)
 candidate_lons = [centroids[str(row["candidate_geoid_2020"])][0] for row in case_matches]
 candidate_lats = [centroids[str(row["candidate_geoid_2020"])][1] for row in case_matches]
 candidate_text = [
@@ -734,18 +709,34 @@ case_figure.add_trace(
         lat=candidate_lats,
         mode="markers+text",
         text=[str(row["match_rank"]) for row in case_matches],
-        textposition="top center",
+        textposition="middle center",
         marker={
-            "size": 10,
-            "color": [int(row["match_rank"]) for row in case_matches],
-            "colorscale": "Blues",
-            "reversescale": True,
-            "showscale": False,
-            "line": {"width": 0.8, "color": "white"},
+            "size": 19,
+            "color": GOLD,
+            "line": {"width": 1.2, "color": "#76520B"},
         },
+        textfont={"size": 10, "color": "#2F240C"},
         name="Historical matches",
         hovertemplate="%{customdata}<extra></extra>",
         customdata=candidate_text,
+    ),
+    row=1,
+    col=1,
+)
+case_figure.add_trace(
+    go.Scattergeo(
+        lon=[query_lon],
+        lat=[query_lat],
+        text=[f"Selected: {query_label}"],
+        mode="markers",
+        marker={
+            "size": 22,
+            "color": "#C43C39",
+            "symbol": "star",
+            "line": {"width": 1.4, "color": "white"},
+        },
+        name="Selected neighborhood",
+        hovertemplate="%{text}<extra></extra>",
     ),
     row=1,
     col=1,
@@ -847,6 +838,8 @@ case_figure.update_yaxes(
     title_text="Cumulative FHFA HPI change (%)", gridcolor="#E2E8EB", row=2, col=1
 )
 case_figure.update_xaxes(title_text="Mean absolute standardized gap", row=1, col=2)
+maximum_family_gap = max(float(top_explanation[field]) for field, _label in family_fields)
+case_figure.update_xaxes(range=[0, maximum_family_gap * 1.28], row=1, col=2)
 case_figure.update_layout(
     title={
         "text": (
@@ -858,11 +851,11 @@ case_figure.update_layout(
         "xanchor": "left",
     },
     template="plotly_white",
-    height=980,
+    height=1020,
     width=1600,
-    margin={"l": 70, "r": 45, "t": 120, "b": 95},
+    margin={"l": 70, "r": 45, "t": 120, "b": 135},
     font={"family": "Arial", "size": 13, "color": TEXT},
-    legend={"orientation": "h", "y": -0.08, "x": 0.5, "xanchor": "center"},
+    legend={"orientation": "h", "y": -0.09, "x": 0.5, "xanchor": "center"},
     annotations=[
         *list(case_figure.layout.annotations),
         {
@@ -871,7 +864,7 @@ case_figure.update_layout(
                 "inputs; they do not identify causal drivers."
             ),
             "x": 0,
-            "y": -0.12,
+            "y": -0.18,
             "xref": "paper",
             "yref": "paper",
             "showarrow": False,
@@ -880,6 +873,8 @@ case_figure.update_layout(
         },
     ],
 )
+for annotation in case_figure.layout.annotations[:-1]:
+    annotation.font = {"size": 13, "color": TEXT}
 case_path = figure_directory / figure_spec(5).file_name
 case_figure.write_image(case_path, width=1600, height=980, scale=1.5)
 manifest_records.append(_manifest_record(5, case_path))

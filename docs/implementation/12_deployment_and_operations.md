@@ -12,6 +12,21 @@ Use three connected environments:
 
 Databricks Free Edition currently has quotas, restricted outbound access, serverless-only compute, and no service-level agreement. Free Edition allows up to three apps, and an app stops after 24 hours unless restarted. Databricks Apps cannot be anonymously public. The Databricks app is therefore the primary build and authenticated demonstration target, while the compact public mirror remains necessary if the course or portfolio requires an open URL. Verify these conditions again before the final deployment because free offerings change.
 
+## Current deployment implementation
+
+The bundle now manages the private Databricks App `neighborhood-intelligence` from `app/`. Its
+service principal has `CAN_USE` on the existing SQL warehouse and `SELECT` on nine named profile,
+history, geometry, manifest, and historical-analogue tables. It has no raw, modeling-panel, or
+write resource. `app/app.yaml` injects the warehouse resource and starts Streamlit; source control
+contains no host credential or token.
+
+Local sample mode and the Streamlit startup test are implemented. The private app has reached a
+successful running deployment, returned HTTP 200, and completed a full render against the current
+national analogue release. Browser-width review, explicit partner sharing, and forecast serving
+integration remain open.
+Operational commands and release checks are in
+[`docs/application/deployment_and_testing.md`](../application/deployment_and_testing.md).
+
 ## Environment strategy
 
 | Environment | Purpose | Data | Deployment expectation |
@@ -52,7 +67,10 @@ Initial checks should include:
 - Markdown-link checks when practical;
 - detection of accidentally committed secrets or large data files.
 
-Later, add a small application smoke test and, if a public mirror is used, a build check for that host. Heavy training and full data refreshes should not run on every pull request.
+The local application smoke test now loads the complete Streamlit script against a reduced real
+fixture and fails on rendered exceptions. If a public mirror is used later, add a build check for
+that host. Heavy training, live warehouse queries, and full data refreshes should not run on every
+pull request.
 
 ## Continuous delivery
 
