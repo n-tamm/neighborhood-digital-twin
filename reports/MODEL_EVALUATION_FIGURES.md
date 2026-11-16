@@ -39,20 +39,18 @@ labels and legends were readable, and the smallest file was 97,768 bytes.
 
 ## What the first evaluation shows
 
-The regularized linear model currently has the lowest one-year validation MAE, 0.0724 in
-cumulative log HPI change. It improves MAE by about 39% over the zero-change baseline, but its
-R-squared is negative and it underpredicts by about 2.74 annualized percentage points on average.
-Those measures describe different weaknesses, which is why no single metric should select the
-model.
+In the November 7, 2026 decade-safe validation run, gradient-boosted trees has the lowest one-year
+MAE (0.0707) and improves MAE by 40.4% over zero change. It underpredicts by about 3.77 annualized
+percentage points on average, showing why no single metric should select the model.
 
-Directional accuracy needs especially careful interpretation. About 90.2% of one-year validation
-targets are positive, rising to roughly 97.8% and 98.1% at three and five years. The apparent
+Directional accuracy needs especially careful interpretation. About 90.2% of one-year validation targets are positive, rising to roughly 94.6% and 97.3% at three
+and five years. The apparent
 90%-plus directional accuracy therefore provides essentially no lift over always predicting the
 majority direction. It should not be presented as evidence of useful directional prediction.
 
-At three years, the state-trend baseline narrowly beats the linear model on MAE. The five-year
-linear result looks stronger on some metrics, but it is based on only three training origins and
-one validation origin, so it remains exploratory. One-year errors are also higher for tracts where
+At three years, the gradient-boosted-tree candidate has the lowest MAE and RMSE. The five-year
+regularized linear result is stronger than the tree, but it is based on only two training origins
+and one validation origin, so it remains exploratory. One-year errors are also higher for tracts where
 single-family detached homes make up less than 25% of the housing stock, reinforcing the need to
 show housing-composition limitations in the application.
 

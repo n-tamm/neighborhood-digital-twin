@@ -12,10 +12,13 @@ import pytest
 
 from neighborhood_twin.forecasting import (
     LINEAR_FEATURE_COLUMNS,
+    active_forecast_model_horizons,
     acs_uncertainty_band,
     annualized_rate_from_cumulative_log,
     cumulative_log_from_annual_rate,
+    gbt_temporal_cv_origin_years,
     validate_feature_registry,
+    validate_gradient_boosted_tree_parameters,
 )
 
 
@@ -38,6 +41,71 @@ def test_forecast_feature_registry_names_missing_fields() -> None:
     validate_feature_registry(LINEAR_FEATURE_COLUMNS)
     with pytest.raises(ValueError, match="origin_annual_change_pct"):
         validate_feature_registry(LINEAR_FEATURE_COLUMNS[1:])
+
+
+def test_gradient_boosted_tree_parameters_validate_domain() -> None:
+    validate_gradient_boosted_tree_parameters(
+        max_depth=4,
+        max_iter=50,
+        step_size=0.05,
+        subsampling_rate=0.8,
+    )
+    with pytest.raises(ValueError, match="max_depth must be positive"):
+        validate_gradient_boosted_tree_parameters(
+            max_depth=0,
+            max_iter=50,
+            step_size=0.05,
+            subsampling_rate=0.8,
+        )
+    with pytest.raises(ValueError, match="step_size"):
+        validate_gradient_boosted_tree_parameters(
+            max_depth=4,
+            max_iter=50,
+            step_size=0.0,
+            subsampling_rate=0.8,
+        )
+    with pytest.raises(ValueError, match="subsampling_rate"):
+        validate_gradient_boosted_tree_parameters(
+            max_depth=4,
+            max_iter=50,
+            step_size=0.05,
+            subsampling_rate=1.1,
+        )
+
+
+def test_active_forecast_models_ignore_five_year_panel_rows() -> None:
+    assert active_forecast_model_horizons((1, 3, 5)) == (1, 3)
+    assert active_forecast_model_horizons((3, 5)) == (3,)
+    assert active_forecast_model_horizons((5,)) == ()
+
+
+def test_gbt_temporal_cv_uses_recent_purge_safe_origins() -> None:
+    one_year_origins = [2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020]
+    assert gbt_temporal_cv_origin_years(
+        one_year_origins, horizon_years=1
+    ) == (2017, 2018, 2020)
+    assert gbt_temporal_cv_origin_years(
+        [2011, 2012, 2013], horizon_years=3
+    ) == ()
+    assert gbt_temporal_cv_origin_years([2011, 2012], horizon_years=5) == ()
+
+
+@pytest.mark.parametrize(
+    ("origins", "horizon", "max_folds", "message"),
+    [
+        ([2011, 2012], 0, 3, "horizon_years must be positive"),
+        ([2011, 2012], 1, 0, "max_folds must be positive"),
+    ],
+)
+def test_gbt_temporal_cv_validates_fold_settings(
+    origins: list[int], horizon: int, max_folds: int, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        gbt_temporal_cv_origin_years(
+            origins,
+            horizon_years=horizon,
+            max_folds=max_folds,
+        )
 
 
 def test_acs_uncertainty_band_is_publicly_importable() -> None:

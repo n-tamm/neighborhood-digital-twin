@@ -92,7 +92,8 @@ flowchart TB
     GR -.->|quality checks| QM
     EV -.->|evaluation checks| QM
 
-    GR -.->|next| NF["Focused nonlinear forecast<br/>and calibrated uncertainty"]
+    EV -.->|next| NF["Forecast ablations<br/>and uncertainty calibration"]
+    GH -.->|next| NA["Time-safe historical<br/>analogue evaluation"]
     EV -.->|model-selection evidence| NF
     AR --> SV["700 Serving schema<br/>analogues, explanations, paths, and manifest"]
     AR --> PR["800 Presentation<br/>5 similarity figures and walkthrough"]

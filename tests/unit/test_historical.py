@@ -13,6 +13,7 @@ from neighborhood_twin.historical import (
     DEFAULT_FORECAST_HORIZONS,
     HISTORICAL_STATE_COLUMNS,
     acs_available_year,
+    forecast_target_within_decade,
     validate_forecast_horizons,
 )
 
@@ -35,6 +36,24 @@ def test_forecast_horizons_are_ordered_and_validated() -> None:
         validate_forecast_horizons((1, 1))
     with pytest.raises(ValueError, match="positive integers"):
         validate_forecast_horizons((0, 1))
+
+
+@pytest.mark.parametrize(
+    ("origin_year", "target_end_year", "expected"),
+    [
+        (2019, 2022, False),
+        (2017, 2020, False),
+        (2015, 2020, False),
+        (2020, 2025, True),
+        (2016, 2019, True),
+    ],
+)
+def test_forecast_target_must_stay_within_calendar_decade(
+    origin_year: int,
+    target_end_year: int,
+    expected: bool,
+) -> None:
+    assert forecast_target_within_decade(origin_year, target_end_year) is expected
 
 
 def test_historical_state_contract_retains_alignment_and_timing_fields() -> None:

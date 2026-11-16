@@ -4,19 +4,20 @@
 
 ## Question
 
-Is the performance of state trend and regularized linear consistent across the independent
-forecast-origin years available for each horizon?
+Is the performance of state trend, regularized linear, and gradient-boosted trees consistent across
+the independent forecast-origin years for the active horizons?
 
 ## Construction
 
-Each panel corresponds to one horizon and plots MAE by validation origin for the two selected
+Each panel corresponds to an active horizon and plots MAE by validation origin for the three
 methods. A point summarizes many tract predictions but only one independent market origin.
 
 ## Interpretation
 
 The figure prevents the national row count from being mistaken for temporal replication. A method
 that wins overall but loses badly in one origin may be relying on a particular market period. The
-one-year horizon has two validation origins, three years has two, and five years has one.
+one-year and three-year horizons each have two validation origins. Five-year results are not part
+of the active evaluation.
 
 ## Limits
 

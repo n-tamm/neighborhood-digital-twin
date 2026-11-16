@@ -37,6 +37,17 @@ approved display geometry and writes a versioned twelve-figure set to the Unity 
 `05_modeling/01_run_forecast_baselines.py` fits the fixed baseline ladder and one regularized
 linear model from the published modeling panel. It writes validation-only predictions and sliced
 scorecards and records the run in MLflow; it does not score the locked temporal tests.
+[`05_modeling/06_local_forecast_demo.ipynb`](05_modeling/06_local_forecast_demo.ipynb) is the
+meeting-ready local forecast demo. It downloads and caches a deterministic 500-tract subset of
+`gold_modeling_panel` (one-year horizon, eligible training and validation rows), then demonstrates
+the production feature registry, temporal split, local model fitting, score interpretation, and
+subset-based diagnostics. It also reproduces published EDA figures 2, 3, 4, 5, 7, and 8 from
+small aggregated Databricks EDA tables. Calibration and locked-test outcome rows are excluded.
+Local scikit-learn results are illustrative and are not an exact reproduction of Spark ML or the
+national validation scorecard. Outputs and downloaded subsets are ignored under
+`reports/generated/`.
+[`scripts/forecast_demo.py`](../scripts/forecast_demo.py) remains a separate synthetic-data CLI
+demo.
 `05_modeling/02_run_similarity_baselines.py` compares standardized raw and PCA current-state
 matches for a small deterministic review set. That output is an inspection baseline, not yet the
 time-safe historical analogue product used for final evaluation or serving.

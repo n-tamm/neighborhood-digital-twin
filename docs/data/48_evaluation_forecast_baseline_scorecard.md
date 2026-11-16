@@ -20,6 +20,7 @@ These are point-forecast development metrics. Interval coverage and width belong
 reserved calibration workflow exists, while final locked-test results must remain unopened until
 model and uncertainty choices are frozen.
 
-The current build contains 1,248 rows. Directional accuracy must always be read beside
+The November 7, 2026 build contains 1,463 rows across seven forecast methods. Directional accuracy
+must always be read beside
 `majority_direction_accuracy` and `directional_accuracy_lift`: positive validation outcomes are so
 common that the strongest models currently add almost no directional lift over the majority rule.

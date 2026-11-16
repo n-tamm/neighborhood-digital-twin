@@ -5,7 +5,7 @@ and code methodological brainstorming. All final modeling, implementation,
 validation, commentary, and interpretation were performed and verified by the authors.
 Model used: GPT-5
 
-Leakage-safe baseline forecasting and validation scorecard utilities.
+Leakage-safe forecasting candidates and validation scorecard utilities.
 """
 
 from __future__ import annotations
@@ -16,9 +16,18 @@ from datetime import UTC, datetime
 from math import exp, log1p
 from typing import Any
 
-FORECAST_MODEL_SCHEMA_VERSION = "1.2.0"
+FORECAST_MODEL_SCHEMA_VERSION = "1.4.0"
 FORECAST_PREDICTION_TABLE = "forecast_baseline_prediction"
 FORECAST_SCORECARD_TABLE = "forecast_baseline_scorecard"
+FORECAST_MODEL_HORIZONS = (1, 3)
+GBT_MAX_DEPTH = 4
+GBT_MAX_ITER = 50
+GBT_STEP_SIZE = 0.05
+GBT_SUBSAMPLING_RATE = 0.8
+GBT_SEED = 699
+GBT_TUNING_CANDIDATES = ((2, 30), (2, 50), (4, 30), (4, 50), (6, 30), (6, 50))
+GBT_CV_MAX_FOLDS = 3
+GBT_CV_MIN_FOLDS = 2
 
 BASELINE_MODELS = (
     "zero_change",
@@ -59,13 +68,29 @@ LINEAR_FEATURE_COLUMNS = (
 
 
 @dataclass(frozen=True)
+class GBTModelSelection:
+    """Selected GBT parameters and the training-only temporal CV evidence."""
+
+    horizon_years: int
+    max_depth: int
+    max_iter: int
+    step_size: float
+    subsampling_rate: float
+    tuning_status: str
+    cv_mae: float | None
+    cv_fold_origin_years: tuple[int, ...]
+    candidate_cv_mae: tuple[tuple[int, int, float], ...]
+
+
+@dataclass(frozen=True)
 class ForecastRun:
-    """Published prediction and scorecard frames for one baseline run."""
+    """Published prediction and scorecard frames for one forecast-development run."""
 
     run_id: str
     built_at_utc: str
     predictions: Any
     scorecard: Any
+    tree_model_selections: tuple[GBTModelSelection, ...]
 
 
 def cumulative_log_from_annual_rate(rate_pct: float, horizon_years: int) -> float:
@@ -98,6 +123,52 @@ def validate_feature_registry(
     missing = sorted(set(feature_columns) - available)
     if missing:
         raise ValueError(f"Modeling panel is missing required features: {', '.join(missing)}")
+
+
+def validate_gradient_boosted_tree_parameters(
+    *,
+    max_depth: int,
+    max_iter: int,
+    step_size: float,
+    subsampling_rate: float,
+) -> None:
+    """Validate the fixed-parameter gradient-boosted-tree candidate configuration."""
+
+    if max_depth <= 0:
+        raise ValueError("max_depth must be positive")
+    if max_iter <= 0:
+        raise ValueError("max_iter must be positive")
+    if not 0 < step_size <= 1:
+        raise ValueError("step_size must be greater than 0 and at most 1")
+    if not 0 < subsampling_rate <= 1:
+        raise ValueError("subsampling_rate must be greater than 0 and at most 1")
+
+
+def active_forecast_model_horizons(available_horizons: Iterable[int]) -> tuple[int, ...]:
+    """Keep the one- and three-year horizons from an input panel for model scoring."""
+
+    available = set(available_horizons)
+    return tuple(horizon for horizon in FORECAST_MODEL_HORIZONS if horizon in available)
+
+
+def gbt_temporal_cv_origin_years(
+    training_origin_years: Iterable[int],
+    *,
+    horizon_years: int,
+    max_folds: int = GBT_CV_MAX_FOLDS,
+) -> tuple[int, ...]:
+    """Choose recent training origins with at least one fully purged earlier origin."""
+
+    if horizon_years <= 0:
+        raise ValueError("horizon_years must be positive")
+    if max_folds <= 0:
+        raise ValueError("max_folds must be positive")
+    origins = sorted(set(training_origin_years))
+    if len(origins) < 2:
+        return ()
+    first_purge_safe_origin = origins[0] + horizon_years + 1
+    eligible = [year for year in origins if year >= first_purge_safe_origin]
+    return tuple(eligible[-max_folds:])
 
 
 def housing_composition_band(column: Any, functions: Any) -> Any:
@@ -245,6 +316,157 @@ def _linear_model_predictions(frame: Any, *, reg_param: float) -> Any:
     for output in outputs[1:]:
         combined = combined.unionByName(output)
     return combined
+
+
+def _gradient_boosted_tree_predictions(
+    frame: Any,
+    *,
+    seed: int = GBT_SEED,
+) -> tuple[Any, tuple[GBTModelSelection, ...]]:
+    """Tune on purged training-origin folds, then fit one GBT per horizon."""
+
+    from pyspark.ml import Pipeline  # type: ignore[import-not-found]
+    from pyspark.ml.evaluation import RegressionEvaluator  # type: ignore[import-not-found]
+    from pyspark.ml.feature import Imputer, VectorAssembler  # type: ignore[import-not-found]
+    from pyspark.ml.regression import GBTRegressor  # type: ignore[import-not-found]
+    from pyspark.sql import functions  # type: ignore[import-not-found]
+
+    validate_feature_registry(frame.columns)
+    outputs = []
+    selections = []
+    imputed = tuple(f"{column}__tree_imputed" for column in LINEAR_FEATURE_COLUMNS)
+    evaluator = RegressionEvaluator(
+        labelCol="target_cumulative_log_change",
+        predictionCol="prediction_cumulative_log_change",
+        metricName="mae",
+    )
+
+    def fit_tree(training: Any, *, max_depth: int, max_iter: int) -> Any:
+        """Fit one imputation-and-GBT pipeline with the requested tree settings."""
+
+        validate_gradient_boosted_tree_parameters(
+            max_depth=max_depth,
+            max_iter=max_iter,
+            step_size=GBT_STEP_SIZE,
+            subsampling_rate=GBT_SUBSAMPLING_RATE,
+        )
+        pipeline = Pipeline(
+            stages=[
+                Imputer(
+                    strategy="median",
+                    inputCols=list(LINEAR_FEATURE_COLUMNS),
+                    outputCols=list(imputed),
+                ),
+                VectorAssembler(
+                    inputCols=list(imputed),
+                    outputCol="_tree_features",
+                    handleInvalid="error",
+                ),
+                GBTRegressor(
+                    featuresCol="_tree_features",
+                    labelCol="target_cumulative_log_change",
+                    predictionCol="prediction_cumulative_log_change",
+                    maxDepth=max_depth,
+                    maxIter=max_iter,
+                    stepSize=GBT_STEP_SIZE,
+                    subsamplingRate=GBT_SUBSAMPLING_RATE,
+                    seed=seed,
+                ),
+            ]
+        )
+        return pipeline.fit(training)
+
+    for horizon in sorted(row[0] for row in frame.select("horizon_years").distinct().collect()):
+        horizon_frame = frame.where(functions.col("horizon_years") == int(horizon))
+        training = horizon_frame.where(
+            functions.col("eligible_for_point_model_fit")
+            & functions.col("target_is_observed")
+        )
+        validation = horizon_frame.where(
+            (functions.col("temporal_role") == "validation")
+            & functions.col("target_is_observed")
+        )
+        if not training.limit(1).count():
+            raise ValueError(f"No eligible training observations for {horizon}-year horizon")
+        if not validation.limit(1).count():
+            raise ValueError(f"No observed validation targets for {horizon}-year horizon")
+        training_origins = [
+            int(row[0])
+            for row in training.select("forecast_origin_year").distinct().collect()
+        ]
+        candidate_fold_years = gbt_temporal_cv_origin_years(
+            training_origins,
+            horizon_years=int(horizon),
+        )
+        folds = []
+        for fold_year in candidate_fold_years:
+            fold_training = training.where(
+                (functions.col("forecast_origin_year") < fold_year)
+                & (functions.col("target_end_year") < fold_year)
+            )
+            fold_validation = training.where(
+                functions.col("forecast_origin_year") == fold_year
+            )
+            if fold_training.limit(1).count() and fold_validation.limit(1).count():
+                folds.append((fold_year, fold_training, fold_validation))
+
+        selected_depth = GBT_MAX_DEPTH
+        selected_iter = GBT_MAX_ITER
+        selected_cv_mae = None
+        tuning_status = "fixed_default_insufficient_purged_folds"
+        candidate_cv_mae: tuple[tuple[int, int, float], ...] = ()
+        if len(folds) >= GBT_CV_MIN_FOLDS:
+            candidate_scores = []
+            for max_depth, max_iter in GBT_TUNING_CANDIDATES:
+                fold_maes = []
+                for _, fold_training, fold_validation in folds:
+                    model = fit_tree(
+                        fold_training,
+                        max_depth=max_depth,
+                        max_iter=max_iter,
+                    )
+                    scored_fold = model.transform(fold_validation)
+                    fold_maes.append(evaluator.evaluate(scored_fold))
+                candidate_scores.append(
+                    (sum(fold_maes) / len(fold_maes), max_depth, max_iter)
+                )
+            selected_cv_mae, selected_depth, selected_iter = min(candidate_scores)
+            candidate_cv_mae = tuple(
+                (depth, iteration, mae)
+                for mae, depth, iteration in candidate_scores
+            )
+            tuning_status = "selected_by_expanding_origin_cv"
+
+        selection = GBTModelSelection(
+            horizon_years=int(horizon),
+            max_depth=selected_depth,
+            max_iter=selected_iter,
+            step_size=GBT_STEP_SIZE,
+            subsampling_rate=GBT_SUBSAMPLING_RATE,
+            tuning_status=tuning_status,
+            cv_mae=selected_cv_mae,
+            cv_fold_origin_years=tuple(year for year, _, _ in folds),
+            candidate_cv_mae=candidate_cv_mae,
+        )
+        selections.append(selection)
+        fitted_model = fit_tree(
+            training,
+            max_depth=selected_depth,
+            max_iter=selected_iter,
+        )
+        output = fitted_model.transform(validation).select(
+            *frame.columns,
+            "prediction_cumulative_log_change",
+        )
+        outputs.append(
+            output.withColumn("model_name", functions.lit("gradient_boosted_trees"))
+        )
+    if not outputs:
+        raise ValueError("No forecast horizons were available to fit")
+    combined = outputs[0]
+    for output in outputs[1:]:
+        combined = combined.unionByName(output)
+    return combined, tuple(selections)
 
 
 def _add_prediction_fields(frame: Any, *, run_id: str, built_at_utc: str) -> Any:
@@ -462,11 +684,20 @@ def build_forecast_baseline_run(
     built_at_utc: str | None = None,
     reg_param: float = 0.05,
 ) -> ForecastRun:
-    """Build fixed and regularized-linear predictions without opening locked tests."""
+    """Build one- and three-year validation predictions without opening locked tests."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     validate_feature_registry(frame.columns)
+    available_horizons = (
+        int(row[0]) for row in frame.select("horizon_years").distinct().collect()
+    )
+    active_horizons = active_forecast_model_horizons(available_horizons)
+    if not active_horizons:
+        raise ValueError(
+            "No modeling-panel rows are available for the active one- and three-year horizons"
+        )
+    frame = frame.where(functions.col("horizon_years").isin(*active_horizons))
     forbidden = frame.where(
         functions.col("eligible_for_locked_temporal_evaluation")
         & (functions.col("temporal_role") != "locked_temporal_test")
@@ -477,12 +708,21 @@ def build_forecast_baseline_run(
     built_at_utc = built_at_utc or datetime.now(UTC).isoformat()
     fixed = baseline_predictions(frame)
     linear = _linear_model_predictions(frame, reg_param=reg_param)
+    tree, tree_model_selections = _gradient_boosted_tree_predictions(frame)
     predictions = _add_prediction_fields(
-        fixed.unionByName(linear, allowMissingColumns=True),
+        fixed.unionByName(linear, allowMissingColumns=True).unionByName(
+            tree, allowMissingColumns=True
+        ),
         run_id=run_id,
         built_at_utc=built_at_utc,
     )
     if predictions.where(functions.col("temporal_role") != "validation").limit(1).count():
         raise ValueError("Baseline prediction output contains a non-validation row")
     scorecard = build_forecast_scorecard(predictions)
-    return ForecastRun(run_id, built_at_utc, predictions, scorecard)
+    return ForecastRun(
+        run_id,
+        built_at_utc,
+        predictions,
+        scorecard,
+        tree_model_selections,
+    )

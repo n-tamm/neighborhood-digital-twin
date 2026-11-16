@@ -225,9 +225,10 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "One row per figure in the current visual EDA build.",
     ),
     "forecast_baseline_prediction": TableMetadata(
-        "Validation-only predictions from fixed forecasting baselines and the initial regularized "
-        "linear model; locked temporal tests are deliberately absent.",
-        "One row per tract, forecast origin, horizon, and baseline model.",
+        "Validation-only predictions from fixed forecasting baselines, regularized linear, and "
+        "gradient-boosted-tree forecasting candidates; locked temporal tests are deliberately "
+        "absent.",
+        "One row per tract, forecast origin, horizon, and forecasting method.",
     ),
     "forecast_baseline_scorecard": TableMetadata(
         "Forecast development metrics, bias, tail error, explanatory power, and baseline skill "

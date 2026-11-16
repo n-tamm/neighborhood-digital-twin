@@ -9,12 +9,12 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC # Forecasting baseline workflow
+# MAGIC # Forecasting model development workflow
 # MAGIC
-# MAGIC This development workflow fits five fixed forecasting baselines and one regularized linear
-# MAGIC model against the governed split contract. It publishes validation predictions and sliced
-# MAGIC scorecards only. Locked temporal test rows remain closed, and calibration rows are reserved
-# MAGIC for later interval work.
+# MAGIC This development workflow fits five fixed forecasting baselines, a regularized linear model,
+# MAGIC and a fixed-parameter gradient-boosted-tree challenger against the governed split contract.
+# MAGIC It publishes validation predictions and sliced scorecards only. Locked temporal test rows
+# MAGIC remain closed, and calibration rows are reserved for later interval work.
 
 # COMMAND ----------
 
@@ -44,6 +44,13 @@ from neighborhood_twin.data.databricks import qualified_name
 from neighborhood_twin.forecasting import (
     FORECAST_PREDICTION_TABLE,
     FORECAST_SCORECARD_TABLE,
+    GBT_CV_MAX_FOLDS,
+    GBT_MAX_DEPTH,
+    GBT_MAX_ITER,
+    GBT_SEED,
+    GBT_STEP_SIZE,
+    GBT_SUBSAMPLING_RATE,
+    GBT_TUNING_CANDIDATES,
     LINEAR_FEATURE_COLUMNS,
     build_forecast_baseline_run,
 )
@@ -96,6 +103,15 @@ with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run
             "reg_param": reg_param,
             "linear_feature_count": len(LINEAR_FEATURE_COLUMNS),
             "linear_features": ",".join(LINEAR_FEATURE_COLUMNS),
+            "tree_model": "pyspark.ml.regression.GBTRegressor",
+            "tree_default_max_depth": GBT_MAX_DEPTH,
+            "tree_default_max_iter": GBT_MAX_ITER,
+            "tree_step_size": GBT_STEP_SIZE,
+            "tree_subsampling_rate": GBT_SUBSAMPLING_RATE,
+            "tree_tuning_candidates_depth_iter": str(GBT_TUNING_CANDIDATES),
+            "tree_tuning_objective": "mean_expanding_origin_cv_mae",
+            "tree_tuning_max_folds": GBT_CV_MAX_FOLDS,
+            "tree_seed": GBT_SEED,
         }
     )
     result = build_forecast_baseline_run(
@@ -103,6 +119,25 @@ with mlflow.start_run(run_name="interpretable-forecast-baselines") as active_run
         run_id=active_run.info.run_id,
         reg_param=reg_param,
     )
+    for selection in result.tree_model_selections:
+        horizon_stem = f"tree_h{selection.horizon_years}"
+        mlflow.log_params(
+            {
+                f"{horizon_stem}_selected_max_depth": selection.max_depth,
+                f"{horizon_stem}_selected_max_iter": selection.max_iter,
+                f"{horizon_stem}_tuning_status": selection.tuning_status,
+                f"{horizon_stem}_cv_fold_origin_years": ",".join(
+                    map(str, selection.cv_fold_origin_years)
+                ),
+            }
+        )
+        if selection.cv_mae is not None:
+            mlflow.log_metric(f"{horizon_stem}_temporal_cv_mae", selection.cv_mae)
+        for depth, iterations, candidate_mae in selection.candidate_cv_mae:
+            mlflow.log_metric(
+                f"{horizon_stem}_candidate_depth_{depth}_iter_{iterations}_cv_mae",
+                candidate_mae,
+            )
     overall = (
         result.scorecard.where("slice_name = 'overall'")
         .select(
