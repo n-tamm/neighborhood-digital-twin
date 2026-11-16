@@ -219,7 +219,9 @@ def grouped_metric_figure(
 
 
 overall_rows = rows_as_dicts(
-    scorecard.where("slice_name = 'overall'").orderBy("horizon_years", "model_name")
+    scorecard.where("slice_name = 'overall' AND horizon_years IN (1, 3)").orderBy(
+        "horizon_years", "model_name"
+    )
 )
 
 # COMMAND ----------
@@ -263,7 +265,7 @@ for model in MODEL_LABELS:
     )
 axis.axhline(0, color=TEXT, linewidth=1)
 axis.yaxis.set_major_formatter(PercentFormatter(1.0))
-axis.set_xticks([1, 3, 5], ["1-year", "3-year", "5-year"])
+axis.set_xticks([1, 3], ["1-year", "3-year"])
 axis.set_xlabel("Forecast horizon")
 axis.set_ylabel("MAE improvement over zero-change baseline")
 axis.set_title("Baseline skill must stay positive across the intended horizon")
@@ -305,7 +307,7 @@ for axis, metric, ylabel, subtitle in (
         "Tail error: lower is better",
     ),
 ):
-    horizons = [1, 3, 5]
+    horizons = [1, 3]
     x_positions = np.arange(len(horizons))
     comparison_models = (
         "state_current_trend",
@@ -355,13 +357,15 @@ save_figure(
 # COMMAND ----------
 
 geography_rows = rows_as_dicts(
-    scorecard.where("slice_name = 'evaluation_geography'").orderBy(
+    scorecard.where(
+        "slice_name = 'evaluation_geography' AND horizon_years IN (1, 3)"
+    ).orderBy(
         "horizon_years", "model_name", "slice_value"
     )
 )
 row_labels = []
 matrix_rows = []
-for horizon in (1, 3, 5):
+for horizon in (1, 3):
     for model in (
         "state_current_trend",
         "regularized_linear",
@@ -548,12 +552,13 @@ save_figure(
 temporal_rows = rows_as_dicts(
     scorecard.where(
         "slice_name = 'forecast_origin_year' "
+        "AND horizon_years IN (1, 3) "
         "AND model_name IN "
         "('state_current_trend', 'regularized_linear', 'gradient_boosted_trees')"
     ).orderBy("horizon_years", "slice_value", "model_name")
 )
-figure, axes = plt.subplots(1, 3, figsize=(15, 5.5), sharey=True)
-for axis, horizon in zip(axes, (1, 3, 5), strict=True):
+figure, axes = plt.subplots(1, 2, figsize=(12, 5.5), sharey=True)
+for axis, horizon in zip(axes, (1, 3), strict=True):
     horizon_rows = [row for row in temporal_rows if int(row["horizon_years"]) == horizon]
     for model in (
         "state_current_trend",

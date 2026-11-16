@@ -22,8 +22,9 @@ tests contain 42,082, 45,887, and 34,644 rows respectively.
 
 The current eligible training rows cover nine origins (2011-2018 and 2020) at one year, three
 origins (2011-2013) at three years, and two origins (2011-2012) at five years. Validation origins
-are 2021-2022, 2014-2015, and 2013 respectively. This shortens the independent training history at
-longer horizons; five-year performance must be treated as exploratory.
+are 2021-2022, 2014-2015, and 2013 respectively. The five-year rows remain in the data layer for
+feasibility and historical reference; active forecast fitting and evaluation use one- and
+three-year horizons only.
 
 Retaining censored, purged, holdout, and future-scoring rows is intentional. Modeling code must
 filter by the published eligibility fields rather than inventing a new random split or silently

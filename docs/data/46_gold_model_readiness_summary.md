@@ -19,7 +19,8 @@ target timing, split reconciliation, and holdout-region count remain in
 
 The summary makes the main limitation visible: the five-year horizon has many tract rows but only
 two independent training origins. Row volume should never be mistaken for independent temporal
-evidence when repeated tract observations and overlapping ACS releases are involved.
+evidence when repeated tract observations and overlapping ACS releases are involved. The active
+forecast model excludes five-year results from fitting and evaluation.
 
 It also profiles 34 raw features, housing-mix bands, and housing-unit relative-MOE bands. Core ACS
 composition fields are complete after the model-feature eligibility join, while exact five-year

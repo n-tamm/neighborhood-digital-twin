@@ -26,6 +26,5 @@ do not replace the separate out-of-time test.
 
 The table contains 2,090,658 rows across 63,367 tracts and three horizons in the original build.
 The decade-boundary rule changes the current split assignments and eligible target counts; rebuild
-the product before using it. The five-year split has only two independent training origins before
-validation and calibration, so five-year modeling is exploratory and should use limited complexity
-and restrained claims.
+the product before using it. Five-year split rows remain available for feasibility and historical
+reference, but the active forecast model does not train or score that horizon.

@@ -42,9 +42,8 @@ added until a model result or required app view shows a specific gap.
   `ineligible_target` and excluded from fitting and evaluation. The rebuilt panel has zero
   observed cross-decade targets.
 - The decade-safe split has nine one-year, three three-year, and two five-year independent training
-  origins. Validation origins are 2021-2022, 2014-2015, and 2013 for the one-, three-, and
-  five-year horizons; calibration origins are 2023, 2016, and 2014. Locked test origins remain
-  2024, 2022, and 2020.
+  origins. Current model runs use only the one- and three-year horizons; five-year assignments
+  remain in the data layer but are excluded from active evaluation.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
 - The 23 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
@@ -56,11 +55,8 @@ added until a model result or required app view shows a specific gap.
 - Job `500 Modeling | Forecast Baselines` completed on November 7 and published 1,588,340
   validation predictions across 59,179 tracts and seven methods, plus 1,463 sliced scorecard rows.
 - Gradient-boosted trees has the lowest validation MAE/RMSE at one year (0.0707/0.0902) and three
-  years (0.0721/0.0933). Regularized linear is better at five years (0.1033/0.1332 versus
-  0.1286/0.1603 for the tree).
-- Five-year evidence is especially exploratory: only two training origins and one validation
-  origin support it. These validation results do not select a champion or justify opening the
-  locked temporal test.
+  years (0.0721/0.0933). Five-year results from the earlier exploratory run are retained only in
+  historical artifacts and are no longer considered in model comparisons.
 - Job `501 Modeling | Similarity Baselines` published 120 matches for six review queries under
   standardized raw and six-component PCA representations. PCA retains 95.5% of standardized
   variance.
@@ -130,8 +126,8 @@ added until a model result or required app view shows a specific gap.
 The baseline and nonlinear challenger have made these choices concrete. The team should review
 them before model selection, calibration, or retrospective analogue work:
 
-1. **Forecast horizons:** keep one year as the primary result, three years as secondary, and
-   either retain five years as explicitly exploratory or remove it from the MVP.
+1. **Forecast horizons:** keep one year as primary and three years as secondary; exclude five-year
+   results from active model runs and evaluation.
 2. **Target contract:** model cumulative log change in the FHFA single-family HPI, then transform
    it into a readable percentage for presentation. Do not relabel it as the entire housing market.
 3. **Evaluation populations:** use the stable cohort for the cleanest like-for-like temporal

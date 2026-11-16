@@ -9,9 +9,10 @@ end of horizon `h`:
 target(t, h) = log(HPI(t + h) / HPI(t))
 ```
 
-In plain language, the model predicts how much the tract's measured single-family HPI changes over
-the next one, three, or five years. It does not predict an individual home price or the value of
-all housing in the tract.
+In plain language, the active model predicts how much the tract's measured single-family HPI
+changes over the next one or three years. It does not predict an individual home price or the value
+of all housing in the tract. Five-year results from earlier exploratory runs are excluded from
+current model evaluation.
 
 The origin and target endpoint must be in the same calendar decade (for example, both in
 2010-2019 or both in 2020-2029). Targets that cross a decade boundary are censored and cannot be
@@ -41,6 +42,9 @@ every origin:
 | 3 years | 380,562 | 45,887 |
 | 5 years | 203,694 | 34,644 |
 
+These counts describe the published panel, which retains five-year target rows for feasibility and
+historical reference. Active forecast fitting and evaluation use one- and three-year horizons only.
+
 ## Point-in-time feature rule
 
 For origin `t`, features use HPI observations ending at `t`, county and state context available at
@@ -69,13 +73,13 @@ share conditions, and adjacent ACS releases overlap. Assignments are frozen in
 |---|---:|---|---:|---:|
 | 1 year | 9 | 2021-2022 | 2023 | 2024 |
 | 3 years | 3 | 2014-2015 | 2016 | 2022 |
-| 5 years | 2 | 2013 | 2014 | 2020 |
+| 5 years (not scored by active model) | 2 | 2013 | 2014 | 2020 |
 
 Labels that would end after the applicable locked-test origin are purged from development. The
-one-year horizon is primary, three years is secondary, and five years is exploratory because only
-two independent training origins support it. Calibration and validation origins are selected
-backward from the locked-test origin, skipping any origin whose horizon crosses a calendar-decade
-boundary.
+one-year horizon is primary and three years is secondary. Five-year assignments shown above are
+retained only as historical context and are no longer part of active model evaluation. Calibration
+and validation origins for active horizons are selected backward from the locked-test origin,
+skipping any origin whose horizon crosses a calendar-decade boundary.
 
 ## Geographic transfer role
 

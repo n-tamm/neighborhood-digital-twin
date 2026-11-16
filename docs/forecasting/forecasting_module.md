@@ -7,10 +7,12 @@
 ## Responsibility
 
 The module contains reusable forecast logic. It validates the input contract, builds the five
-fixed baselines, fits horizon-specific regularized-linear and gradient-boosted-tree pipelines,
-filters decade-crossing targets from fitting and validation, adds readable prediction and residual
-fields, and builds sliced evaluation scorecards. It does not read or write a Databricks table
-directly; orchestration and publication belong to the notebook.
+fixed baselines, fits regularized-linear and gradient-boosted-tree pipelines for the active one- and
+three-year horizons, filters decade-crossing targets from fitting and validation, adds readable
+prediction and residual fields, and builds sliced evaluation scorecards. It does not read or write
+a Databricks table directly; orchestration and publication belong to the notebook. Five-year rows
+may remain in the upstream panel, but they are excluded from model fitting, predictions, and
+scorecards.
 
 ## Feature contract
 
@@ -25,14 +27,15 @@ feature set.
 |---|---|
 | `cumulative_log_from_annual_rate` | Converts an annual percent rate into cumulative log change for a horizon |
 | `annualized_rate_from_cumulative_log` | Converts cumulative log change into a readable annualized percentage |
+| `active_forecast_model_horizons` | Selects one- and three-year horizons from available panel horizons |
 | `housing_composition_band` | Applies the shared single-family-share bands used in evaluation |
 | `acs_uncertainty_band` | Bands the largest available relative MOE among income, value, and rent |
 | `baseline_predictions` | Produces the five fixed-rule predictions on observed validation rows |
 | `_linear_model_predictions` | Fits one training-only Spark ML pipeline per horizon and scores validation rows |
-| `_gradient_boosted_tree_predictions` | Fits one training-only boosted-tree pipeline per horizon and scores validation rows |
+| `_gradient_boosted_tree_predictions` | Tunes depth/iteration count on purged expanding-origin training folds, refits one GBT per horizon, and scores validation rows |
 | `_add_prediction_fields` | Adds annualized values, residuals, slices, schema version, run ID, and build time |
 | `build_forecast_scorecard` | Aggregates overall and subgroup metrics and joins zero-change skill references |
-| `build_forecast_baseline_run` | Reconciles the complete run and returns prediction and scorecard DataFrames |
+| `build_forecast_baseline_run` | Filters to active horizons, reconciles the run, and returns prediction and scorecard DataFrames |
 
 Private functions are implementation details even though they are documented here. External code
 should call `build_forecast_baseline_run()` rather than assembling a partial pipeline.
@@ -80,7 +83,10 @@ forecast-origin years.
 - A negative regularization parameter is rejected.
 - Locked-evaluation flags must agree with the frozen split contract.
 - Published predictions are rejected if any non-validation temporal role appears.
+- Model runs select only the active one- and three-year horizons from the input panel.
 - Targets spanning two calendar decades are censored and cannot be fitted or scored.
+- GBT tuning folds use only eligible training origins, purge overlapping target windows, and fall
+  back to fixed parameters if fewer than two usable folds exist.
 - A run fails if no horizon can be fit.
 
 ## Testing boundary

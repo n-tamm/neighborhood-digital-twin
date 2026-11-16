@@ -27,7 +27,7 @@ Can heterogeneous public data support useful, transferable, interpretable, and u
 
 The intended analytical unit is a census tract represented on a canonical 2020 tract geography. The main table will contain one record per tract and forecast origin year, with source vintages and quality flags retained.
 
-The initial prediction target is future change in the FHFA tract-level House Price Index. This is an annual appreciation measure for a filtered set of single-family homes financed with conforming conventional mortgages; it excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments. One-year forecasting is the primary evaluation target. Three-year and five-year targets are added only if the feasibility audit leaves enough independent forecast origins and acceptable coverage.
+The initial prediction target is future change in the FHFA tract-level House Price Index. This is an annual appreciation measure for a filtered set of single-family homes financed with conforming conventional mortgages; it excludes condominiums, cooperatives, multi-unit properties, and planned-unit developments. One-year forecasting is the primary evaluation target and three-year forecasting is secondary. Five-year results from earlier exploration are not part of the active model or evaluation.
 
 Each direct forecast target must begin and end in the same calendar decade. A target that crosses a decade boundary is censored and is not eligible for model fitting, calibration, validation, or testing; for example, a 2019-to-2022 three-year target is excluded even when both HPI observations exist.
 

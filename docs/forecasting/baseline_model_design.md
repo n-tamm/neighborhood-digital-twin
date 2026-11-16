@@ -48,6 +48,15 @@ L2 regularization shrinks coefficients when features overlap, which is useful fo
 housing, tenure, and affordability measures. It does not make the relationship nonlinear, select
 causal variables, or eliminate the need for error slices.
 
+## Gradient-boosted-tree candidate
+
+`gradient_boosted_trees` uses Spark ML `GBTRegressor` as a challenger. A small grid searches tree
+depth and iteration count using expanding-origin folds drawn only from eligible training rows;
+fold training targets are purged if their endpoint reaches the held-out origin. Step size 0.05,
+subsampling 0.8, and seed 699 remain fixed. At least two nonempty folds are required; if a horizon
+does not have them, the model uses the original depth-4, 50-iteration settings. This preserves the
+frozen validation, calibration, and locked-test rows for their intended roles.
+
 ### Feature families
 
 | Family | Implemented inputs |
@@ -62,9 +71,13 @@ causal variables, or eliminate the need for error slices.
 
 ## Design boundaries
 
-- The gradient-boosted-tree candidate has fixed parameters; a feature-family ablation and
-  hyperparameter search have not been run.
-- No feature-family ablation has been run.
+- The GBT search only tunes depth and iteration count. Step size and subsampling remain fixed.
+- The temporal search uses the most recent three eligible folds to bound compute; limited training
+  origins mean the active three-year horizon falls back to the original parameters. Five-year
+  results from earlier runs are excluded from current model comparisons.
+- A one-year feature-family ablation on the training-only temporal folds found the clearest
+  deterioration when HPI history or regional context was removed. It did not justify dropping any
+  family; see the [ablation results](gradient_boosted_tree_candidate.md#feature-family-ablation-training-cv).
 - No tract adjacency or distance feature is present because current geometry is display-only.
 - Forecast windows that cross a calendar-decade boundary are censored before fitting and scoring.
 - The linear model produces point predictions only; uncertainty is not calibrated.

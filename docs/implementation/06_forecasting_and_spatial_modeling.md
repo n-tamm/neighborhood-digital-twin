@@ -17,18 +17,20 @@ Freeze split definitions before tuning:
 Use expanding-window or rolling-origin evaluation. Do not randomly split tract-year rows. Adjacent observations from the same tract share history, and ACS releases overlap.
 
 The split contract is frozen in `gold_model_split_assignment`. Every forecast target must begin and
-end in the same calendar decade; crossing targets are explicitly censored. The locked test origins
-are 2024, 2022, and 2020 for the one-, three-, and five-year horizons. Calibration uses 2023, 2016,
-and 2014; validation uses 2021-2022, 2014-2015, and 2013. Labels that end after the applicable
-locked test origin are purged. Maine, North Dakota, West Virginia, and New Mexico are held out as
-the deterministic geographic transfer sample. If the team changes this contract, it should create
-a new split version rather than overwrite the meaning of the existing evaluation.
+end in the same calendar decade; crossing targets are explicitly censored. The data layer retains
+one-, three-, and five-year split assignments, but active model runs score only the one- and
+three-year horizons. Their locked test origins are 2024 and 2022, calibration origins are 2023 and
+2016, and validation origins are 2021-2022 and 2014-2015. Five-year results are excluded from
+active evaluation. Labels that end after the applicable locked test origin are purged. Maine,
+North Dakota, West Virginia, and New Mexico are held out as the deterministic geographic transfer
+sample. If the team changes this contract, it should create a new split version rather than
+overwrite the meaning of the existing evaluation.
 
-The independent-year count is the binding limitation. The decade-safe panel has nine one-year
-training origins, three three-year origins, and only two five-year origins. Repeated tract rows
-provide cross-sectional information but do not turn two time origins into a large temporal sample.
-The one-year horizon is therefore primary, three years is secondary, and five years remains
-exploratory.
+The independent-year count is the binding limitation. The active horizons have nine one-year and
+three three-year training origins. The five-year split has only two training origins and is not
+scored by the active model. Repeated tract rows provide cross-sectional information but do not turn
+a small number of time origins into a large temporal sample. The one-year horizon is primary and
+three years is secondary.
 
 The broader post-2020-only tract cohort first appears in validation and later periods because it
 does not have stable pre-2020 geography. Report it separately from the stable longitudinal cohort.
@@ -38,7 +40,7 @@ coverage, but the stable slice is the cleaner like-for-like time comparison.
 
 ## Baseline ladder
 
-Every horizon should include the baselines it can support:
+Each active horizon should include the baselines it can support:
 
 1. **Zero change:** no future HPI movement.
 2. **Historical average:** tract or region follows its prior mean change.
@@ -52,9 +54,9 @@ Baselines use the same rows, split, and metrics as the candidate model. A baseli
 
 Job `500 Modeling | Forecast Baselines` implements the comparison workflow. It reads
 `gold_modeling_panel`, fits no preprocessing outside the published training rows, and publishes
-validation predictions from zero change, latest-change persistence, recent three-year mean,
-county trend, state trend, one L2-regularized linear model, and a fixed-parameter Spark
-gradient-boosted-tree candidate. The output scorecard uses MAE,
+validation predictions for one- and three-year horizons from zero change, latest-change
+persistence, recent three-year mean, county trend, state trend, one L2-regularized linear model,
+and a Spark gradient-boosted-tree candidate. The output scorecard uses MAE,
 RMSE, median and 90th-percentile absolute error, signed bias, annualized percentage-point error,
 R-squared, directional accuracy, skill over zero change, coverage, cohort, geography, housing
 mix, and state slices. MLflow records the feature list, target, regularization, and aggregate
@@ -63,19 +65,18 @@ validation metrics.
 The workflow is intentionally not a final model. It does not use calibration rows, does not open
 the locked temporal tests, and does not serialize an application model yet. Its purpose is to
 establish honest difficulty, expose weak slices, and compare a nonlinear candidate with simpler
-methods. Five-year results should be interpreted cautiously because its training sample contains
-only two independent origin years.
+methods. Five-year results from prior exploratory runs are excluded from current model comparisons;
+their historical records are retained.
 
-The November 7, 2026 decade-safe run published 1,588,340 validation predictions across seven
-methods. Gradient-boosted trees has the best MAE at one and three years (0.0707 and 0.0721), while
-regularized linear is better at five years (0.1033 versus 0.1286). This is a useful warning against
-assuming that the more elaborate model is automatically better.
+The November 7, 2026 decade-safe run is a historical baseline. On its one- and three-year horizons,
+gradient-boosted trees had the best MAE (0.0707 and 0.0721). Current evaluation excludes its
+five-year results.
 
 Directional accuracy is also checked against the majority direction, not interpreted alone.
-Positive outcomes account for about 90.2%, 94.6%, and 97.3% of one-, three-, and five-year
-validation targets. The strongest models currently add almost no directional lift over that base
-rate, despite apparently high raw accuracy. This makes MAE skill, signed bias, tail error, and
-origin-level stability more informative than the unadjusted direction percentage.
+Positive outcomes account for about 90.2% and 94.6% of one- and three-year validation targets. The
+strongest models currently add almost no directional lift over that base rate, despite apparently
+high raw accuracy. This makes MAE skill, signed bias, tail error, and origin-level stability more
+informative than the unadjusted direction percentage.
 
 The next forecast iteration should inspect subgroup scorecards and residual maps, then run a small
 feature-family ablation. If results are not consistent across geography, housing mix, cohort, ACS
@@ -84,12 +85,18 @@ Calibration rows and locked tests remain untouched until the point-model choice 
 
 ## Candidate nonlinear model
 
-The first nonlinear candidate is Spark ML `GBTRegressor` with depth 4, 50 iterations, step size
-0.05, subsampling 0.8, and seed 699. It is trained separately by horizon on `eligible_for_point_model_fit` rows, using median imputation fitted only on that horizon's training rows. The
-gradient-boosted-tree candidate document records the current validation comparison. It is not a
-frozen champion.
+The nonlinear candidate is Spark ML `GBTRegressor`, trained separately for each active horizon on
+`eligible_for_point_model_fit` rows with median imputation fitted only on that horizon's training
+rows. A purge-safe, expanding-origin search selects tree depth and iteration count when enough
+training folds are available; step size 0.05, subsampling 0.8, and seed 699 stay fixed. The
+one-year search currently selects depth 2 with 50 iterations; the three-year horizon retains the
+depth-4/50-iteration fallback because it lacks enough folds. The local Jupyter demo mirrors the
+one-year settings with scikit-learn's GBT implementation, so its estimator and scores are not
+identical to Spark ML.
 
-Fit a separate direct model for each horizon. Do not recursively feed one-year forecasts into later years for the MVP. Each horizon can have its own eligible population, preprocessing, parameters, calibration, and limitation statement.
+Fit separate direct models for the active horizons. Do not recursively feed one-year forecasts into
+later years for the MVP. Each active horizon can have its own eligible population, preprocessing,
+parameters, calibration, and limitation statement.
 
 Start from `gold_modeling_panel` and filter with its published eligibility fields. Do not rebuild
 splits in a notebook. The shared feature table intentionally contains raw values: imputation,
