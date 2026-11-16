@@ -96,8 +96,9 @@ The application should also return distinct physical communities rather than mul
 one tract. Seventeen of 32 baseline query lists contain a repeated tract; enforcing uniqueness
 retains 93.1% of neighbors, is exactness-certified, and restores ten distinct communities.
 
-The next modeling step is to expand or more strongly justify the 16-query-per-horizon evaluation
-sample before freezing these choices. The following branch can then build current-neighborhood
-retrieval, explanations, and compact serving tables. The state trend or selected supervised model
-remains the primary forecast, analogue outcomes remain secondary historical context, and the
-locked temporal test stays unopened until the representation and prediction rules are frozen.
+Job 602 subsequently expanded the sample to 88 one-year and 90 three-year queries, required ten
+distinct communities, and ensured that every eligible housing, size, and uncertainty category was
+represented. Weighted analogues had lower overall MAE than PCA at both horizons, while the
+regularized-linear forecast remained more accurate. Weighted standardized distance and the
+distinct-community rule are therefore frozen for current-neighborhood retrieval. Analogue outcomes
+remain secondary historical context, and the locked temporal test remains unopened.

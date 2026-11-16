@@ -6,6 +6,21 @@ The application is the main way a user experiences the project, but it should re
 
 Build a map-driven application that presents historical context, forecasts, analogues, model drivers, and scenario sensitivity through a coherent set of user tasks. The first release should be useful without requiring an AI assistant or live model training.
 
+## Current implementation
+
+The first Streamlit foundation is now implemented and managed as the private Databricks App
+`neighborhood-intelligence`. It provides tract search, a map-first current profile, housing-stock
+composition, observed FHFA history, historical analogue summaries and ranked matches, stored
+feature-family explanations, observed post-match trajectories, release lineage, and explicit
+limitations. The map now uses simplified selected, nearby-context, and matched tract polygons,
+with side-by-side footprint comparisons for an inspected analogue. A reduced real-data fixture
+supports credential-free local work.
+
+Forecasting remains an explicit unavailable state until a selected model and calibrated interval
+are published. Scenario sensitivity, metro comparison, analytical neighbor context, and an AI
+explanation layer are not implemented. The current source and interpretation guide is in
+[`docs/application/`](../application/README.md).
+
 ## Primary users and questions
 
 The first design should support a curious resident, prospective home buyer, analyst, or planner who wants to ask:
@@ -64,14 +79,20 @@ The Databricks app should read versioned serving tables instead of rebuilding fe
 - explanation fields and quality flags;
 - data-source and model-version metadata.
 
-Document the detailed serving schema beside the table, export, and loading code when it is implemented. The app must reject incompatible data rather than silently guessing at changed columns.
+The first serving contract is implemented for current historical analogues. Job 700 publishes
+versioned match, summary, availability, deterministic explanation, aligned annual trajectory, and
+manifest tables in `neighborhood_twin_serving`; its [component documentation](../similarity/analogue_serving_products.md)
+defines their grains and reading rule. The application now selects one complete validated release
+and refuses to mix its five components. Forecasts and calibrated intervals still need a serving
+contract. Current profiles, FHFA history, and display geometry are read through narrow read-only
+app resources as an interim boundary; versioned profile-history and geometry serving products
+remain a later hardening step. The app must reject incompatible data rather than silently guessing
+at changed columns.
 
-The pipeline is now ready to support a descriptive application shell, but the new
-`gold_modeling_panel` is not a serving table. It is wide, contains evaluation-only fields, and
-includes censored and future-scoring rows. The app should continue to use current profiles and
-display geometry until approved forecast and analogue outputs are available; later, a compact
-serving job should join only the selected tract's profile, history, forecasts, intervals,
-analogues, explanations, warnings, and version metadata.
+The implemented shell does not query `gold_modeling_panel`. That table is wide, contains
+evaluation-only fields, and includes censored and future-scoring rows. Later serving jobs should
+add only the selected tract's profile, history, forecasts, intervals, explanations, warnings, and
+version metadata.
 
 Coverage will differ by feature. A user may be able to open a current profile for a tract that is
 not eligible for an FHFA forecast or outcome-based analogue evaluation. The interface should keep
@@ -81,8 +102,9 @@ historical feature row and from the smaller eligible population for a selected h
 
 ## Application boundaries
 
-- `app/` owns pages, components, session state, formatting, and calls to the serving layer.
-- `src/neighborhood_twin/` owns reusable data access, validation, inference, and analytical logic.
+- `app/` owns pages, components, session state, formatting, and the current read-only repository
+  interface.
+- `src/neighborhood_twin/` owns reusable analytical, feature, model, and serving-publication logic.
 - Generated models and application data stay outside the source package and are not ordinary Git dependencies.
 - Configuration should choose the serving release and runtime environment; application code should not contain local paths or secrets.
 
@@ -94,6 +116,12 @@ historical feature row and from the smaller eligible population for a selected h
 - Cache immutable tables and expensive transforms using keys that include the serving release.
 - Keep the default app functional within Databricks Apps limits and, if used, the public mirror's limits.
 - Move heavy spatial joins, training, and batch inference out of request-time execution.
+
+The current app executes the seven neighborhood result sets over one SQL connection and caches the
+assembled view by GEOID for 15 minutes. The local context query is ordered by center proximity and
+capped at 80 simplified polygons. In one warm-warehouse comparison, this reduced neighborhood-load
+time from 11.57 to 6.22 seconds even after the geometry payload was added. Treat this as a
+development benchmark, not a guaranteed response time.
 
 Set measurable budgets after the prototype: for example, a useful first view within several seconds on a cold start and sub-second updates for cached controls.
 

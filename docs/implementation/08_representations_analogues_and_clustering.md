@@ -68,11 +68,16 @@ retain 93.4% of weighted neighbors on average, while alternate PCA dimensions re
 six-component list. Reviewed PCA matches can be close in compressed space while retaining a large
 gap in an original feature family.
 
-Weighted standardized distance is consequently the provisional application representation, and
-the application should return one historical state per physical candidate tract. The latter rule
-retains 93.1% of baseline neighbors while removing repeated-community results. PCA and the
-tract-year rule remain available for model audit. These are development decisions rather than
-final performance claims until the 16-query-per-horizon sample is expanded or justified.
+Job `602 Evaluation | Historical Analogue Selection` expanded the sample to 88 one-year and 90
+three-year queries. It requires ten distinct physical candidates, covers every eligible housing,
+size, and ACS-uncertainty category, and compares both representations on identical rows. Weighted
+analogue MAE is lower overall than PCA at both horizons, while the regularized-linear forecast
+remains more accurate.
+
+Weighted standardized distance is consequently the selected application representation, and the
+application will return one historical state per physical candidate tract. PCA and the tract-year
+rule remain available for model audit. This freezes the definition needed for current-neighborhood
+retrieval without making a broad claim that analogues are more accurate than the forecast.
 
 For a query tract at forecast origin `t`:
 

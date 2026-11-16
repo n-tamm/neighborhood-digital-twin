@@ -25,4 +25,4 @@ The validated November 7 table contains 600 match rows for 30 selected queries a
 representations. Representative review found that weighted-standardized matches usually keep the
 five family-level gaps visible and balanced. Several PCA examples looked close in compressed
 space while retaining a large market-trajectory or housing-structure gap, which is one reason PCA
-is not the provisional application default.
+was not selected as the application representation after expanded evaluation.

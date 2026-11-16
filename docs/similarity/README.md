@@ -130,7 +130,7 @@ guaranteed to follow the same path.
 
 ## Current implementation status
 
-All three similarity-development stages have completed validated live runs.
+All six implemented similarity stages have completed validated live runs.
 
 ### Job 501: Current-state similarity baseline
 
@@ -161,11 +161,56 @@ on average and were exactness-certified. Alternate PCA dimensions retained 50.9%
 PCA list, while family removal retained 37.6% of weighted matches and confirmed that market
 trajectory has the strongest influence on the current match definition.
 
-Weighted standardized distance is now the provisional application default. It is more stable
-under reasonable local changes, easier to explain, and does not sacrifice a clear accuracy
-advantage to PCA. The application should return distinct physical communities: this policy
-retained 93.1% of baseline matches while removing repeat years from the same tract. Both decisions
-remain subject to the expanded or justified evaluation sample.
+Weighted standardized distance was the provisional application default after job 601. It was more
+stable under reasonable local changes, easier to explain, and did not sacrifice a clear accuracy
+advantage to PCA. The audit also supported distinct physical communities: that policy retained
+93.1% of baseline matches while removing repeat years from the same tract.
+
+### Job 602: Expanded historical analogue selection
+
+- Expands the sample to 88 one-year and 90 three-year validation query tract-years.
+- Requires ten distinct physical candidate tracts for both representations.
+- Covers every eligible housing-composition, community-size, and ACS-uncertainty category, while
+  labeling rare categories that have too few examples for subgroup claims.
+- Finds lower overall analogue MAE for weighted matching than PCA at both horizons.
+- Confirms that the regularized-linear forecast remains the stronger primary numerical estimate.
+
+Weighted standardized distance and distinct physical candidates are now the selected application
+policy. PCA remains an internal audit lens. Job 503 implements current-neighborhood retrieval for
+a small configurable set of latest-year model-ready tracts while keeping locked temporal-test
+outcomes unavailable.
+
+### Job 503: Current analogue retrieval
+
+- Applies the selected weighted representation to neighborhoods at the latest model-ready year.
+- Published ten distinct one-year and three-year historical matches for one Arizona, Michigan,
+  and Pennsylvania tract in the first validated run.
+- Excludes same-tract results, future candidate outcomes, and every locked temporal-test row.
+- Publishes the median, inverse-distance summary, and 10th-to-90th percentile historical outcome
+  range as context rather than a calibrated interval.
+- Took about 14 minutes for three query tracts, so exact retrieval is the audit reference rather
+  than the intended interactive serving method.
+
+The current historical representation can serve 46,719 tracts with 2025 model-ready features.
+The broader ACS similarity cohort contains 83,359 tracts. Unsupported tracts therefore need an
+explained unavailable state or a separately evaluated ACS-only method; they must not be passed
+through an invisible change to the selected representation.
+
+### Job 603: Scalable retrieval benchmark
+
+- Compares three deterministic random-projection LSH shortlists with exhaustive exact retrieval
+  for 29 stratified current queries at one- and three-year horizons.
+- Adds separate physical-community and tract-year-state recall so a different historical year
+  cannot be hidden behind the same tract identifier.
+- Covers every required region, cohort, housing-composition, community-size, and ACS-uncertainty
+  category without using later outcomes to select queries.
+- Finds perfect community recall, but the tested shortlists retain 88.7% to 99.9% of all possible
+  pairs and are roughly three to five times slower than exact retrieval within the cached run.
+
+The tested LSH design is rejected for application serving. This is useful engineering evidence:
+high recall came from doing nearly all of the original work. The next retrieval design should use
+bounded exact precomputation or a materially more selective index and must retain the same fidelity
+and timing checks.
 
 The initial historical evaluation used 16 queries per horizon. It found that:
 
@@ -184,9 +229,30 @@ The five-year analogue evaluation is intentionally unavailable. There is not eno
 model-ready history to produce leakage-safe five-year candidates for the existing validation
 period.
 
-The historical development method is implemented and evaluated, but the application-serving
-lookup is not yet complete. The current workflow validates the method using past query years; the
-application will eventually apply the approved representation to a neighborhood selected today.
+## Visual evidence status
+
+Job 800 now publishes a reviewed five-figure communication package from the governed audit,
+selection, exact-retrieval, and serving outputs. Build `20261114T204019949707Z` contains:
+
+1. the complete method workflow;
+2. stability and weighted-versus-PCA selection evidence;
+3. analogue later-outcome error beside forecast comparators;
+4. current availability and explicit unavailable-result coverage; and
+5. an Oakland County, Michigan case combining a map, feature-family gaps, and observed later
+   trajectories.
+
+The companion Databricks notebook presents the same evidence in a standup-ready sequence without
+retraining or reimplementing retrieval. The example was selected through a declared completeness
+and geographic-diversity rule rather than its later outcome. Full-resolution review caught and
+corrected two layout issues before the accepted build was documented. The early
+`06_similarity_representation_diagnostics.png` remains useful development evidence, but it is no
+longer the main similarity story.
+
+The historical method, current-year lookup contract, exact indexed retrieval, national serving
+release, explanations, annual paths, visual package, and walkthrough are implemented and
+evaluated. The remaining similarity work is application integration: render the approved serving
+release, keep analogue evidence visually separate from the primary forecast, show explicit
+unavailable states and path gaps, and add application contract and display tests.
 
 ## Detailed documentation
 
@@ -209,3 +275,21 @@ application will eventually apply the approved representation to a neighborhood 
    diagnostic cases, the evidence reviewers inspect, and the repeated-community decision.
 9. [Stability evaluation](stability_evaluation.md) defines the bounded weight, ablation, PCA, and
    candidate-uniqueness tests and the metrics used to interpret them.
+10. [Expanded historical analogue evaluation](expanded_evaluation.md) explains the larger
+    validation sample, distinct-community policy, sample-coverage evidence, publication gates,
+    and representation-selection boundary.
+11. [Current-neighborhood historical analogue retrieval](current_neighborhood_retrieval.md)
+    explains the latest-year lookup, test-set safeguard, published outputs, coverage boundary,
+    and path toward application serving.
+12. [Scalable retrieval benchmark](scalable_retrieval.md) explains the exact reference, LSH
+    shortlist configurations, fidelity measures, coverage design, and serving-selection boundary.
+13. [Exact indexed retrieval](exact_tree_retrieval.md) explains the KD-tree design, exact
+    distinct-community stopping rule, scale populations, decision measures, and publication
+    boundary.
+14. [Current analogue serving products](analogue_serving_products.md) explains the national batch
+    release, table grains, activation manifest, validation gates, and application reading rule.
+15. [Analogue explanations and historical trajectories](analogue_explanations_and_trajectories.md)
+    explains the family-level gap method, annual path construction, interpretation limits, and
+    serving checks.
+16. [Similarity communication figures and walkthrough](communication_figures_and_walkthrough.md)
+    defines the five-figure set, case-study rule, lineage gates, and standup sequence.

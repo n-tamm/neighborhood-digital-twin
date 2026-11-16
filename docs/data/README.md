@@ -1,7 +1,7 @@
 # Data Guide
 
 This folder explains the tables that currently exist across the shared Databricks bronze, silver,
-gold, model, evaluation, and quality schemas. It is the
+gold, model, evaluation, serving, and quality schemas. It is the
 starting point for understanding what a row represents, which table should be used for a given
 task, and where important limitations enter the pipeline.
 
@@ -102,6 +102,28 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 56. [`historical_analogue_audit_match`](56_model_historical_analogue_audit_match.md)
 57. [`historical_analogue_stability_summary`](57_evaluation_historical_analogue_stability_summary.md)
 58. [`historical_analogue_case_review`](58_evaluation_historical_analogue_case_review.md)
+59. [`historical_analogue_selection_match`](59_model_historical_analogue_selection_match.md)
+60. [`historical_analogue_selection_prediction`](60_model_historical_analogue_selection_prediction.md)
+61. [`historical_analogue_selection_summary`](61_evaluation_historical_analogue_selection_summary.md)
+62. [`historical_analogue_selection_scorecard`](62_evaluation_historical_analogue_selection_scorecard.md)
+63. [`historical_analogue_selection_coverage`](63_evaluation_historical_analogue_selection_coverage.md)
+64. [`current_analogue_match`](64_model_current_analogue_match.md)
+65. [`current_analogue_summary`](65_model_current_analogue_summary.md)
+66. [`scalable_analogue_match`](66_model_scalable_analogue_match.md)
+67. [`scalable_analogue_query_evaluation`](67_evaluation_scalable_analogue_query_evaluation.md)
+68. [`scalable_analogue_summary`](68_evaluation_scalable_analogue_summary.md)
+69. [`scalable_analogue_coverage`](69_evaluation_scalable_analogue_coverage.md)
+70. [`analogue_tree_benchmark_match`](70_model_analogue_tree_benchmark_match.md)
+71. [`analogue_tree_query_evaluation`](71_evaluation_analogue_tree_query_evaluation.md)
+72. [`analogue_tree_summary`](72_evaluation_analogue_tree_summary.md)
+73. [`analogue_tree_scale_benchmark`](73_evaluation_analogue_tree_scale_benchmark.md)
+74. [`serving_analogue_match_current`](74_serving_analogue_match_current.md)
+75. [`serving_analogue_summary_current`](75_serving_analogue_summary_current.md)
+76. [`serving_analogue_availability_current`](76_serving_analogue_availability_current.md)
+77. [`serving_release_manifest`](77_serving_release_manifest.md)
+78. [`serving_analogue_explanation_current`](78_serving_analogue_explanation_current.md)
+79. [`serving_analogue_trajectory_current`](79_serving_analogue_trajectory_current.md)
+80. [`similarity_evaluation_figure_manifest`](80_evaluation_similarity_figure_manifest.md)
 
 ### Gold exploration and readiness
 
@@ -139,7 +161,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 
 ## Current coverage
 
-As of October 26, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
+As of November 12, 2026, the organized schemas contain complete annual 2010-2024 ACS coverage for
 the 50 states and District of Columbia, national FHFA tract HPI history through 2025, and national
 Census geography support. The validated ACS contract contains all 765 required state-release
 pairs, 1,152,605 selected silver tract-release rows, and 24,204,705 normalized measure rows.
@@ -174,15 +196,27 @@ retain roughly 84,400 supported tracts, so this table is longitudinal but not a 
 panel unless downstream work explicitly restricts it to the stable cohort. The latest historical
 gold validation contains no hard failures.
 
-The November 7, 2026 model-readiness rebuild retains 696,886 point-in-time feature rows across
-63,367 tracts. The split and joined modeling tables each contain 2,090,658 horizon-specific rows
-and reconcile exactly. Cross-decade target windows are censored with
-`target_censor_reason = 'crosses_decade_boundary'`; their split rows are assigned `ineligible_target`.
-The rebuilt panel has zero observed cross-decade targets. Training has nine, three, and two
-independent origins at one, three, and five years respectively, so longer-horizon results require
-especially restrained claims.
+The first model-readiness build was published on October 29, 2026. Its point-in-time feature table
+contains 696,886 rows across 63,367 tracts and origins from 2011 through 2025. The split and joined
+modeling tables each contain 2,090,658 horizon-specific rows and reconcile exactly. Frozen tests
+use the latest complete origin for each horizon, while Maine, North Dakota, West Virginia, and New
+Mexico are held out for geographic transfer checks. All hard leakage, timing, key, and
+reconciliation checks passed. The only warning is substantive rather than a pipeline error: the
+five-year horizon has three independent training origins and must remain exploratory.
 
-The November 7, 2026 forecast-development outputs contain 1,588,340 validation predictions and
-1,463 sliced forecast scorecard rows. Similarity outputs are unchanged by this forecast refresh.
-These are development products rather than final claims: interval calibration, time-safe
-retrospective similarity evaluation, and the locked temporal tests remain outstanding.
+The first model-development outputs were published on October 30, 2026. The dedicated model
+schema contains 1,369,401 validation forecast predictions and 120 current-state similarity
+matches. The evaluation schema contains 1,248 sliced forecast scorecard rows, two similarity
+representation summaries, and a seven-row figure manifest. These are development products rather
+than final claims: interval calibration, time-safe retrospective similarity evaluation, and the
+locked temporal tests remain outstanding.
+
+The first application-serving component was published on November 12 and expanded under schema
+1.1 on November 13. The current validated release contains 934,380 approved matches, 93,438
+tract-horizon summaries, 171,056 availability rows, 934,380 deterministic explanations,
+2,803,140 annual trajectory rows, and a five-row activation manifest. It covers 46,719 model-ready
+current tracts at both one and three years while retaining an explicit availability state for all
+85,528 canonical tract profiles at each horizon. Job 900 confirmed comments on all 43 explanation
+and 26 trajectory columns. Job 800 also publishes a five-row similarity figure manifest for the
+reviewed report and standup build; job 900 confirmed comments on all 14 of its columns. Forecasts
+and calibrated intervals are not yet serving tables.

@@ -25,3 +25,7 @@ The model-development diagnostics are documented separately in
 [MODEL_EVALUATION_FIGURES.md](MODEL_EVALUATION_FIGURES.md). That guide records the seven current
 evaluation figures, their source MLflow runs, the main findings, and the evaluation work that
 must be completed before final model claims are made.
+
+The historical-analogue communication package is documented in
+[SIMILARITY_FIGURES.md](SIMILARITY_FIGURES.md). It records the five reviewed figures, exact source
+lineage, Michigan case-selection rule, standup walkthrough, and interpretation limits.

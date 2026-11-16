@@ -12,7 +12,7 @@
 # MAGIC # Organize project schemas
 # MAGIC
 # MAGIC This one-time, idempotent transition creates separate bronze, silver, gold, model,
-# MAGIC evaluation, and quality schemas. Existing tables are copied from the earlier shared
+# MAGIC evaluation, serving, and quality schemas. Existing tables are copied from the earlier shared
 # MAGIC development or gold schema only when the destination table does not already exist. Source
 # MAGIC schemas are never changed or deleted.
 # MAGIC Existing source-file paths remain valid lineage references; new acquisitions use the bronze
@@ -54,6 +54,7 @@ dbutils.widgets.text("model_schema", "neighborhood_twin_model", "Model-output sc
 dbutils.widgets.text(
     "evaluation_schema", "neighborhood_twin_evaluation", "Model-evaluation schema"
 )
+dbutils.widgets.text("serving_schema", "neighborhood_twin_serving", "Serving schema")
 dbutils.widgets.text("quality_schema", "neighborhood_twin_quality", "Quality schema")
 dbutils.widgets.text("volume", "source_snapshots", "Bronze source-snapshot volume")
 dbutils.widgets.text(
@@ -67,6 +68,7 @@ silver_schema = dbutils.widgets.get("silver_schema").strip()
 gold_schema = dbutils.widgets.get("gold_schema").strip()
 model_schema = dbutils.widgets.get("model_schema").strip()
 evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
+serving_schema = dbutils.widgets.get("serving_schema").strip()
 quality_schema = dbutils.widgets.get("quality_schema").strip()
 volume = dbutils.widgets.get("volume").strip()
 evaluation_figure_volume = dbutils.widgets.get("evaluation_figure_volume").strip()
@@ -77,6 +79,7 @@ layer_schemas = {
     "gold": gold_schema,
     "model": model_schema,
     "evaluation": evaluation_schema,
+    "serving": serving_schema,
     "quality": quality_schema,
 }
 
@@ -86,6 +89,7 @@ schema_comments = {
     gold_schema: "Curated analytical inputs and application-ready project data products.",
     model_schema: "Generated model predictions, ranked matches, and model artifact references.",
     evaluation_schema: "Model scorecards, diagnostics, figure manifests, and evaluation artifacts.",
+    serving_schema: "Versioned, validated products approved for application and reporting use.",
     quality_schema: "Pipeline validation, reconciliation, and observability results.",
 }
 
@@ -104,6 +108,7 @@ for schema_name in (
     gold_schema,
     model_schema,
     evaluation_schema,
+    serving_schema,
     quality_schema,
 ):
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{catalog}`.`{schema_name}`")

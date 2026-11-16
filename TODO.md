@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 8, 2026. The broader design remains in the
+This is the working handoff as of November 13, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -15,10 +15,14 @@ evaluation. Model outputs and diagnostics now live outside gold in dedicated mod
 schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
 
 This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, expanded historical-analogue evaluation, current-neighborhood retrieval, serving
-tables, and the interactive application still need to be built. Analogue case review and bounded
-stability testing are now complete for the development sample. New source families should not be
-added until a model result or required app view shows a specific gap.
+uncertainty, and the interactive application still need to be built. The national analogue
+serving workflow publishes matches, summaries, availability, deterministic explanations, and
+annual historical paths as one validated release. Job 800 now turns that release and its approved
+evaluation evidence into five reviewed figures and a standup-ready walkthrough.
+Historical-analogue case review, bounded stability testing, expanded representation selection,
+exact current-neighborhood retrieval, and scalable retrieval evaluation are complete. Exact
+indexed retrieval is validated for all 46,719 eligible current tracts. New source families should
+not be added until a model result or required app view shows a specific gap.
 
 ## Data checkpoint
 
@@ -47,8 +51,8 @@ added until a model result or required app view shows a specific gap.
   2024, 2022, and 2020.
 - Each new table has a Databricks description and column comments, a per-table document, and a
   small real sample in `data/samples/`.
-- The 23 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-502`, `600-601`, and `900`), grouping tags, and the maintained
+- The 29 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
+  `400-401`, `500-503`, `600-604`, `700`, `800`, and `900`), grouping tags, and the maintained
   [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
 
 ## Baseline modeling checkpoint
@@ -100,11 +104,91 @@ added until a model result or required app view shows a specific gap.
   exactness-certified. Full family removals retain 37.6%; removing market trajectory is most
   disruptive at 16.6%, showing that it strongly controls the present match definition.
 - Five- and seven-component PCA variants retain 50.9% of the six-component list on average and
-  sometimes hide a large original-family gap. Weighted standardized retrieval is therefore the
-  provisional application default; PCA remains an internal comparison lens.
+  sometimes hide a large original-family gap. This made weighted standardized retrieval the
+  provisional choice entering the expanded evaluation; PCA remained the comparison lens.
 - Seventeen of 32 baseline query lists repeat a physical tract at multiple years. The certified
   distinct-tract variants retain 93.1% of neighbors and restore ten distinct communities, so the
   application should use a distinct-community policy.
+- Job `602 Evaluation | Historical Analogue Selection` expanded the evidence to 88 one-year and
+  90 three-year query tract-years. It published 3,560 matches, 1,246 predictions, four retrieval
+  summaries, 322 scorecard rows, and 78 selected-versus-eligible coverage rows.
+- The first live coverage review found that an otherwise balanced sample missed the under-25%
+  single-family group at one year. The corrected workflow adds deterministic, outcome-blind
+  supplements for missing housing, size, or ACS-uncertainty categories. The final run covers every
+  eligible required category; rare categories with one case remain coverage checks, not reliable
+  subgroup estimates.
+- Weighted analogue MAE is lower overall than PCA at both horizons: 0.0788 versus 0.0823 at one
+  year and 0.1022 versus 0.1098 at three years when comparing each representation's better
+  aggregation. Regularized linear remains more accurate at 0.0682 and 0.0801.
+- Weighted standardized distance and ten distinct physical communities are now the frozen
+  application retrieval policy. PCA remains an internal audit lens, and analogues remain secondary
+  historical context rather than the primary forecast.
+- Job `503 Modeling | Current Analogue Retrieval` now applies that policy to selected 2025
+  neighborhoods. Its first live run published 60 exact matches and six summaries for one Arizona,
+  Michigan, and Pennsylvania tract under MLflow run
+  `ff3ad7a038ce4d4180110a7a9adcbab1`.
+- Every current query returned ten distinct matches, and direct SQL checks found no self-match,
+  future outcome, locked temporal-test candidate, unapproved representation, or falsely calibrated
+  outcome-range row. Metadata covers all 33 match columns and all 35 summary columns.
+- Exact job-503 retrieval took about 14 minutes for three tracts. It is the reference result for
+  evaluating a scalable index or precomputed product, not a viable on-click application query.
+- Current historical-analogue coverage is narrower than profile coverage: 46,719 tracts have a
+  2025 model-ready query row, compared with 83,359 current ACS similarity candidates and 84,396
+  current ACS profiles. The application needs an explicit unavailable state unless a separate
+  ACS-only fallback is designed and evaluated.
+- Job `603 Evaluation | Scalable Analogue Retrieval` benchmarked exact retrieval and three
+  random-projection LSH configurations for 29 stratified current queries at one- and three-year
+  horizons. The final schema-1.1 run published 2,320 matches, 174 query-level evaluations, eight
+  configuration summaries, and 19 coverage rows under MLflow run
+  `3dd5aaa6c4ce47d88ef752a1d5e20f6b`.
+- All configurations returned complete top-ten lists with 100% physical-community recall. A new
+  tract-year-state metric exposed one narrow-LSH three-year query with 90% state recall, even
+  though it retained the same ten tract identifiers. That single changed historical year shifted
+  the query's median analogue outcome by 0.049 cumulative log-change units.
+- The tested LSH design is rejected for serving. Its shortlists retain 88.7% to 99.9% of the full
+  query-candidate cross-product and take about three to five times as long as exact retrieval in
+  the same cached benchmark. The high fidelity comes from doing almost all of the original work.
+- The benchmark contains no self, future-outcome, locked-test, incomplete-list, or duplicate-tract
+  violation. All required region, cohort, housing-mix, community-size, and ACS-uncertainty groups
+  are represented. Job 900 reapplied descriptions and comments to every new table column.
+- Job `604 Evaluation | Exact Tree Retrieval` replaced the unsuccessful LSH direction with an exact
+  KD-tree under the same frozen representation. It published 580 benchmark matches, 58 query-level
+  checks, two horizon summaries, and six scale rows under MLflow run
+  `fae78721154347039d41864bad2e871a`.
+- Every benchmark community, tract-year state, and rank matches job 603's exhaustive reference.
+  Outcome drift is zero within a `1e-12` numerical tolerance, and no self, future-outcome, locked,
+  or incomplete result passed publication.
+- The index directly queried all 46,719 eligible current tracts in about 193 seconds at one year
+  and 133 seconds at three years. It computed about 9.5% to 9.8% of one exhaustive pair pass while
+  using roughly 57.8 MB and 37.9 MB for the two horizon trees.
+- Exact KD-tree retrieval is now selected for batch generation of the application analogue tables.
+  The application should read compact published matches and explanations; it should not rebuild
+  the index or scan the wide modeling panel during a user request.
+- Job `700 Serving | Current Analogue Products` published release
+  `analogue-20261112T220655832818Z` with 934,380 ranked matches, 93,438 tract-horizon summaries,
+  and 171,056 availability rows. It covers 46,719 eligible current tracts at both one and three
+  years and preserves an explicit result for all 85,528 canonical current-profile rows per
+  horizon. The complete serverless job took 433 seconds. The activation manifest reconciles all
+  three tables to model-readiness build
+  `20261107T185721624743Z` and job-604 run `fae78721154347039d41864bad2e871a`.
+- Schema-1.1 release `analogue-20261113T132155097077Z` extends that same population with 934,380
+  deterministic match explanations and 2,803,140 annual trajectory rows. Its five-table manifest
+  activated only after one-to-one explanation keys and every path endpoint reconciled.
+- All 467,190 one-year paths are complete. At three years, 444,093 paths are complete and 23,097
+  contain at least one explicit intermediate gap; all endpoints remain observed. The application
+  must show these gaps rather than connecting across them as if values were observed.
+- The explanation output shows that housing structure is most often the closest family and recent
+  market trajectory is most often the largest difference. These are representation diagnostics,
+  not causal findings. Imputation counts are stored with every match explanation.
+- Per horizon, unavailable states are now concrete: 1,121 tracts lack a current ACS profile, 1,037
+  lack enough current similarity features, 19,443 lack FHFA history, and 17,208 lack the complete
+  model-ready market features used by the selected representation. The application must show
+  these reasons rather than silently changing the matching method.
+- The live run first exposed an interface mismatch between `query_geoid_2020` in retrieved matches
+  and `geoid_2020` in the availability contract. No release had been activated. The contract now
+  resolves either governed name explicitly, the corrected run passed, and job 900 confirmed
+  comments on all 113 columns across the original four serving tables. After schema 1.1, job 900
+  also confirmed all 43 explanation and 26 trajectory column comments.
 
 ## Important interpretation limits
 
@@ -208,38 +292,74 @@ dimension of lived experience are already represented.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
   origins supports it; do not present tract-row counts as the number of independent replications.
 
-### 2. Similarity and historical analogues: audit complete, production retrieval next
+### 2. Similarity and historical analogues: implemented, preserve through app integration
 
-- Treat weighted standardized distance and distinct physical communities as the provisional
-  production choices. Keep PCA and tract-year matches available for development audit.
-- Expand or justify the current 16-query-per-horizon sample before freezing the representation or
-  making a final performance claim. Do not open the locked temporal test for this decision.
+- Preserve weighted standardized distance and ten distinct physical communities as the frozen
+  production retrieval policy. Keep PCA and tract-year matches available for development audit.
+- Preserve job-602 sample coverage, subgroup counts, and later-outcome comparisons. Do not convert
+  one-case rare-category checks into performance claims, and do not open the locked temporal test.
 - Preserve the implemented stability, case-review, distance, geography, coverage, and
   later-outcome evidence as the baseline for future changes.
 - Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even
   when later-outcome evaluation is unavailable.
-- Build current-neighborhood retrieval under a frozen preprocessing/version contract. Decide
-  whether an approximate-neighbor index or bounded on-demand calculation provides acceptable
-  latency without changing the match definition.
-- Generate explanations containing shared strengths, important differences, candidate year and
-  location, later outcome, coverage warnings, and the descriptive outcome range.
-- Publish compact, versioned serving tables rather than querying `gold_modeling_panel` or the
-  wide audit tables from the application.
+- Preserve job 503 as the exact reference implementation. Do not use its roughly 14-minute batch
+  runtime as an on-click application path.
+- Preserve job 603 as evidence that broad random-projection LSH buckets do not improve this
+  workload. Do not approve or further tune the tested configurations without a new hypothesis
+  that materially reduces the candidate-pair share.
+- Preserve job 604 as the approved retrieval implementation. It must continue to reproduce the
+  job-603 reference before any representation or candidate-pool change is promoted.
+- Preserve job 700 as the application publication boundary. It must use the approved job-604 run,
+  publish versioned national matches and summaries, retain an availability row for every current
+  tract and horizon, and write its activation manifest only after all checks pass.
+- Quantify and expose current retrieval eligibility. Historical analogues are currently available
+  for 46,719 model-ready 2025 tracts, not all 84,396 current ACS profiles.
+- Decide whether unsupported tracts should show an explained unavailable state or receive a
+  separately versioned ACS-only similarity fallback. Do not silently impute the missing market
+  trajectory family and call it the same representation.
+- Preserve the deterministic explanation and trajectory contracts in schema 1.1. The application
+  should read their stored family gaps, highlighted values, annual paths, and missingness flags;
+  it should not reconstruct model logic or interpolate missing points during a request.
+- Preserve job-800 build `20261114T204019949707Z` as the current reviewed communication baseline.
+  Its five figures cover the workflow, stability and representation choice, later-outcome utility,
+  current availability, and an Oakland County example. The standup notebook reads those governed
+  outputs in sequence and does not retrain the method.
+- Keep the figure manifest tied to one audit run, selection run, exact-tree run, and complete
+  serving release. Refresh job 800 only after one of those approved inputs or the visual design
+  changes, inspect every new image at full resolution, and run job 900 afterward.
+- Integrate the compact job-700 serving release into the application rather than querying
+  `gold_modeling_panel` or the wide audit tables. Render stored feature-family gaps and observed
+  paths, keep intermediate gaps visible, and show the stored unavailable reason when no complete
+  result exists.
 
-### 3. Descriptive application shell
+### 3. Application foundation: implemented, review and extend deliberately
 
-- Start a thin Streamlit application using current profiles, display geometry, housing
-  composition, source dates, FHFA history, and explicit coverage warnings.
-- Keep app data access behind a small serving interface so later forecast and analogue tables can
-  be added without rewriting pages.
-- Do not read `gold_modeling_panel` directly from the UI.
-- Show unavailable forecasts as an explained state while preserving the descriptive profile.
-- Begin with tract search and map selection, community profile, housing composition, historical
-  ACS/FHFA charts, source dates, uncertainty, and explicit coverage messages.
-- Use clear unavailable-result placeholders until approved forecast and analogue serving tables
-  exist; do not demonstrate mocked analytical claims.
-- Defer the optional conversational or AI layer until the analytical application and serving
-  contracts work. It may explain stored results but should not produce the underlying analysis.
+- The first Streamlit neighborhood explorer is implemented in `app/` with tract search, a map-first
+  profile, housing composition, observed FHFA history, evidence-availability states, historical
+  analogue summaries and matches, stored explanations, observed post-match paths, and release
+  lineage.
+- The UI reads one complete validated job-700 release and never reads `gold_modeling_panel`.
+  Profiles, FHFA history, and display geometry currently use narrow read-only gold/silver table
+  resources until their serving products are versioned.
+- Forecasting is intentionally unavailable in the UI. Do not replace it with analogue statistics,
+  validation predictions, or demonstration values while forecast selection and interval
+  calibration remain open.
+- The local default uses a visibly labeled reduced real-data fixture. The private Databricks App
+  `neighborhood-intelligence` is the live target and uses a dedicated service principal with one
+  `CAN_USE` warehouse resource and `SELECT` access only to the declared tables.
+- The focused app contract and startup suite passes locally. The private live app reached running
+  state, returned HTTP 200, selected the validated release, and rendered all ten matches per
+  horizon without an exception. Manual exact-GEOID search, unavailable-state, desktop and narrow
+  layout, legend, caveat, and accessibility review remain.
+- The first map refinement replaces point markers with actual simplified tract polygons. The main
+  map shows the selected tract within a capped local tract context; analogue results use matched
+  outlines, rank labels, and side-by-side footprint views with land-area labels. Live neighborhood
+  loading fell from 11.57 to 6.22 seconds in a warm-warehouse comparison after seven result sets
+  were moved onto one connection. Visual review across dense urban, rural, coastal, Alaska, and
+  Hawaii examples remains necessary before the map design is final.
+- Next app work should integrate the approved forecast serving contract, then compare forecast and
+  historical-analogue evidence without blending their interpretation. Scenario sensitivity and an
+  optional conversational layer remain deferred.
 
 ### 4. Model and product decisions
 
@@ -255,7 +375,8 @@ dimension of lived experience are already represented.
 
 ### 5. Serving and integration
 
-- Build compact serving tables and a release manifest from approved outputs.
+- Extend the implemented analogue serving release with forecast, interval, profile/history, and
+  display-geometry products as those components are approved.
 - Connect the application to the serving contract, then add forecasts, analogues, explanations,
   and guarded scenario sensitivity.
 - Add application contract tests, smoke tests, accessibility review, and deployment runbooks.
@@ -278,16 +399,20 @@ for approved output tables rather than mock analytical claims.
 
 The next checkpoint is complete when:
 
-- the baseline models run from the published split and panel tables;
-- experiment runs record reproducible configurations and artifacts in MLflow;
-- all forecast candidates use identical validation rows and have a subgroup scorecard;
-- point metrics are interpreted together, including bias, tail error, baseline skill, and the
-  majority-direction comparison rather than only the most favorable metric;
+- one focused nonlinear forecast candidate has been compared with the regularized-linear and
+  state-trend baselines on identical validation rows;
+- forecast selection uses subgroup, bias, tail-error, and independent-origin evidence rather than
+  only overall MAE;
+- one uncertainty method has been calibrated and evaluated on the reserved calibration origins;
+- the implemented exact analogue precomputation, explanations, trajectories, runtime, refresh,
+  and unavailable-result behavior remain documented and contract-tested;
+- the reviewed similarity visual package and standup walkthrough remain reproducible from governed
+  model, evaluation, and serving outputs;
+- compact, versioned forecast and analogue serving tables exist, with release lineage and no UI
+  dependency on `gold_modeling_panel`;
+- a descriptive application shell reads the documented serving interface and handles unsupported
+  tracts honestly;
 - the locked temporal tests remain untouched during model selection;
-- the current-state similarity baseline has stability results and reviewed examples;
-- retrospective analogue evaluation uses only information available at each query date and its
-  representation choice is reviewed for case quality and stability;
-- a descriptive application shell reads a documented serving interface;
 - the application clearly separates observed ACS, observed FHFA history, model forecasts,
   historical analogues, and scenario sensitivity; and
 - the team has an evidence-based decision on nonlinear forecasting, analytical adjacency, and any

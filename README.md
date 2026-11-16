@@ -4,7 +4,20 @@ An interactive, map-based research platform for exploring how U.S. neighborhoods
 
 This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
 
-> **Project status:** Shared Databricks pipelines now populate separate bronze, silver, gold, model, evaluation, and quality schemas. They include complete 2010-2024 ACS history for the 50 states and Washington, D.C., national FHFA history, a valid country-to-tract Census hierarchy, canonical 2020 tract geography, a reviewed Connecticut identity bridge, current and historical analytical products, twelve versioned EDA figures, and seven model-evaluation figures. The national ACS load contains all 765 required state-release pairs and passed bronze, silver, and gold validation. Complete source coverage does not mean identical tract coverage over time: the historical state uses 59,607 stable 2010-to-2020 tracts for each pre-2020 ACS release, while later releases retain roughly 84,400 supported tracts. Leakage-safe model features, frozen temporal and geographic assignments, and a joined modeling panel are live for 63,367 tracts. Forecast, current-state similarity, and time-safe historical-analogue baselines now run as tracked MLflow experiments. The analogue workflow published 640 matches and showed that later match outcomes beat zero change on its small validation sample but did not beat the state-trend or regularized-linear forecasts. The next work is case review and stability testing, focused nonlinear forecasting, uncertainty calibration, compact serving tables, and the descriptive application shell. Features described below are planned unless explicitly marked complete.
+> **Project status:** Shared Databricks pipelines populate separate bronze, silver, gold, model,
+> evaluation, serving, and quality schemas. They include complete 2010-2024 ACS history for the 50
+> states and Washington, D.C.; national FHFA history; governed Census geography; point-in-time
+> modeling features; twelve EDA figures; and seven model-evaluation figures. The forecasting and
+> similarity workflows use frozen time and geographic assignments and tracked MLflow experiments.
+> Weighted historical matching with ten distinct communities is the selected analogue method; it
+> provides useful context but has not beaten the stronger forecast baselines. Job 700 now publishes
+> a validated national application release with 934,380 matches, 93,438 tract-horizon summaries,
+> explicit availability states for all 85,528 canonical tracts at both supported horizons,
+> 934,380 deterministic match explanations, and 2,803,140 aligned historical-path rows. The next
+> work is focused forecast improvement and uncertainty calibration and the interactive
+> application. Job 800 now publishes a reviewed five-figure similarity package and a standup-ready
+> walkthrough from the governed evaluation and serving outputs. Features below are planned unless
+> marked complete.
 
 ## What the finished product should do
 
@@ -65,10 +78,12 @@ flowchart TB
     FM --> MO["Model schema<br/>validation predictions and ranked matches"]
     SM --> MO
     HA --> MO
+    HA --> AR["601-604 Analogue evaluation<br/>stability, selection, and exact retrieval"]
     FM --> MLF["Shared MLflow experiments"]
     SM --> MLF
     HA --> MLF
     MO --> EV["Evaluation schema and 600 workflow<br/>scorecards, diagnostics, and 7 versioned figures"]
+    AR --> EV
     MLF --> EV
 
     B -.->|quality checks| QM["Quality schema and 900 metadata<br/>reconciliation, table descriptions, and column comments"]
@@ -80,10 +95,13 @@ flowchart TB
     EV -.->|next| NF["Forecast ablations<br/>and uncertainty calibration"]
     GH -.->|next| NA["Time-safe historical<br/>analogue evaluation"]
     EV -.->|model-selection evidence| NF
-    GC -.->|planned input| SV["Versioned serving tables"]
+    AR --> SV["700 Serving schema<br/>analogues, explanations, paths, and manifest"]
+    AR --> PR["800 Presentation<br/>5 similarity figures and walkthrough"]
+    EV --> PR
+    SV --> PR
     NF -.->|planned output| SV
-    HA -.->|reviewed output| SV
-    SV -.-> APP["Interactive Databricks<br/>Streamlit application"]
+    SV --> APP["Interactive Databricks<br/>Streamlit application"]
+    PR -.->|communication design| APP
 
     classDef control fill:#EEF2F7,stroke:#455A64,color:#263238,stroke-width:1.4px;
     classDef source fill:#FFFFFF,stroke:#78909C,color:#263238,stroke-width:1.4px;
@@ -91,25 +109,25 @@ flowchart TB
     classDef planned fill:#FFF4DD,stroke:#D99035,color:#263238,stroke-width:1.5px,stroke-dasharray:5 4;
     class GIT,DAB,JOBS control;
     class SRC source;
-    class B,SS,SG,GC,GH,GR,EDA,FM,SM,HA,MO,MLF,EV,QM implemented;
-    class NF,SV,APP planned;
+    class B,SS,SG,GC,GH,GR,EDA,FM,SM,HA,AR,MO,MLF,EV,QM,SV,PR,APP implemented;
+    class NF planned;
 ```
 
 Teal nodes are implemented; gold nodes with dashed borders are the next planned delivery stages.
 The diagram reflects the current operational split: current and historical gold products are built
-separately, forecast and similarity baselines publish to dedicated model and evaluation schemas,
-and EDA and model figures are versioned Databricks outputs. The forecast workflow includes a
-gradient-boosted-tree challenger, but validation results have not selected a champion. Forecast
-targets that cross a calendar-decade boundary are censored; the locked temporal test remains
-unopened. Quality checks run throughout the pipeline, while job 900 reapplies table and column
-metadata after schema-overwriting jobs.
+separately, forecast and similarity work publish to dedicated model and evaluation schemas, and
+job 700 publishes approved current analogue releases to a dedicated serving schema. EDA, model,
+and similarity communication figures are versioned Databricks outputs. Job 800 reads approved
+evidence rather than retraining models. Quality checks run throughout the pipeline, while job 900
+reapplies table and column metadata after schema-overwriting jobs.
 
 Databricks Free Edition is the shared environment for source snapshots, Delta tables,
-transformations, MLflow experiments, figures, and the planned primary Streamlit application.
-GitHub remains the source of truth for code and review. The application will read compact serving
-tables rather than downloading national data or training models during a session. Because
-Databricks Apps require authenticated access, a separate public mirror remains a deployment
-fallback if the capstone needs an anonymous portfolio URL.
+transformations, MLflow experiments, figures, and the primary private Streamlit application.
+GitHub remains the source of truth for code and review. The application reads the approved
+analogue serving release and narrow profile, history, and geometry tables rather than downloading
+national data or training models during a session. Because Databricks Apps require authenticated
+access, a separate public mirror remains a deployment fallback if the capstone needs an anonymous
+portfolio URL.
 
 ## Initial data scope
 
@@ -163,10 +181,11 @@ Start with:
 5. [Forecasting documentation](docs/forecasting/README.md)
 6. [Similarity documentation](docs/similarity/README.md)
 7. [Model-evaluation documentation](docs/model_evaluation/README.md)
-8. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
-9. [Data guide and per-table documentation](docs/data/README.md)
-10. [Implementation sequence](docs/implementation/README.md)
-11. [System architecture](docs/ARCHITECTURE.md)
+8. [Application documentation](docs/application/README.md)
+9. [Databricks pipeline run order](docs/PIPELINE_RUN_ORDER.md)
+10. [Data guide and per-table documentation](docs/data/README.md)
+11. [Implementation sequence](docs/implementation/README.md)
+12. [System architecture](docs/ARCHITECTURE.md)
 
 The implementation guide is numbered in dependency order. It is a living technical plan, not a claim that every optional feature must be built.
 
@@ -179,9 +198,10 @@ The repository has two execution environments:
 - **Databricks serverless jobs** run acquisition, ETL, validation, modeling, MLflow tracking, and
   figure generation against the shared Unity Catalog tables.
 
-The interactive application, calibrated uncertainty workflow, application-serving analogue
-lookup, and locked-test release have not been implemented yet. There is currently no
-application-start command to run.
+The initial Streamlit application is implemented with current neighborhood profiles, observed FHFA
+history, and the validated historical-analogue release. Forecast serving, calibrated uncertainty,
+scenario sensitivity, and the locked-test release remain incomplete. The forecast view therefore
+shows an explicit unavailable state instead of a mock or validation prediction.
 
 ### Prerequisites
 
@@ -206,9 +226,9 @@ Set-Location neighborhood-digital-twin
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,app]"
 python -m ruff check .
-python -m mypy src
+python -m mypy src app/neighborhood_app
 python -m pytest
 ```
 
@@ -220,16 +240,33 @@ cd neighborhood-digital-twin
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,app]"
 python -m ruff check .
-python -m mypy src
+python -m mypy src app/neighborhood_app
 python -m pytest
 ```
 
 A successful local check requires all three commandsâ€”Ruff, mypy, and pytestâ€”to pass. The tests use
 small committed fixtures; they do not download or process the national datasets.
 
-### 2. Authenticate and deploy the Databricks jobs
+### 2. Run the application locally
+
+The default local mode is an explicit reduced sample made from real public project data. It does
+not require Databricks credentials:
+
+```powershell
+python -m streamlit run app/streamlit_app.py
+```
+
+The banner identifies sample mode, which contains one tract and one historical match for interface
+testing. It is not the national application release. Run the focused contract and startup tests
+with:
+
+```powershell
+python -m pytest tests/unit/test_app_data.py tests/unit/test_app_presentation.py
+```
+
+### 3. Authenticate and deploy Databricks jobs and the application
 
 The bundle deploys source files and job definitions from the local Git checkout. Do not create a
 second repository clone inside the Databricks workspace.
@@ -254,7 +291,19 @@ Deployment updates code and job definitions; it does not run a job or rebuild a 
 the deployment window with the other teammate so two branches do not replace the same shared job
 definitions.
 
-### 3. Reproduce the current EDA, model results, and figures
+To deploy the private SQL-backed Streamlit app after bundle deployment:
+
+```powershell
+databricks bundle run neighborhood_housing_intelligence --profile neighborhood-twin -t team
+databricks apps get neighborhood-intelligence --profile neighborhood-twin --output json
+```
+
+The app uses its own service principal, one `CAN_USE` SQL warehouse resource, and `SELECT` access
+only to the nine declared profile, history, geometry, manifest, and analogue tables. Sharing app
+access is a separate deliberate workspace action; source deployment does not grant the entire
+workspace access.
+
+### 4. Reproduce the current EDA, model results, and figures
 
 The following sequence assumes the shared bronze, silver, gold, and model-readiness tables already
 exist and have passed their quality checks. It reproduces the implemented report inputs without
@@ -269,9 +318,18 @@ databricks bundle run visual_eda --profile neighborhood-twin -t team
 databricks bundle run forecast_baselines --profile neighborhood-twin -t team
 databricks bundle run similarity_baselines --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_baseline --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_selection --profile neighborhood-twin -t team
+databricks bundle run current_analogue_retrieval --profile neighborhood-twin -t team
+databricks bundle run scalable_analogue_retrieval --profile neighborhood-twin -t team
+databricks bundle run analogue_tree_retrieval --profile neighborhood-twin -t team
+databricks bundle run analogue_serving_products --profile neighborhood-twin -t team
 
 # Render the 7 model-evaluation figures from the two completed model runs.
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
+
+# Render the reviewed 5-figure similarity package and standup walkthrough inputs.
+databricks bundle run similarity_communication_figures --profile neighborhood-twin -t team
 
 # Reapply descriptions and column comments after table-overwriting jobs.
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
@@ -279,10 +337,11 @@ databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t tea
 
 The forecast and current-state similarity jobs are independent after their upstream tables exist.
 The historical analogue job waits for model readiness and the forecast comparators. The evaluation
-figure job currently waits for forecast and current-state similarity. These are development runs;
-they do not open or score the locked temporal test outcomes.
+figure job currently waits for forecast and current-state similarity. Job 800 reads the approved
+analogue audit, selection, exact-retrieval, and serving outputs; it does not retrain the method.
+These are development runs; they do not open or score the locked temporal test outcomes.
 
-### 4. Run only the stage affected by a change
+### 5. Run only the stage affected by a change
 
 Routine development should start at the first changed stage rather than rerunning the national
 pipeline:
@@ -294,6 +353,8 @@ pipeline:
 | Forecast code | `forecast_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
 | Current-state similarity code | `similarity_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
 | Historical analogue code | `historical_analogue_baseline`, then `table_metadata_pipeline` |
+| Approved current-analogue serving release | `analogue_serving_products`, then `table_metadata_pipeline` |
+| Similarity communication design or approved upstream evidence | `similarity_communication_figures`, then `table_metadata_pipeline` |
 | Point-in-time features or split rules | `gold_model_readiness`, affected analysis/modeling jobs, then `table_metadata_pipeline` |
 | Historical gold logic | `gold_historical_products`, `gold_model_readiness`, affected downstream jobs, then `table_metadata_pipeline` |
 | Source or geography data | Follow the reviewed refresh path in `docs/PIPELINE_RUN_ORDER.md` |
@@ -315,12 +376,16 @@ scope, and stage-by-stage validation described in [the acquisition guide](docs/i
 | Forecast predictions and scorecards | `notebooks/05_modeling/01_run_forecast_baselines.py` | `workspace.neighborhood_twin_model.forecast_baseline_prediction`, `workspace.neighborhood_twin_evaluation.forecast_baseline_scorecard`, and the shared forecast MLflow experiment |
 | Similarity matches and diagnostics | `notebooks/05_modeling/02_run_similarity_baselines.py` | `workspace.neighborhood_twin_model.similarity_baseline_match`, `workspace.neighborhood_twin_evaluation.similarity_baseline_summary`, and the shared similarity MLflow experiment |
 | Historical matches, estimates, and evaluation | `notebooks/05_modeling/04_run_historical_analogue_baseline.py` | `historical_analogue_match` and `historical_analogue_prediction` in `workspace.neighborhood_twin_model`; `historical_analogue_summary` and `historical_analogue_scorecard` in `workspace.neighborhood_twin_evaluation`; and the shared historical-analogue MLflow experiment |
+| Current analogue application release | `notebooks/06_representations/01_build_analogue_serving_products.py` | Versioned matches, summaries, availability, and activation manifest in `workspace.neighborhood_twin_serving` |
 | Seven model-evaluation figures | `notebooks/05_modeling/03_render_model_evaluation.py` | `workspace.neighborhood_twin_evaluation.model_evaluation_figures` and its manifest table |
+| Five similarity communication figures | `notebooks/08_final_analysis/00_render_similarity_communication.py` | `workspace.neighborhood_twin_evaluation.similarity_evaluation_figure_manifest` and the `similarity_evaluation_figures` volume |
 
 The current build IDs, filenames, and export commands are maintained in the
 [EDA figure guide](reports/EDA_FIGURES.md) and
-[model-evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md). Local figure exports belong in
-the ignored `reports/generated/` directory.
+[model-evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md). The five historical-analogue
+figures and standup sequence are in the
+[similarity figure guide](reports/SIMILARITY_FIGURES.md). Local figure exports belong in the ignored
+`reports/generated/` directory.
 
 ### Dependencies
 
@@ -366,13 +431,14 @@ source comment, but the dependency must be declared in the correct environment f
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
 forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
-initial forecast, current-state similarity, and time-safe historical-analogue outputs in a
-dedicated model schema and governed diagnostics in a separate evaluation schema. These are
-development baselines, not final models: model selection, calibrated uncertainty, analogue case
-review and stability testing, serving products, and the interactive application remain. Current
-figure locations and reproduction steps are documented in the
+initial forecast, current-state similarity, time-safe historical-analogue outputs, governed model
+diagnostics, and a versioned five-table national analogue serving contract. The similarity method,
+case review, stability testing, exact retrieval, explanations, annual paths, and reviewed visual
+walkthrough are implemented; forecast model selection and uncertainty and the interactive
+application remain. Current figure locations and reproduction steps are documented in the
 [EDA figure guide](reports/EDA_FIGURES.md) and
-[model evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md).
+[model evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md), with the analogue package in
+the [similarity figure guide](reports/SIMILARITY_FIGURES.md).
 
 ## Planned deployment
 

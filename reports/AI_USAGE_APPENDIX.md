@@ -35,8 +35,12 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | Model-output governance, evaluation metrics, and diagnostic figures, October 30, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
-| Forecast model implementation and decade-safe target/split update on `braeden-forecasting`, November 7-8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
-| Local forecasting meeting notebook, embedded EDA figures, and production scorecard interpretation, November 12, 2026 | OpenAI Copilot SDK in VS Code | Not exposed in the available session metadata | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Expanded analogue selection and coverage safeguards, November 8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Current analogue retrieval and scalable serving benchmark, November 9-11, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| National analogue serving contract and publication, November 12, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Deterministic analogue explanations and historical trajectories, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Similarity communication figures and standup walkthrough, November 13, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
+| Initial Streamlit application, data contract, tests, and Databricks App configuration, November 14, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
 
@@ -271,74 +275,123 @@ and distinct physical communities as provisional application choices. This evalu
 why a green job status was not treated as sufficient evidence: the most important correction came
 from reconciling the analytical output after a technically successful run.
 
-The forecasting model work on the `braeden-forecasting` branch started from the governed
-`gold_modeling_panel` and the existing regularized-linear and fixed-baseline workflow. AI assistance
-was used for code generation, debugging, repository organization, and methodological brainstorming;
-the forecasting module and Databricks notebook record OpenAI ChatGPT/GPT-5, and state that the
-authors performed and verified the final modeling, implementation, validation, and interpretation.
-The model was designed as a small, comparable baseline ladder rather than an unrestricted algorithm
-search: zero change, latest-change persistence, recent three-year mean, county trend, and state
-trend are compared with the regularized linear model and a fixed-parameter Spark ML
-gradient-boosted-tree challenger. Both fitted models use the same registered 26 point-in-time HPI,
-county/state, ACS housing, socioeconomic, timing, and uncertainty features. They predict cumulative
-log change in tract FHFA single-family HPI, with a separate direct model for each one-, three-, and
-five-year horizon.
+The expanded analogue-selection workflow was checked with all 98 local tests, Ruff, mypy, bundle
+validation, two successful live job-602 runs, the metadata job, and direct SQL reconciliation.
+The first live run passed every leakage and top-ten check and expanded the evaluation to 80 queries
+per horizon. Its coverage table nevertheless showed that the sample missed the under-25%
+single-family group at one year, along with a few very rare size or uncertainty categories. The
+selection logic was revised to add one deterministic, outcome-blind query for each otherwise
+missing required category. The corrected run covered every category and still preserved the
+balanced time, region, and geographic-transfer core.
 
-Preprocessing is fitted on training rows only. The linear pipeline uses median imputation,
-centering/scaling, and L2 regularization (`regParam=0.05`, up to 100 iterations); the tree pipeline
-uses median imputation and a fixed configuration (depth 4, 50 iterations, step size 0.05,
-subsampling 0.8, seed 699). The tree settings form a reproducible challenger, not a hyperparameter
-search. Predictions are scored only on observed validation rows; calibration and locked temporal
-test outcomes are not used in model fitting or this development scorecard. The comparison retains
-MAE, RMSE, signed bias, tail error, subgroup and geography slices, zero-change skill, and
-majority-direction context rather than treating one aggregate score as a sufficient selection
-criterion.
+The final tables contain 3,560 matches, 1,246 predictions, four retrieval summaries, 322 scorecard
+rows, and 78 coverage rows. SQL checks found zero future outcomes, self-matches, nonvalidation
+queries, incomplete or duplicate top tens, or uncovered required categories. Weighted matching
+had lower overall analogue MAE than PCA at both horizons, but the primary regularized-linear
+forecast remained more accurate. The result therefore froze weighted, distinct-community
+retrieval for application development without promoting analogue outcomes to the primary
+forecast. This is another case where post-run data review changed the generated implementation
+rather than merely confirming that it executed.
 
-A subsequent modeling change made the target/split contract decade-safe: an observed target is
-allowed only when its forecast origin and endpoint are in the same calendar decade; crossing
-targets are retained as censored records and made ineligible for fitting and evaluation. Frozen
-temporal validation/calibration origins were moved as needed to comply, rather than randomly
-splitting repeated tract-year rows. The target, split, and readiness code received regression
-tests; all 88 unit tests passed, as did Ruff, Python compilation, and bundle validation, followed
-by live Databricks rebuilds and forecasting. The resulting November 7 run published 1,588,340
-validation predictions across 59,179 tracts and seven methods, with 1,463 scorecard rows; a
-Databricks check found zero cross-decade validation predictions. Validation favored
-gradient-boosted trees at one and three years and regularized linear at five years, but the
-five-year evidence had only two training origins and one validation origin. No champion was
-selected, the locked test remained unopened, and the similarity model was not changed.
+The scalable analogue benchmark was evaluated with 101 local unit tests, Ruff, mypy, bundle
+validation, two successful live job-603 runs, the metadata job, and direct SQL reconciliation of
+all four outputs. The first live run recovered the same ten physical communities for every query,
+but outcome drift on one narrow-LSH result showed that community IDs alone had hidden a different
+historical origin year. The evaluation contract was revised to measure tract-year-state recall,
+the schema was versioned, and the workflow was rerun. The final checks found complete distinct
+top tens and no self, future-outcome, or locked-test matches. They also showed that the LSH
+shortlists retained 88.7% to 99.9% of the candidate cross-product and ran roughly three to five
+times slower than exact retrieval within the cached comparison. The tested LSH approach was
+therefore rejected rather than adopted because it had high recall.
 
-The meeting-demo work began with a request for a self-contained offline forecasting proof of
-concept, including model features and county/state trends. A synthetic-data command-line demo was
-created, then formatted as a Jupyter notebook. The user subsequently redirected the notebook to
-use the production workflow's source rather than synthetic input. The command-line script remains
-a separate synthetic proof of concept; the notebook now uses a deterministic, bounded 500-tract
-sample from the governed `gold_modeling_panel`, queried with the user-selected Databricks profile
-after the CLI was updated. It includes observed, one-year, decade-safe training and validation
-rows only; locked temporal test outcomes are excluded. Cached panel and aggregate EDA files allow
-the notebook to be rerun locally after download. A request for separate per-step READMEs was
-superseded by the consolidated demo format; the notebook index and forecasting overview were
-updated rather than retaining a set of redundant step documents.
+The exact indexed-retrieval workflow was evaluated with Ruff, mypy, all 107 local unit tests,
+bundle validation, repeated live serverless runs, the metadata workflow, and direct SQL review of
+all four published tables. A randomized known-answer test compares batched KD-tree neighbors with
+an exhaustive distinct-tract ordering. The first live attempt revealed that an explicitly pinned
+older serverless environment was incompatible with the Spark Connect preprocessing used by the
+existing models, so the job was aligned with the project's standard serverless runtime. The next
+full-scale attempt reached its final gate but found that scikit-learn's internal distance counter
+overflowed on the national query batch. Retrieval was changed to bounded batches whose counters
+are summed in Python, and the complete test suite was rerun before deployment.
 
-The notebook fits local scikit-learn equivalents of the regularized linear and gradient-boosted-
-tree candidates, compares them with five simple baselines, and documents the 26 registered
-features, the cumulative log HPI-change target, the temporal split, and metric interpretation.
-The sample has 4,130 rows from 500 tracts (3,293 training and 837 validation rows). Its split is
-the governed time-based split, not a random pairing split: the same tract can appear in both
-roles at different origin years. Explanations also distinguish tract GEOID continuity from
-guaranteed boundary continuity, clarify that a one-year HPI target is not an individual home
-price, and explain how validation MAE describes average absolute prediction error. Related
-interpretive answers covered the forecasting flow, feature inputs, model-versus-baseline results,
-example HPI values, the reasonableness and units of the reported errors, and what the EDA plots
-represent; these explanations did not change the production model.
+The validated job reproduced every community, tract-year state, and rank in the 58-row exhaustive
+reference evaluation. It then directly queried all 46,719 current eligible tracts per horizon,
+using about 9.5% to 9.8% of one exhaustive distance pass and completing in about 193 and 133
+seconds. SQL reconciliation confirmed the expected 580 match rows, 58 query evaluations, two
+summaries, six scale rows, one run ID per table, and comments on every output column. These results
+changed the implementation decision: the exact KD-tree is approved for batch serving-table
+generation, while the earlier LSH design remains rejected.
 
-The notebook reproduces six published forecasting-relevant EDA figures (figures 2, 3, 4, 5, 7,
-and 8) from cached aggregate data, alongside five local validation/diagnostic charts. All 11
-plots are embedded as PNG display outputs in the notebook itself. Markdown was expanded to list
-the feature inputs and explain each candidate's current demo MAE, units, row counts, and
-limitations. The notebook index, forecasting documentation, and local optional dependency
-declaration (Matplotlib and scikit-learn) were updated to match. The notebook JSON and embedded
-image outputs were checked; the focused forecasting unit suite passed seven tests, and
-`git diff --check` passed.
+The national analogue serving workflow was reviewed with Ruff, mypy, focused unit tests, bundle
+validation, a live serverless run, the metadata workflow, and direct SQL reconciliation. The first
+live attempt completed both national retrieval passes but failed before publication because the
+match output used `query_geoid_2020` while the availability builder expected `geoid_2020`. The
+unchanged retry was canceled, the contract was revised to resolve either governed key explicitly,
+and no partial release had been activated. The corrected run published 934,380 matches, 93,438
+summaries, 171,056 availability rows, and a three-row manifest written last. SQL review confirmed
+46,719 available tracts at each horizon, ten matches per available tract, explicit unavailable
+reason counts, one source model build and tree run, and comments on all 113 serving columns. This
+live failure is also why application releases are append-only and become active through a final
+manifest rather than because a data table happens to exist.
+
+The schema-1.1 serving enrichment was evaluated with Ruff, mypy, all 120 local tests, bundle
+validation, live job-700 execution, job-900 metadata application, and read-only SQL reconciliation
+of the complete release. The first live attempt reached its endpoint gate and correctly failed:
+some valid three-year FHFA outcomes have a missing intermediate annual origin, but the generated
+trajectory logic had required the endpoint to pass through that one-year chain. The automatic
+unchanged retry was canceled. The implementation was revised to read the endpoint from the
+approved direct horizon target while retaining unavailable intermediate points as explicit gaps.
+The failed attempt activated no data because its manifest had not been written.
+
+The corrected 470-second run activated five tables containing 934,380 explanations and 2,803,140
+trajectory rows in addition to the existing match, summary, and availability products. SQL review
+confirmed one explanation per match, complete one-year paths, observed endpoints for every path,
+23,097 three-year paths with explicit intermediate gaps, the expected five-row manifest, and
+comments on all 43 explanation and 26 trajectory columns. The documentation and application
+guidance were then changed so missing intermediate years are displayed rather than silently
+interpolated or treated as a failed later outcome.
+
+The similarity communication workflow was evaluated with unit tests for its figure and lineage
+contracts, Ruff, mypy, notebook compilation, all 125 local tests, bundle validation, and two live
+job-800 renders. The first successful render was not accepted only because the job was green. All
+five PNGs were downloaded and inspected at full resolution. That review found an ambiguous
+transition between the final workflow stages and a coverage annotation sitting on top of the
+stacked bar. Both layouts were revised, the complete job was rerun, and the two changed figures
+were inspected again. The accepted 58-second run published five manifest rows with one audit,
+selection, tree, and serving lineage set. Job 900 then succeeded, and read-only SQL confirmed the
+table description and comments on all 14 manifest columns. The walkthrough reads these governed
+outputs rather than reproducing model logic, and the case-study rule uses completeness and
+geographic diversity rather than later outcome performance.
+
+The initial application foundation was evaluated with Ruff, mypy, nine focused unit and contract
+tests, a full Streamlit startup test, bundle validation, and inspection of the created Databricks
+App resources. The startup test found that the same map rendered in two locations received a
+duplicate automatic element ID; explicit keys were added and the complete app then rendered
+without an exception. Dependency review also exposed Plotly's retired Mapbox trace, which was
+replaced with its current MapLibre equivalent. The first bundle deployment rejected an app name
+over Databricks' 30-character limit, so the source-controlled name was shortened and revalidated.
+The deployed definition was then checked to confirm one `CAN_USE` warehouse permission and
+`SELECT` access only to the nine declared tables. Workspace-wide app access was deliberately
+removed before deployment rather than being granted as an incidental convenience.
+The private app then reached a successful snapshot deployment and returned HTTP 200. The exact
+repository path and a full Streamlit render were run against the national tables: they selected
+one validated release, returned the full ten matches at each horizon, and produced no rendered
+exception. That live render did expose a non-fatal Arrow warning caused by mixed numeric and text
+lineage values. The UI now converts those display values explicitly instead of relying on
+Streamlit's automatic type repair.
+
+The first application map revision was evaluated against live geometry rather than only a
+synthetic polygon. Read-only profiling found that the Autauga context window contained 30 possible
+tracts and only about 45 KB of WKB, supporting a bounded outline design. The final query returned
+17 nearby display polygons and all 20 analogue polygons. Tests confirmed that the primary map uses
+polygon traces rather than point markers and that the neighborhood repository groups its seven
+result sets on one SQL connection. A same-warehouse comparison reduced neighborhood loading from
+11.57 to 6.22 seconds, while a complete live render produced eight Plotly figures without an
+exception. The implementation retains a hard 80-tract context cap and keeps the geometry explicitly
+display-only so a visual improvement cannot silently become a spatial-model claim.
+Additional live construction checks covered Michigan, New York County, Alaska, and Honolulu.
+Those cases exercised dense urban context, the 80-row cap, non-contiguous states, and an unavailable
+three-year analogue result without producing a map-construction error.
 
 ## Maintenance requirements
 

@@ -280,10 +280,114 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "needed for substantive human review.",
         "One row per selected validation query, baseline representation, and match rank.",
     ),
+    "historical_analogue_selection_match": TableMetadata(
+        "Expanded validation matches under weighted-standardized and PCA representations with "
+        "one historical state retained per physical candidate tract.",
+        "One row per expanded validation query, representation, and match rank.",
+    ),
+    "historical_analogue_selection_prediction": TableMetadata(
+        "Analogue outcome estimates and forecast comparators evaluated on the same expanded "
+        "validation query sample.",
+        "One row per expanded validation query, horizon, and prediction method.",
+    ),
+    "historical_analogue_selection_summary": TableMetadata(
+        "Retrieval distance, geography, candidate-age, overlap, and PCA diagnostics for the "
+        "expanded historical analogue sample.",
+        "One row per horizon, representation, and analogue selection run.",
+    ),
+    "historical_analogue_selection_scorecard": TableMetadata(
+        "Expanded validation error, bias, tail, skill, housing-composition, community-size, and "
+        "ACS-uncertainty evidence for analogue and forecast methods.",
+        "One row per prediction method, horizon, evaluation slice, and slice value.",
+    ),
+    "historical_analogue_selection_coverage": TableMetadata(
+        "Selected-versus-eligible validation query coverage across the declared sampling and "
+        "interpretation dimensions.",
+        "One row per horizon, coverage dimension, and dimension value.",
+    ),
+    "current_analogue_match": TableMetadata(
+        "Exact weighted-standardized historical matches for selected neighborhoods at the "
+        "latest model-ready year, excluding locked temporal-test outcomes.",
+        "One row per current query tract, horizon, and historical match rank.",
+    ),
+    "current_analogue_summary": TableMetadata(
+        "Descriptive outcome range, distance, age, and geographic diagnostics for each selected "
+        "current neighborhood's historical matches.",
+        "One row per current query tract and horizon.",
+    ),
+    "scalable_analogue_match": TableMetadata(
+        "Exact-reference and random-projection LSH-shortlisted historical analogue matches using "
+        "the same weighted representation and exact final distance.",
+        "One row per benchmark query, horizon, retrieval configuration, and match rank.",
+    ),
+    "scalable_analogue_query_evaluation": TableMetadata(
+        "Query-level retrieval fidelity, completeness, rank movement, and historical outcome "
+        "drift for each LSH configuration versus exhaustive exact matching.",
+        "One row per benchmark query, horizon, and approximate retrieval configuration.",
+    ),
+    "scalable_analogue_summary": TableMetadata(
+        "Configuration-level recall, completeness, rank, outcome-drift, shortlist-size, and "
+        "runtime evidence for scalable analogue retrieval selection.",
+        "One row per horizon and exact or approximate retrieval configuration.",
+    ),
+    "scalable_analogue_coverage": TableMetadata(
+        "Selected-versus-eligible current-query coverage across region, cohort, housing mix, "
+        "community size, and ACS uncertainty.",
+        "One row per benchmark coverage dimension and value.",
+    ),
+    "analogue_tree_benchmark_match": TableMetadata(
+        "Exact KD-tree historical analogue matches for job-603 benchmark queries under the "
+        "frozen weighted representation and distinct-community policy.",
+        "One row per benchmark query, horizon, and historical match rank.",
+    ),
+    "analogue_tree_query_evaluation": TableMetadata(
+        "Query-level exact-reference fidelity and historical-outcome reconciliation for indexed "
+        "KD-tree retrieval.",
+        "One row per benchmark query and horizon.",
+    ),
+    "analogue_tree_summary": TableMetadata(
+        "Horizon-level KD-tree fidelity, construction, pruning, runtime, expansion, and storage "
+        "evidence used for the production retrieval decision.",
+        "One row per outcome horizon and indexed retrieval configuration.",
+    ),
+    "analogue_tree_scale_benchmark": TableMetadata(
+        "Measured exact KD-tree query work for the job-603 sample, a deterministic intermediate "
+        "sample, and every eligible current query.",
+        "One row per horizon and declared current-query population.",
+    ),
+    "serving_analogue_match_current": TableMetadata(
+        "Versioned exact historical matches approved for the current-neighborhood application.",
+        "One row per serving release, current query tract, horizon, and match rank.",
+    ),
+    "serving_analogue_summary_current": TableMetadata(
+        "Versioned descriptive outcome and distance summaries for approved current analogues.",
+        "One row per serving release, current query tract, and horizon.",
+    ),
+    "serving_analogue_availability_current": TableMetadata(
+        "Explicit current analogue availability, reason, and FHFA target-scope context.",
+        "One row per serving release, current profile tract, and horizon.",
+    ),
+    "serving_analogue_explanation_current": TableMetadata(
+        "Deterministic feature-family similarities and differences for approved current matches.",
+        "One row per serving release, current query tract, horizon, and match rank.",
+    ),
+    "serving_analogue_trajectory_current": TableMetadata(
+        "Aligned observed annual FHFA paths following each approved historical match.",
+        "One row per serving release, current query, match rank, and trajectory-year offset.",
+    ),
+    "serving_release_manifest": TableMetadata(
+        "Validated serving-table inventory whose rows activate an application release.",
+        "One row per serving release, component, and published table.",
+    ),
     "model_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of model-evaluation figures stored in the managed evaluation "
         "figure volume.",
         "One row per figure in the current model-evaluation build.",
+    ),
+    "similarity_evaluation_figure_manifest": TableMetadata(
+        "Versioned inventory of similarity communication figures with audit, selection, "
+        "retrieval, and serving lineage.",
+        "One row per figure in the current similarity communication build.",
     ),
 }
 
@@ -293,6 +397,12 @@ MODEL_TABLES = {
     "historical_analogue_match",
     "historical_analogue_prediction",
     "historical_analogue_audit_match",
+    "historical_analogue_selection_match",
+    "historical_analogue_selection_prediction",
+    "current_analogue_match",
+    "current_analogue_summary",
+    "scalable_analogue_match",
+    "analogue_tree_benchmark_match",
 }
 
 EVALUATION_TABLES = {
@@ -302,7 +412,26 @@ EVALUATION_TABLES = {
     "historical_analogue_scorecard",
     "historical_analogue_stability_summary",
     "historical_analogue_case_review",
+    "historical_analogue_selection_summary",
+    "historical_analogue_selection_scorecard",
+    "historical_analogue_selection_coverage",
+    "scalable_analogue_query_evaluation",
+    "scalable_analogue_summary",
+    "scalable_analogue_coverage",
+    "analogue_tree_query_evaluation",
+    "analogue_tree_summary",
+    "analogue_tree_scale_benchmark",
     "model_evaluation_figure_manifest",
+    "similarity_evaluation_figure_manifest",
+}
+
+SERVING_TABLES = {
+    "serving_analogue_match_current",
+    "serving_analogue_summary_current",
+    "serving_analogue_availability_current",
+    "serving_analogue_explanation_current",
+    "serving_analogue_trajectory_current",
+    "serving_release_manifest",
 }
 
 TABLE_LAYERS = {
@@ -313,6 +442,8 @@ TABLE_LAYERS = {
         if table in MODEL_TABLES
         else "evaluation"
         if table in EVALUATION_TABLES
+        else "serving"
+        if table in SERVING_TABLES
         else "bronze"
         if table == "source_snapshot_manifest" or table.startswith("bronze_")
         else "silver"
@@ -423,8 +554,8 @@ COMMON_COLUMN_COMMENTS = {
     "hpi_change_3_year_pct": "Point-in-time cumulative three-year FHFA HPI percentage change.",
     "hpi_change_5_year_pct": "Point-in-time cumulative five-year FHFA HPI percentage change.",
     "summary_group": "Governed category of model-readiness summary rows.",
-    "dimension_name": "Field summarized by the model-readiness row.",
-    "dimension_value": "Value of the summarized model-readiness dimension.",
+    "dimension_name": "Field or coverage dimension summarized by the row.",
+    "dimension_value": "Readable value within the summarized dimension.",
     "non_null_count": "Rows with a populated value for the summarized feature.",
     "non_null_rate": "Share of summarized rows with a populated feature value.",
     "observed_target_count": "Rows with an observed direct FHFA outcome in the summary group.",
@@ -664,6 +795,364 @@ COMMON_COLUMN_COMMENTS = {
         "MLflow run ID of the published historical analogue baseline used by the audit."
     ),
     "analogue_audit_run_id": "MLflow run ID of the analogue case-review and stability build.",
+    "analogue_selection_run_id": (
+        "MLflow run ID of the expanded historical analogue selection build."
+    ),
+    "selection_queries_per_group": (
+        "Maximum deterministic queries selected per origin, Census region, and geographic role."
+    ),
+    "query_housing_composition_band": (
+        "Readable single-family housing-share band assigned to the validation query."
+    ),
+    "query_community_size_band": (
+        "Readable population band assigned to the validation query."
+    ),
+    "query_acs_uncertainty_band": (
+        "Band based on the largest core ACS relative margin of error for the validation query."
+    ),
+    "eligible_query_count": (
+        "Eligible validation tract-year queries in the horizon and dimension value."
+    ),
+    "eligible_query_tract_count": (
+        "Distinct eligible validation tract GEOIDs in the horizon and dimension value."
+    ),
+    "selected_query_count": (
+        "Selected expanded-evaluation tract-year queries in the horizon and dimension value."
+    ),
+    "selected_query_tract_count": (
+        "Distinct selected expanded-evaluation tract GEOIDs in the horizon and dimension value."
+    ),
+    "eligible_query_share": (
+        "Share of eligible horizon queries represented by the dimension value."
+    ),
+    "selected_query_share": (
+        "Share of selected horizon queries represented by the dimension value."
+    ),
+    "selected_minus_eligible_share": (
+        "Selected query share minus eligible query share for the dimension value."
+    ),
+    "coverage_status": (
+        "Whether at least one expanded-evaluation query represents the eligible dimension value."
+    ),
+    "query_as_of_year": (
+        "Latest model-ready calendar year represented by the selected current neighborhood."
+    ),
+    "query_forecast_end_year": (
+        "Calendar endpoint implied by the query as-of year and outcome horizon."
+    ),
+    "query_model_readiness_build_id": (
+        "Model-readiness build that supplied the selected current query features."
+    ),
+    "candidate_temporal_role": (
+        "Frozen development role of the historical candidate; locked temporal tests are excluded."
+    ),
+    "candidate_model_readiness_build_id": (
+        "Model-readiness build that supplied the historical candidate features and outcome."
+    ),
+    "locked_temporal_candidates_excluded": (
+        "Whether retrieval explicitly excluded every locked temporal-test candidate row."
+    ),
+    "median_similarity_distance": (
+        "Median weighted-standardized distance among the returned historical matches."
+    ),
+    "oldest_candidate_origin_year": (
+        "Earliest feature-origin year represented among the returned historical matches."
+    ),
+    "newest_candidate_origin_year": (
+        "Latest feature-origin year represented among the returned historical matches."
+    ),
+    "analogue_median_cumulative_change_pct": (
+        "Cumulative percentage change implied by the median historical analogue log outcome."
+    ),
+    "analogue_inverse_distance_cumulative_change_pct": (
+        "Cumulative percentage change implied by the inverse-distance historical outcome summary."
+    ),
+    "analogue_outcome_p10_cumulative_change_pct": (
+        "Cumulative percentage change implied by the tenth-percentile historical outcome."
+    ),
+    "analogue_outcome_p90_cumulative_change_pct": (
+        "Cumulative percentage change implied by the ninetieth-percentile historical outcome."
+    ),
+    "outcome_range_is_calibrated_interval": (
+        "False for the descriptive analogue range; it is not a calibrated forecast interval."
+    ),
+    "analogue_role": "Required interpretation of analogue output relative to the primary forecast.",
+    "current_analogue_run_id": (
+        "MLflow run ID of the current-neighborhood historical analogue retrieval build."
+    ),
+    "current_analogue_as_of_year": (
+        "As-of year applied consistently to every current query in the retrieval run."
+    ),
+    "retrieval_config_name": (
+        "Stable exact-reference or LSH configuration name used to retrieve this result."
+    ),
+    "retrieval_method": (
+        "Declared exhaustive, shortlisted, or exact indexed method used for retrieval."
+    ),
+    "lsh_bucket_length": (
+        "Random-projection hash bucket width; null for exhaustive exact retrieval."
+    ),
+    "lsh_num_hash_tables": (
+        "Number of deterministic random-projection hash tables; null for exhaustive retrieval."
+    ),
+    "approximate_match_count": (
+        "Matches returned for the query and approximate configuration, up to the requested top-k."
+    ),
+    "approximate_candidate_tract_count": (
+        "Distinct physical candidate tracts returned by the approximate configuration."
+    ),
+    "exact_top_k_overlap_count": (
+        "Approximate candidates also present in the exhaustive exact top-k result."
+    ),
+    "exact_candidate_state_overlap_count": (
+        "Approximate matches retaining both the exact candidate tract and historical origin year."
+    ),
+    "complete_top_k": (
+        "Whether the approximate configuration returned the requested number of distinct matches."
+    ),
+    "exact_top_k_recall": (
+        "Share of exhaustive exact top-k candidates recovered by the approximate result."
+    ),
+    "exact_candidate_state_recall": (
+        "Share of exact top-k candidate tract-and-origin-year states recovered by the "
+        "approximate result."
+    ),
+    "exact_top_three_retention_count": (
+        "Exhaustive exact top-three candidates retained by the approximate result."
+    ),
+    "exact_top_three_retention_share": (
+        "Share of the exhaustive exact top three retained by the approximate result."
+    ),
+    "approximate_analogue_median_log_change": (
+        "Median historical outcome produced by the approximate match list."
+    ),
+    "approximate_analogue_inverse_distance_log_change": (
+        "Inverse-distance historical outcome summary produced by the approximate match list."
+    ),
+    "exact_analogue_median_log_change": (
+        "Median historical outcome produced by the exhaustive exact match list."
+    ),
+    "exact_analogue_inverse_distance_log_change": (
+        "Inverse-distance historical outcome summary produced by the exhaustive exact match list."
+    ),
+    "median_outcome_drift_log_change": (
+        "Approximate minus exact median historical outcome on the cumulative log-change scale."
+    ),
+    "inverse_distance_outcome_drift_log_change": (
+        "Approximate minus exact inverse-distance outcome on the cumulative log-change scale."
+    ),
+    "complete_top_k_share": (
+        "Share of benchmark queries receiving the requested number of distinct matches."
+    ),
+    "mean_exact_top_k_recall": (
+        "Mean share of exhaustive exact top-k candidates recovered across benchmark queries."
+    ),
+    "p10_exact_top_k_recall": (
+        "Tenth percentile query-level exact top-k recall for the configuration."
+    ),
+    "mean_exact_candidate_state_recall": (
+        "Mean share of exact candidate tract-and-origin-year states retained across queries."
+    ),
+    "minimum_exact_candidate_state_recall": (
+        "Lowest query-level exact candidate tract-and-origin-year retention for the configuration."
+    ),
+    "mean_top_k_jaccard_similarity": (
+        "Mean intersection-over-union between approximate and exact top-k candidate sets."
+    ),
+    "mean_exact_top_three_retention_share": (
+        "Mean share of exact top-three candidates retained by the approximate result."
+    ),
+    "mean_absolute_median_outcome_drift_log_change": (
+        "Mean absolute approximate-versus-exact drift in the median historical outcome."
+    ),
+    "mean_absolute_inverse_distance_outcome_drift_log_change": (
+        "Mean absolute approximate-versus-exact drift in the inverse-distance outcome summary."
+    ),
+    "shortlist_pair_count": (
+        "Query-to-candidate pairs generated by the LSH shortlist before distinct-tract reranking."
+    ),
+    "retrieval_elapsed_seconds": (
+        "Measured benchmark seconds for candidate generation and final retrieval materialization."
+    ),
+    "benchmark_queries_per_group": (
+        "Maximum deterministic queries selected per Census-region and modeling-cohort group."
+    ),
+    "scalable_analogue_run_id": (
+        "MLflow run ID of the scalable analogue retrieval benchmark."
+    ),
+    "scalable_analogue_as_of_year": (
+        "Current model-ready year used for every query in the scalable retrieval benchmark."
+    ),
+    "retrieved_state_count": (
+        "Candidate tract-year states requested from the index before distinct-tract reranking."
+    ),
+    "tree_expansion_count": (
+        "Number of times the requested neighbor count doubled to resolve distinct tracts or ties."
+    ),
+    "tree_leaf_size": "Maximum leaf-size setting used to construct the exact KD-tree.",
+    "tree_initial_neighbors": (
+        "Candidate states initially requested before any distinct-tract or tie expansion."
+    ),
+    "tree_expansion_factor": (
+        "Multiplier applied when the indexed candidate request requires expansion."
+    ),
+    "tree_query_batch_size": (
+        "Current queries evaluated before resetting and accumulating the tree distance counter."
+    ),
+    "tree_build_elapsed_seconds": "Measured seconds required to construct the exact KD-tree.",
+    "tree_array_bytes": (
+        "Bytes occupied by the NumPy arrays returned from the fitted KD-tree structure."
+    ),
+    "current_eligible_query_count": (
+        "Current model-ready tracts eligible for the historical-analogue representation."
+    ),
+    "candidate_state_count": "Historical tract-year states present in the indexed candidate pool.",
+    "candidate_state_count_from_index": (
+        "Historical tract-year states confirmed in the constructed index."
+    ),
+    "sample_name": "Stable name of the current-query population used for the scale measurement.",
+    "possible_pair_count": (
+        "Query count multiplied by candidate-state count for one exhaustive distance pass."
+    ),
+    "distance_computation_count": (
+        "Distance computations reported by the KD-tree, including repeated work after expansion."
+    ),
+    "distance_computation_ratio": (
+        "Reported KD-tree distance computations divided by one exhaustive query-candidate pass; "
+        "it can exceed one when expansion repeats work."
+    ),
+    "query_elapsed_seconds": (
+        "Measured seconds for indexed querying and distinct-community post-processing."
+    ),
+    "queries_per_second": "Current queries completed per measured indexed-query second.",
+    "mean_retrieved_state_count": (
+        "Mean candidate states requested from the index for each current query."
+    ),
+    "maximum_retrieved_state_count": (
+        "Largest candidate-state request needed by any current query in the population."
+    ),
+    "expanded_query_share": (
+        "Share of current queries that needed more than the initial candidate-state request."
+    ),
+    "maximum_tree_expansion_count": (
+        "Largest number of candidate-request expansions needed by a current query."
+    ),
+    "minimum_exact_top_k_recall": (
+        "Lowest query-level physical-community recall against the exhaustive exact reference."
+    ),
+    "analogue_tree_run_id": "MLflow run ID of the exact indexed analogue retrieval benchmark.",
+    "analogue_tree_as_of_year": (
+        "Current model-ready year used by the exact indexed retrieval benchmark."
+    ),
+    "serving_release_id": (
+        "Immutable identifier shared by all tables in one validated application release."
+    ),
+    "serving_schema_version": "Executable serving-table contract version.",
+    "serving_built_at_utc": "UTC timestamp when the serving release was built.",
+    "serving_built_at_utc_text": (
+        "ISO-formatted UTC build timestamp retained while creating the release manifest."
+    ),
+    "serving_as_of_year": "Latest model-ready year represented by this serving release.",
+    "source_model_readiness_build_id": (
+        "Model-readiness build used to construct this serving release."
+    ),
+    "source_analogue_tree_run_id": (
+        "Validated job-604 MLflow run whose exact retrieval policy this release uses."
+    ),
+    "component_name": "Application component represented by the release-manifest row.",
+    "table_name": "Managed table represented by the release-manifest row.",
+    "row_count": "Validated row count published for the named serving table.",
+    "horizons_csv": "Comma-separated outcome horizons included in the serving release.",
+    "release_status": "Manifest publication status after all serving validations pass.",
+    "analogue_available": "Whether a complete approved historical top-k is available.",
+    "availability_reason": (
+        "Plain-language machine-readable reason that an analogue result is available or absent."
+    ),
+    "target_representativeness_band": (
+        "Housing-composition context for how broadly the FHFA single-family target represents "
+        "the tract."
+    ),
+    "target_scope_note": (
+        "Application-ready warning that describes the supported FHFA single-family outcome scope."
+    ),
+    "strongest_shared_family": (
+        "Feature family with the smallest mean absolute standardized query-to-candidate gap."
+    ),
+    "strongest_shared_family_display_name": (
+        "Readable label for the closest feature family."
+    ),
+    "strongest_shared_family_gap": (
+        "Smallest family-level mean absolute standardized query-to-candidate gap."
+    ),
+    "second_shared_family": "Feature family with the second-smallest standardized gap.",
+    "second_shared_family_display_name": (
+        "Readable label for the second-closest feature family."
+    ),
+    "second_shared_family_gap": "Second-smallest family-level standardized gap.",
+    "largest_difference_family": (
+        "Feature family with the largest mean absolute standardized query-to-candidate gap."
+    ),
+    "largest_difference_family_display_name": (
+        "Readable label for the most different feature family."
+    ),
+    "largest_difference_family_gap": "Largest family-level standardized gap.",
+    "second_difference_family": "Feature family with the second-largest standardized gap.",
+    "second_difference_family_display_name": (
+        "Readable label for the second-most-different feature family."
+    ),
+    "second_difference_family_gap": "Second-largest family-level standardized gap.",
+    "strongest_shared_feature_display_name": (
+        "Readable label for the governed feature with the smallest standardized gap."
+    ),
+    "strongest_shared_query_value": (
+        "Training-imputed unscaled query value for the closest governed feature."
+    ),
+    "strongest_shared_candidate_value": (
+        "Training-imputed unscaled candidate value for the closest governed feature."
+    ),
+    "strongest_shared_standardized_gap": (
+        "Absolute standardized gap for the closest governed feature."
+    ),
+    "largest_difference_feature_display_name": (
+        "Readable label for the governed feature with the largest standardized gap."
+    ),
+    "largest_difference_query_value": (
+        "Training-imputed unscaled query value for the most different governed feature."
+    ),
+    "largest_difference_candidate_value": (
+        "Training-imputed unscaled candidate value for the most different governed feature."
+    ),
+    "largest_difference_standardized_gap": (
+        "Absolute standardized gap for the most different governed feature."
+    ),
+    "query_imputed_feature_count": (
+        "Number of query explanation features filled by the training-fitted imputer."
+    ),
+    "candidate_imputed_feature_count": (
+        "Number of candidate explanation features filled by the training-fitted imputer."
+    ),
+    "explanation_scope_note": (
+        "Application-ready warning that similarity explanations are descriptive, not causal."
+    ),
+    "trajectory_year_offset": "Years elapsed after the historical candidate origin.",
+    "trajectory_observation_year": "Calendar year represented by the aligned path row.",
+    "trajectory_hpi": "Observed FHFA single-family tract HPI at the aligned path year.",
+    "trajectory_cumulative_log_change": (
+        "Log FHFA HPI change from the historical candidate origin through this path year."
+    ),
+    "trajectory_cumulative_change_pct": (
+        "Percentage FHFA HPI change from the candidate origin through this path year."
+    ),
+    "trajectory_observed": "Whether an observed FHFA HPI is available at this path offset.",
+    "trajectory_path_complete": (
+        "Whether every annual FHFA observation from candidate origin through horizon is present."
+    ),
+    "is_horizon_endpoint": "Whether this row is the declared analogue outcome endpoint.",
+    "trajectory_source_snapshot_id": "FHFA source snapshot supporting this path observation.",
+    "trajectory_role": "Machine-readable boundary for the descriptive historical path.",
+    "trajectory_scope_note": (
+        "Application-ready warning that the observed historical path is not a forecast."
+    ),
     "top_k_overlap_count": (
         "Number of candidate tract-year states shared with the representation baseline top-k."
     ),
@@ -737,10 +1226,29 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "evaluation_build_id": "Identifier for the model-evaluation figure build.",
     "evaluation_built_at_utc": "UTC timestamp when the evaluation figure build completed.",
+    "similarity_figure_build_id": "Identifier for the similarity communication figure build.",
+    "similarity_figure_built_at_utc": (
+        "UTC timestamp when the similarity communication figure build completed."
+    ),
+    "figure_sequence": "Display order of the figure within its governed matched set.",
     "figure_file_name": "Stable PNG file name within the versioned evaluation build directory.",
+    "figure_title": "Human-readable title of the rendered figure.",
     "figure_path": "Managed-volume path containing the rendered evaluation figure.",
     "source_forecast_run_id": "Forecast MLflow run represented by the evaluation figure build.",
     "source_similarity_run_id": "Similarity MLflow run represented by the evaluation figure build.",
+    "source_analogue_audit_run_id": (
+        "Job-601 analogue audit run represented by the similarity figure build."
+    ),
+    "source_analogue_selection_run_id": (
+        "Job-602 analogue selection run represented by the similarity figure build."
+    ),
+    "source_serving_release_id": (
+        "Complete schema-1.1 serving release represented by the similarity figure build."
+    ),
+    "case_query_geoid_2020": (
+        "Current tract used for the declared communication case study in this figure build."
+    ),
+    "case_horizon_years": "Outcome horizon used by the declared communication case study.",
 }
 
 
@@ -786,6 +1294,7 @@ def apply_table_metadata(
     gold_schema: str | None = None,
     model_schema: str | None = None,
     evaluation_schema: str | None = None,
+    serving_schema: str | None = None,
     quality_schema: str | None = None,
 ) -> list[str]:
     """Apply idempotent table descriptions and column comments to existing managed tables."""
@@ -796,6 +1305,7 @@ def apply_table_metadata(
         gold_schema = schema
         model_schema = schema
         evaluation_schema = schema
+        serving_schema = schema
         quality_schema = schema
     layer_schemas = {
         "bronze": bronze_schema,
@@ -803,10 +1313,11 @@ def apply_table_metadata(
         "gold": gold_schema,
         "model": model_schema,
         "evaluation": evaluation_schema,
+        "serving": serving_schema,
         "quality": quality_schema,
     }
     if any(value is None for value in layer_schemas.values()):
-        raise ValueError("Provide schema or all six layer-specific schemas")
+        raise ValueError("Provide schema or all seven layer-specific schemas")
 
     updated: list[str] = []
     for table, metadata in TABLE_METADATA.items():

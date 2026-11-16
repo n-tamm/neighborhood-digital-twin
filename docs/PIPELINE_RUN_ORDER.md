@@ -11,18 +11,21 @@ Every bundle job has a sortable display name and four tags:
 
 - `project=neighborhood-digital-twin` keeps the project jobs filterable;
 - `pipeline_group` is `setup`, `bronze`, `silver`, `gold`, `analysis`, `modeling`, `evaluation`,
-  or `metadata`;
+  `serving`, `presentation`, or `metadata`;
 - `run_order` matches the number in the display name; and
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-502 Modeling`, `600-601 Evaluation`, and `900 Metadata`. Jobs increment by one inside each
-three-digit layer range,
+`400-401 Analysis`, `500-503 Modeling`, `600-604 Evaluation`, `700 Serving`, `800 Presentation`,
+and `900 Metadata`.
+Jobs increment
+by one inside each three-digit layer range,
 leaving room to add later jobs without renumbering another layer. These numbers communicate
 dependency order; they do not create an automatic dependency between separate jobs. The reserved
 ranges are `000-099` for setup and operations, `100-199` for bronze, `200-299` for silver,
 `300-399` for gold, `400-499` for analysis, `500-599` for modeling, `600-699` for evaluation,
-and `900-999` for metadata.
+`700-799` for serving, `800-899` for presentation and final-analysis builds, and `900-999` for
+metadata.
 The bundle job keys remain stable even if a display label is clarified later.
 
 ## Job inventory
@@ -49,8 +52,14 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 500 | Modeling | `forecast_baselines` | After 302 or forecast-development code changes | Publishes validation-only baseline predictions and scorecards; does not open locked tests |
 | 501 | Modeling | `similarity_baselines` | After 300 or similarity-development code changes | Publishes a small reviewable current-state baseline, not the final retrospective analogue product |
 | 502 | Modeling | `historical_analogue_baseline` | After current successful runs of 302 and 500 | Retrieves time-safe historical matches for sampled validation queries and compares their later outcomes with forecast baselines |
+| 503 | Modeling | `current_analogue_retrieval` | After a current successful run of 302, using the representation contract already selected by 602 | Applies the frozen weighted representation to selected latest-year neighborhoods without opening locked temporal-test outcomes |
 | 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
+| 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
+| 603 | Evaluation | `scalable_analogue_retrieval` | After the weighted representation is frozen and job 503 establishes an exact current-query reference | Compares deterministic LSH shortlists with exhaustive exact top-ten matches on a stratified current-query benchmark |
+| 604 | Evaluation | `analogue_tree_retrieval` | After job 603 and from the same model-readiness build | Requires an exact KD-tree to reproduce the exhaustive benchmark, then measures indexed work on 1,000 and all eligible current queries |
+| 700 | Serving | `analogue_serving_products` | After a successful current job 604 or when approved current analogues need refreshing | Publishes national exact matches, descriptive summaries, explicit availability, and an activation manifest; it does not train or select the method |
+| 800 | Presentation | `similarity_communication_figures` | After current approved outputs from 601, 602, 604, and 700 | Renders five lineage-linked similarity figures; it reads governed evidence and does not retrain or retrieve matches |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
 ## Dependency outline
@@ -76,6 +85,12 @@ The bundle job keys remain stable even if a display label is clarified later.
 302 Model readiness + 500 Forecast -------------> 502 Historical analogue baseline
 500 Forecast + 501 Similarity ------------------> 600 Model evaluation figures
 502 Historical analogue baseline --------------> 601 Analogue review and stability
+500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
+302 Model readiness ----------------------------> 503 Current analogue retrieval
+503 Exact current retrieval contract -----------> 603 Scalable retrieval benchmark
+603 Frozen exhaustive reference ----------------> 604 Exact tree retrieval benchmark
+604 Approved exact retrieval policy ------------> 700 National analogue serving release
+601/602/604 Evaluation + 700 Serving -----------> 800 Similarity communication figures
 
 All schema-overwriting paths -------------------> 900 Metadata
 ```
@@ -136,8 +151,13 @@ run them in parallel during an agreed deployment window:
 databricks bundle run forecast_baselines --profile neighborhood-twin -t team
 databricks bundle run similarity_baselines --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_baseline --profile neighborhood-twin -t team
+databricks bundle run current_analogue_retrieval --profile neighborhood-twin -t team
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 databricks bundle run historical_analogue_audit --profile neighborhood-twin -t team
+databricks bundle run historical_analogue_selection --profile neighborhood-twin -t team
+databricks bundle run scalable_analogue_retrieval --profile neighborhood-twin -t team
+databricks bundle run analogue_tree_retrieval --profile neighborhood-twin -t team
+databricks bundle run analogue_serving_products --profile neighborhood-twin -t team
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
@@ -155,6 +175,77 @@ reproduce the published candidate identities, years, ranks, and distances. It th
 declared variants on the same validation queries. The exact baselines and certifiable bounded
 rerankings are distinguished from shortlist-based stress tests in every row; the job does not use
 the locked temporal tests or select the application representation automatically.
+Job 602 follows the audit evidence but does not overwrite jobs 502 or 601. It expands the
+deterministic validation sample from one to five queries per available origin, Census region, and
+geographic-role stratum, then adds an outcome-blind supplement for any missing housing-mix,
+community-size, or ACS-uncertainty category. It requires ten distinct candidate tracts and compares
+weighted and PCA retrieval on identical queries. Its coverage table compares the selected sample
+with all eligible validation queries across time, geography, cohort, housing mix, community size,
+and ACS uncertainty. The locked temporal tests remain unavailable to this workflow.
+Job 503 applies the representation and distinct-community policy selected by job 602 to a small,
+configurable set of neighborhoods at the latest model-ready year. It fits imputation and scaling
+on point-model training rows, returns exact weighted-standardized matches, and excludes every
+locked temporal-test candidate. Its historical outcome range is descriptive context, not the
+primary forecast or a calibrated interval. The default bundle parameters retrieve one tract from
+each configured application-demo state; `query_geoids` can target specific model-ready tracts.
+Job 603 expands the current-query sample by Census region and modeling cohort, supplements any
+missing housing-composition, community-size, or ACS-uncertainty group, and treats exhaustive
+weighted top-ten retrieval as the reference. It evaluates three deterministic random-projection
+LSH configurations that generate candidate shortlists before applying the same exact distance and
+distinct-tract reranking. The benchmark records top-ten recall, Jaccard overlap, top-three
+retention, tract-year-state recall, rank displacement, historical-outcome drift, shortlist size,
+runtime, and sample coverage. It does not authorize a serving method automatically and does not
+access locked temporal-test candidate outcomes. The November 11 run rejected all three LSH
+configurations because they retained 88.7% to 99.9% of possible pairs and were slower than the
+exact reference. Rerun 603 when the representation, candidate pool, benchmark contract, or a new
+candidate-generation method changes; do not treat it as an application-serving refresh.
+Job 604 tests whether an exact scikit-learn KD-tree can retain that reference's identities, years,
+ranks, distances, and outcome summaries while avoiding the exhaustive Spark cross join. It first
+checks the same 29 job-603 queries, then measures direct indexed retrieval for a deterministic
+1,000-query sample and every eligible current query. The index operates on tract-year states and
+expands its request until the top ten distinct physical tracts and any boundary tie are resolved.
+The workflow fails on any fidelity loss, same-tract result, future outcome, locked-test access, or
+incomplete top ten. Job 604 is evaluation evidence, not the national application serving table;
+rerun it after job 603 or when its tree configuration or retrieval implementation changes.
+The November 12 run reproduced all 58 query-horizon references exactly and directly queried all
+46,719 eligible current tracts in about 193 seconds at one year and 133 seconds at three years.
+It used about 9.5% to 9.8% of an exhaustive distance pass, so the exact tree is the approved engine
+for the batch serving-table build. Job 604 remains evaluation evidence rather than an application
+refresh; job 700 applies its approved policy nationally.
+
+Job 700 rebuilds the training-only feature preprocessing for each approved horizon, constructs the
+exact KD-tree, and retrieves ten distinct historical tracts for every eligible current tract. It
+publishes append-only release partitions in `neighborhood_twin_serving`: match-level evidence, a
+query-level descriptive summary, an availability row for every current profile and horizon,
+deterministic match explanations, and aligned annual outcome trajectories. The job validates
+lineage, complete top tens, uniqueness, time safety, locked-test exclusion, explanation coverage,
+trajectory endpoints, summary reconciliation, and coverage before writing. It writes the release
+manifest last. Schema 1.0 required three `validated` manifest rows; schema 1.1 requires five. Data
+rows from a failed attempt without a complete manifest remain inactive and can be cleaned up later
+by exact release ID.
+Job 700 does not use MLflow because it applies an already evaluated and frozen retrieval policy
+rather than comparing models.
+The first live release on November 12 published 934,380 matches, 93,438 query summaries, and
+171,056 availability rows. It covered 46,719 eligible tracts at both horizons and activated the
+release only after all counts and safety checks reconciled.
+Schema-1.1 release `analogue-20261113T132155097077Z` added 934,380 deterministic explanations and
+2,803,140 aligned annual trajectory rows without changing that retrieval population. Its
+five-table run completed in 470 seconds. All one-year paths and all endpoints are observed; 23,097
+three-year match paths retain explicit intermediate gaps. Run job 900 after a successful contract
+change so the new table and column comments are applied.
+
+Job 800 reads the approved job-601 stability evidence, job-602 selection scorecard, job-604 scale
+measurements, and latest complete schema-1.1 job-700 release. It publishes five PNGs and one
+current manifest in `neighborhood_twin_evaluation`. The figures explain method flow, stability and
+representation selection, later-outcome utility, current availability, and one declared Michigan
+case. It does not fit preprocessing, change feature weights, retrieve matches, or open locked
+tests. Run it after a relevant upstream analytical change or a reviewed visual-design change, then
+run job 900 so the manifest receives its table and column metadata.
+
+The current reviewed job-800 run is `336408681381236`. It completed in 60 seconds and published
+build `20261114T204019949707Z` with five manifest rows. Job 900 run `882753226732037` then
+confirmed the manifest table description and all 14 column comments. The current build and its
+source lineage are documented in `reports/SIMILARITY_FIGURES.md`.
 
 ### Find the MLflow experiments
 
@@ -166,6 +257,10 @@ experiments are:
 - `/Shared/neighborhood-digital-twin/similarity-baselines` (experiment ID `3001817840578298`);
 - `/Shared/neighborhood-digital-twin/historical-analogues` (created by the first job-502 run).
 - `/Shared/neighborhood-digital-twin/analogue-audit-stability` (created by the first job-601 run).
+- `/Shared/neighborhood-digital-twin/analogue-selection` (created by the first job-602 run).
+- `/Shared/neighborhood-digital-twin/current-analogue-retrieval` (created by the first job-503 run).
+- `/Shared/neighborhood-digital-twin/scalable-analogue-retrieval` (created by the first job-603 run).
+- `/Shared/neighborhood-digital-twin/analogue-tree-retrieval` (created by the first job-604 run).
 
 They can also be found from **Machine Learning** or **Experiments** by searching for
 `forecast-baselines` or `similarity-baselines`. A Databricks modeling job run also links to its
@@ -185,11 +280,17 @@ IDs used by each figure build, so figures should not be associated with experime
 6. Run 400 and 401 when analytical summaries or figures need refreshing.
 7. Run 500 and 501 when the source change should be reflected in model-development outputs.
 8. Run 502 after 500 when the historical analogue evaluation should be refreshed.
-9. Run 600 when reviewed evaluation figures should reflect the forecast and current-state
+9. Run 503 when current-neighborhood analogue outputs should reflect the refreshed inputs.
+10. Run 600 when reviewed evaluation figures should reflect the forecast and current-state
    similarity runs.
-10. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
+11. Run 601 after 502 when case-review or stability evidence should reflect the updated analogue
     run.
-11. Finish with 900.
+12. Run 602 after 601 when the expanded representation-selection evidence should be refreshed.
+13. Run 603 when scalable-retrieval evidence should reflect the refreshed analogue inputs.
+14. Run 604 after 603 when exact indexed-retrieval evidence should be refreshed.
+15. Run 700 after 604 when the application release should reflect the refreshed inputs.
+16. Run 800 when the report and walkthrough should reflect the refreshed similarity evidence.
+17. Finish with 900.
 
 ### New FHFA release
 
@@ -198,8 +299,13 @@ IDs used by each figure build, so figures should not be associated with experime
 3. Refresh 400 and 401 if the added year changes coverage or reported figures.
 4. Refresh 500 and 501 after the upstream contracts pass.
 5. Refresh 502 after 500 when analogue results should reflect the new FHFA history.
-6. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
-7. Finish with 900.
+6. Refresh 503 when current-neighborhood analogue outputs should reflect the new inputs.
+7. Refresh 601 after 502 when the analogue audit should reflect the new baseline run.
+8. Refresh 602 after 601 when representation-selection evidence should reflect the new inputs.
+9. Refresh 603 when scalable-retrieval evidence should reflect the new inputs.
+10. Refresh 604 after 603 when exact indexed-retrieval evidence should reflect the new inputs.
+11. Refresh 700 after 604 to publish the new approved application release.
+12. Finish with 900.
 
 ### Geography-source change
 
@@ -225,6 +331,9 @@ equivalents are:
 
 - failed silver rebuild: run 200;
 - failed current-gold rebuild: run 300;
+- failed exact tree retrieval: correct and rerun 604 without rerunning unchanged job 603;
+- failed analogue serving release: correct and rerun 700 without rerunning unchanged job 604;
+  a partial release is inactive unless its manifest was written;
 - failed metadata application: run 900;
 - historical products not yet built: continue with 301, then 302.
 
@@ -249,6 +358,23 @@ Do not continue merely because a job is green. Before advancing:
   Historical analogue audit baselines must reproduce job 502, every variant must cover the same
   query set with top-k results, future and self matches must remain absent, and every result must
   state whether retrieval exactness was certified or only shortlist-based.
+  Expanded analogue selection must fill every available deterministic sampling stratum, compare
+  both representations on identical validation queries, retain ten distinct candidate tracts,
+  and publish selected-versus-eligible coverage without accessing locked temporal tests.
+  Current analogue retrieval must use the frozen weighted representation, return complete top-k
+  lists of distinct physical tracts, keep candidate outcomes time-safe, exclude locked temporal
+  tests, and label the outcome range as descriptive rather than calibrated.
+  Scalable analogue evaluation must retain complete exact references, represent every declared
+  query and LSH configuration even when no approximate match is returned, keep fidelity metrics
+  within valid ranges, cover every required query category, and preserve all timing and locked-test
+  safeguards before an approximate method can be considered for serving.
+  Exact tree retrieval must reproduce every job-603 benchmark community and tract-year state in
+  the same rank with zero outcome drift, complete ten distinct non-self matches for every query,
+  preserve time and locked-test safeguards, and directly measure the 29-query, 1,000-query, and
+  full-current populations before it can be selected for serving.
+- Serving: use one approved tree run and model-readiness build, publish one availability row per
+  current tract and supported horizon, reconcile every available key to one summary and ten
+  distinct matches, and activate the release manifest only after every check passes.
 - Metadata: table descriptions and comments are visible after the final overwrite.
 
 ## Maintenance rule
