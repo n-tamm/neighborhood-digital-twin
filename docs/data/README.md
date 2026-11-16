@@ -179,13 +179,10 @@ The November 7, 2026 model-readiness rebuild retains 696,886 point-in-time featu
 and reconcile exactly. Cross-decade target windows are censored with
 `target_censor_reason = 'crosses_decade_boundary'`; their split rows are assigned `ineligible_target`.
 The rebuilt panel has zero observed cross-decade targets. Training has nine, three, and two
-independent origins at one, three, and five years respectively. Five-year target and split rows
-remain in these data products for feasibility and historical reference; active model runs and
-scorecards use only one- and three-year horizons.
+independent origins at one, three, and five years respectively, so longer-horizon results require
+especially restrained claims.
 
 The November 7, 2026 forecast-development outputs contain 1,588,340 validation predictions and
-1,463 sliced forecast scorecard rows; this is a historical run that included five-year results.
-Current model runs and evaluation reports exclude that horizon. Similarity outputs are unchanged
-by this forecast refresh. These are development products rather than final claims: interval
-calibration, time-safe retrospective similarity evaluation, and the locked temporal tests remain
-outstanding.
+1,463 sliced forecast scorecard rows. Similarity outputs are unchanged by this forecast refresh.
+These are development products rather than final claims: interval calibration, time-safe
+retrospective similarity evaluation, and the locked temporal tests remain outstanding.

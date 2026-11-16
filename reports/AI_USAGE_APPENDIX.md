@@ -36,8 +36,6 @@ For code, validation may include syntax checks, unit tests, linting, type checks
 | EDA map and tract-coverage refinement and visual QA, October 31-November 1, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Historical analogue case review and stability workflow, November 7, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
 | Forecast model implementation and decade-safe target/split update on `braeden-forecasting`, November 7-8, 2026 | OpenAI ChatGPT/Codex workspace assistant | GPT-5 | Not exposed in the available session metadata | Not exposed or set by the author | None |
-| Training-only GBT tuning workflow and Databricks run, November 13, 2026 | OpenAI Copilot SDK in VS Code | Not exposed in the available session metadata | Not exposed in the available session metadata | Not exposed or set by the author | Six depth/iteration candidates; three expanding-origin folds at one year |
-| Training-only GBT feature-family ablation and Databricks run, November 13, 2026 | OpenAI Copilot SDK in VS Code | Not exposed in the available session metadata | Not exposed in the available session metadata | Not exposed or set by the author | Seven one-family removals plus full-feature reference; fixed depth 2 / 50 iterations; same three temporal folds |
 | Local forecasting meeting notebook, embedded EDA figures, and production scorecard interpretation, November 12, 2026 | OpenAI Copilot SDK in VS Code | Not exposed in the available session metadata | Not exposed in the available session metadata | Not exposed or set by the author | None |
 
 The table records only settings that can be verified. A parameter is marked as not exposed when the interface did not provide its value; no value is inferred. Add a new row whenever a different model, interface, or parameter configuration materially contributes to the project.
@@ -287,13 +285,14 @@ log change in tract FHFA single-family HPI, with a separate direct model for eac
 five-year horizon.
 
 Preprocessing is fitted on training rows only. The linear pipeline uses median imputation,
-centering/scaling, and L2 regularization (`regParam=0.05`, up to 100 iterations); the original
-tree pipeline used median imputation and fixed parameters (depth 4, 50 iterations, step size 0.05,
-subsampling 0.8, seed 699). Predictions are scored only on observed validation rows; calibration
-and locked temporal test outcomes are not used in model fitting or this development scorecard. The
-comparison retains MAE, RMSE, signed bias, tail error, subgroup and geography slices, zero-change
-skill, and majority-direction context rather than treating one aggregate score as a sufficient
-selection criterion.
+centering/scaling, and L2 regularization (`regParam=0.05`, up to 100 iterations); the tree pipeline
+uses median imputation and a fixed configuration (depth 4, 50 iterations, step size 0.05,
+subsampling 0.8, seed 699). The tree settings form a reproducible challenger, not a hyperparameter
+search. Predictions are scored only on observed validation rows; calibration and locked temporal
+test outcomes are not used in model fitting or this development scorecard. The comparison retains
+MAE, RMSE, signed bias, tail error, subgroup and geography slices, zero-change skill, and
+majority-direction context rather than treating one aggregate score as a sufficient selection
+criterion.
 
 A subsequent modeling change made the target/split contract decade-safe: an observed target is
 allowed only when its forecast origin and endpoint are in the same calendar decade; crossing
@@ -307,36 +306,6 @@ Databricks check found zero cross-decade validation predictions. Validation favo
 gradient-boosted trees at one and three years and regularized linear at five years, but the
 five-year evidence had only two training origins and one validation origin. No champion was
 selected, the locked test remained unopened, and the similarity model was not changed.
-
-After review confirmed that the GBT had not been tuned, a bounded training-only parameter search
-was added. It compares six depth/iteration combinations on up to three recent expanding-origin
-folds, minimizes mean fold MAE, and purges training targets that reach the held-out origin. It
-requires at least two usable folds; horizons with too few independent training origins keep the
-previous parameters. The selected settings, fold years, and each candidate's CV MAE are logged to
-MLflow. The implementation passed the full 106-test suite, mypy, Ruff, Python compilation, and
-`git diff --check`. After user authorization, it was deployed and run in Databricks; the job
-completed successfully and the latest scorecard is run
-`5005b56099074eb897988c44b472f654`. One-year CV selected depth 2 / 50 iterations (mean CV MAE
-0.051742 across 2017, 2018, and 2020). The 3- and 5-year settings remained at depth 4 / 50 because
-there were not enough purged folds. The one-year validation MAE was 0.071727, slightly worse than
-the previous fixed-setting result of 0.070714; 3- and 5-year GBT validation MAEs were unchanged.
-The tuning result is therefore not presented as a validation improvement or a champion decision.
-
-A follow-up feature-family ablation was added as
-[07_run_forecast_feature_ablation.py](../notebooks/05_modeling/07_run_forecast_feature_ablation.py).
-It compared the full one-year feature set with seven drop-one-family variants using the same
-purged 2017, 2018, and 2020 training folds, selected depth-2/50-iteration GBT parameters, and
-fold-local median imputation. All variants used the same 40,923, 40,959, and 44,116 held-out rows.
-Removing HPI history increased mean fold MAE from 0.051742 to 0.054092; removing county/state
-context increased it to 0.053190. Dropping affordability reduced MAE by only 0.000058, while
-community scale, housing structure, and data timing/quality had no measured difference on these
-folds. The full feature set was retained. Because the same folds selected the GBT parameters,
-these are exploratory and not independent performance estimates. The run did not access frozen
-validation, calibration, or locked-test outcomes and did not write predictions or scorecards.
-Databricks one-time run `49049616857892` completed successfully; MLflow run
-`b94172fcb75a4f4fb34c411470640915` contains the metrics. Local Python syntax and the feature-family
-partition were checked; the active local interpreter lacked `pytest` and the `ruff` command was
-unavailable, so those local checks were not run.
 
 The meeting-demo work began with a request for a self-contained offline forecasting proof of
 concept, including model features and county/state trends. A synthetic-data command-line demo was
