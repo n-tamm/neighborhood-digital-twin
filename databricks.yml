@@ -164,6 +164,9 @@ variables:
   forecast_mlflow_experiment:
     description: Shared MLflow experiment for validation-only forecast development
     default: /Shared/neighborhood-digital-twin/forecast-baselines
+  forecast_finalization_mlflow_experiment:
+    description: Shared MLflow experiment for frozen forecast calibration and final evaluation
+    default: /Shared/neighborhood-digital-twin/forecast-finalization
   similarity_mlflow_experiment:
     description: Shared MLflow experiment for neighborhood representation development
     default: /Shared/neighborhood-digital-twin/similarity-baselines
@@ -963,6 +966,39 @@ resources:
               top_k: "10"
               as_of_year: ""
               mlflow_experiment: ${var.current_analogue_mlflow_experiment}
+    forecast_finalization:
+      name: Neighborhood Digital Twin | 504 Modeling | Forecast Finalization
+      description: Calibrates frozen forecast models, opens locked tests once, and scores current tracts.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: modeling
+        run_order: "504"
+        lifecycle: final_model
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: finalize_forecasts
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/10_finalize_forecast.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              modeling_panel_table: gold_modeling_panel
+              validation_scorecard_table: forecast_baseline_scorecard
+              selection_table: forecast_model_selection
+              calibration_prediction_table: forecast_calibration_prediction
+              interval_table: forecast_interval_calibration
+              locked_test_prediction_table: forecast_locked_test_prediction
+              locked_test_scorecard_table: forecast_locked_test_scorecard
+              current_prediction_table: forecast_current_prediction
+              champions: "1:regularized_linear,3:gradient_boosted_trees"
+              linear_reg_param: "0.05"
+              gbt_parameters: "1:2:50,3:4:50"
+              interval_coverage: "0.90"
+              mlflow_experiment: ${var.forecast_finalization_mlflow_experiment}
     scalable_analogue_retrieval:
       name: Neighborhood Digital Twin | 603 Evaluation | Scalable Analogue Retrieval
       description: Benchmarks LSH shortlists against exact current historical analogue retrieval.
@@ -1112,6 +1148,31 @@ resources:
               initial_neighbors: "64"
               expansion_factor: "2"
               query_batch_size: "250"
+    forecast_serving_products:
+      name: Neighborhood Digital Twin | 701 Serving | Current Forecast Products
+      description: Publishes validated current forecasts and explicit availability behind a versioned serving contract.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: serving
+        run_order: "701"
+        lifecycle: serving_release
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: publish_current_forecast_products
+          notebook_task:
+            notebook_path: ./notebooks/06_representations/02_build_forecast_serving_products.py
+            base_parameters:
+              catalog: ${var.catalog}
+              gold_schema: ${var.gold_schema}
+              model_schema: ${var.model_schema}
+              serving_schema: ${var.serving_schema}
+              current_profile_table: gold_tract_profile_current
+              current_prediction_table: forecast_current_prediction
+              forecast_table: serving_forecast_current
+              availability_table: serving_forecast_availability_current
+              manifest_table: serving_release_manifest
     table_metadata_pipeline:
       name: Neighborhood Digital Twin | 900 Metadata | Table and Column Comments
       description: Applies table descriptions, declared grains, and column comments.

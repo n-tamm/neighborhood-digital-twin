@@ -16,7 +16,7 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-503 Modeling`, `600-604 Evaluation`, `700 Serving`, `800 Presentation`,
+`400-401 Analysis`, `500-504 Modeling`, `600-604 Evaluation`, `700-701 Serving`, `800 Presentation`,
 and `900 Metadata`.
 Jobs increment
 by one inside each three-digit layer range,
@@ -53,12 +53,14 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 501 | Modeling | `similarity_baselines` | After 300 or similarity-development code changes | Publishes a small reviewable current-state baseline, not the final retrospective analogue product |
 | 502 | Modeling | `historical_analogue_baseline` | After current successful runs of 302 and 500 | Retrieves time-safe historical matches for sampled validation queries and compares their later outcomes with forecast baselines |
 | 503 | Modeling | `current_analogue_retrieval` | After a current successful run of 302, using the representation contract already selected by 602 | Applies the frozen weighted representation to selected latest-year neighborhoods without opening locked temporal-test outcomes |
+| 504 | Modeling | `forecast_finalization` | Once after job 500 evidence is reviewed and the champion and interval method are frozen | Calibrates intervals, opens the locked tests without retuning, and scores current model-ready tracts |
 | 600 | Evaluation | `model_evaluation_figures` | After current successful runs of 500 and 501 | Renders seven versioned model-diagnostic figures and publishes their run-linked manifest |
 | 601 | Evaluation | `historical_analogue_audit` | After a current successful run of 502 | Reproduces the published baselines, builds deterministic review cases, and measures stability under bounded retrieval variants |
 | 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
 | 603 | Evaluation | `scalable_analogue_retrieval` | After the weighted representation is frozen and job 503 establishes an exact current-query reference | Compares deterministic LSH shortlists with exhaustive exact top-ten matches on a stratified current-query benchmark |
 | 604 | Evaluation | `analogue_tree_retrieval` | After job 603 and from the same model-readiness build | Requires an exact KD-tree to reproduce the exhaustive benchmark, then measures indexed work on 1,000 and all eligible current queries |
 | 700 | Serving | `analogue_serving_products` | After a successful current job 604 or when approved current analogues need refreshing | Publishes national exact matches, descriptive summaries, explicit availability, and an activation manifest; it does not train or select the method |
+| 701 | Serving | `forecast_serving_products` | After the approved job-504 finalization output changes | Publishes compact current forecasts, intervals, baseline context, explicit availability, and activation records; it does not fit a model |
 | 800 | Presentation | `similarity_communication_figures` | After current approved outputs from 601, 602, 604, and 700 | Renders five lineage-linked similarity figures; it reads governed evidence and does not retrain or retrieve matches |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
@@ -87,9 +89,11 @@ The bundle job keys remain stable even if a display label is clarified later.
 502 Historical analogue baseline --------------> 601 Analogue review and stability
 500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
 302 Model readiness ----------------------------> 503 Current analogue retrieval
+500 Frozen forecast decision -------------------> 504 Calibration, locked test, current scoring
 503 Exact current retrieval contract -----------> 603 Scalable retrieval benchmark
 603 Frozen exhaustive reference ----------------> 604 Exact tree retrieval benchmark
 604 Approved exact retrieval policy ------------> 700 National analogue serving release
+504 Frozen current forecast output -------------> 701 National forecast serving release
 601/602/604 Evaluation + 700 Serving -----------> 800 Similarity communication figures
 
 All schema-overwriting paths -------------------> 900 Metadata
@@ -207,6 +211,17 @@ expands its request until the top ten distinct physical tracts and any boundary 
 The workflow fails on any fidelity loss, same-tract result, future outcome, locked-test access, or
 incomplete top ten. Job 604 is evaluation evidence, not the national application serving table;
 rerun it after job 603 or when its tree configuration or retrieval implementation changes.
+Job 504 is deliberately absent from the routine development sequence. Run it only after the team
+has recorded the per-horizon champion choices and frozen the interval method. It fits calibration
+predictions from labels ending before each calibration origin, estimates the declared interval,
+opens each locked temporal test once without retuning, and refits the same specifications for the
+latest current origin. Rerun 504 only when a documented final model contract changes; a rerun after
+examining locked-test results must never be used to improve the reported test performance.
+Job 701 is a packaging and validation boundary, not a modeling workflow. It reads the frozen
+current predictions from job 504, publishes one compact forecast row for every supported
+tract-horizon, records an unavailable reason for every other current tract, and activates the
+release only after both table contracts reconcile. Run job 900 after 701 so the new serving tables
+receive their registered descriptions and column comments.
 The November 12 run reproduced all 58 query-horizon references exactly and directly queried all
 46,719 eligible current tracts in about 193 seconds at one year and 133 seconds at three years.
 It used about 9.5% to 9.8% of an exhaustive distance pass, so the exact tree is the approved engine
