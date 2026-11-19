@@ -84,6 +84,60 @@ class RecordingExecutor:
         ]
 
 
+class ForecastRecordingExecutor(RecordingExecutor):
+    """Executor double with independent complete analogue and forecast releases."""
+
+    def fetch_frame(
+        self,
+        statement: str,
+        parameters: Mapping[str, Any] | None = None,
+    ) -> pd.DataFrame:
+        """Return the component set requested by the manifest query."""
+
+        del parameters
+        components = (
+            {"serving_forecast_current", "serving_forecast_availability_current"}
+            if "component_name = 'forecasts'" in statement
+            else REQUIRED_RELEASE_COMPONENTS
+        )
+        return pd.DataFrame(
+            [
+                {
+                    "serving_release_id": "forecast-1"
+                    if "component_name = 'forecasts'" in statement
+                    else "release-1",
+                    "table_name": component,
+                    "release_status": "validated",
+                    "serving_built_at_utc": "2026-11-19T00:00:00Z",
+                }
+                for component in components
+            ]
+        )
+
+    def fetch_frames(
+        self,
+        queries: Sequence[tuple[str, Mapping[str, Any] | None]],
+    ) -> list[pd.DataFrame]:
+        """Append forecast availability and prediction frames to the base evidence."""
+
+        frames = super().fetch_frames(queries[:7])
+        self.batch_queries = queries
+        return [
+            *frames,
+            pd.DataFrame(
+                [{"horizon_years": 1, "forecast_available": True}]
+            ),
+            pd.DataFrame(
+                [
+                    {
+                        "horizon_years": 1,
+                        "prediction_annualized_change_pct": 2.0,
+                    }
+                ]
+            ),
+        ]
+
+
 def test_sample_settings_and_repository_load_real_fixture() -> None:
     """The local app fixture should satisfy the same top-level view contract as live data."""
 
@@ -175,6 +229,23 @@ def test_live_repository_batches_neighborhood_queries_and_loads_geometry() -> No
     assert "coalesce(b.geoid_2020, h.geoid)" in executor.batch_queries[2][0]
     assert neighborhood.bounds["minimum_longitude"] == -86.5
     assert neighborhood.map_context["geoid_2020"].tolist() == ["01001020300"]
+
+
+def test_live_repository_loads_forecast_release_without_mixing_manifest_ids() -> None:
+    """Forecast evidence should use its own complete release and tract queries."""
+
+    executor = ForecastRecordingExecutor()
+    repository = DatabricksNeighborhoodRepository(
+        AppSettings(data_mode="live", warehouse_id="warehouse-1"),
+        executor,
+    )
+
+    neighborhood = repository.load_neighborhood("01001020300")
+
+    assert len(executor.batch_queries) == 9
+    assert neighborhood.forecast_release["serving_release_id"] == "forecast-1"
+    assert neighborhood.forecast_horizon_available(1)
+    assert neighborhood.forecasts.iloc[0]["prediction_annualized_change_pct"] == 2.0
 
 
 def test_geographic_browser_rejects_unsafe_or_malformed_identifiers() -> None:

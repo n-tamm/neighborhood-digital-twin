@@ -30,6 +30,9 @@ REQUIRED_RELEASE_COMPONENTS = frozenset(
         "serving_analogue_trajectory_current",
     }
 )
+REQUIRED_FORECAST_RELEASE_COMPONENTS = frozenset(
+    {"serving_forecast_current", "serving_forecast_availability_current"}
+)
 GEOID_PATTERN = re.compile(r"^[0-9]{11}$")
 IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -98,6 +101,9 @@ class NeighborhoodData:
     summaries: pd.DataFrame
     matches: pd.DataFrame
     trajectories: pd.DataFrame
+    forecast_release: Mapping[str, Any]
+    forecast_availability: pd.DataFrame
+    forecasts: pd.DataFrame
     data_mode: str
 
     def horizon_available(self, horizon_years: int) -> bool:
@@ -105,6 +111,17 @@ class NeighborhoodData:
 
         rows = self.availability.loc[
             self.availability["horizon_years"] == horizon_years, "analogue_available"
+        ]
+        return bool(rows.iloc[0]) if not rows.empty else False
+
+    def forecast_horizon_available(self, horizon_years: int) -> bool:
+        """Return whether an approved current forecast exists for the horizon."""
+
+        if self.forecast_availability.empty:
+            return False
+        rows = self.forecast_availability.loc[
+            self.forecast_availability["horizon_years"] == horizon_years,
+            "forecast_available",
         ]
         return bool(rows.iloc[0]) if not rows.empty else False
 
@@ -195,6 +212,7 @@ class DatabricksNeighborhoodRepository:
         self._settings = settings
         self._executor = executor
         self._release = self._load_active_release()
+        self._forecast_release = self._load_active_forecast_release()
 
     def _table(self, schema: str, table: str) -> str:
         return f"{self._settings.catalog}.{schema}.{table}"
@@ -219,6 +237,29 @@ class DatabricksNeighborhoodRepository:
                 first["component_count"] = len(components)
                 return first
         raise RuntimeError("No validated serving release contains all five required components.")
+
+    def _load_active_forecast_release(self) -> dict[str, Any]:
+        """Select the newest complete forecast release, or retain an explicit pending state."""
+
+        manifest = self._executor.fetch_frame(
+            f"""
+            SELECT *
+            FROM {self._table(self._settings.serving_schema, "serving_release_manifest")}
+            WHERE component_name = 'forecasts'
+              AND release_status = 'validated'
+            ORDER BY serving_built_at_utc DESC, serving_release_id DESC
+            """
+        )
+        if manifest.empty:
+            return {}
+        for release_id in manifest["serving_release_id"].drop_duplicates():
+            candidate = manifest.loc[manifest["serving_release_id"] == release_id]
+            components = set(candidate["table_name"].astype(str))
+            if REQUIRED_FORECAST_RELEASE_COMPONENTS.issubset(components):
+                first = candidate.iloc[0].to_dict()
+                first["component_count"] = len(components)
+                return first
+        return {}
 
     def search_places(self, search_text: str, limit: int = 12) -> pd.DataFrame:
         """Search canonical tract, county, or state labels within the active release."""
@@ -503,6 +544,53 @@ class DatabricksNeighborhoodRepository:
             WHERE query_geoid_2020 = :geoid AND serving_release_id = :release_id
             ORDER BY horizon_years, match_rank, trajectory_year_offset
             """
+        queries: list[tuple[str, Mapping[str, Any] | None]] = [
+            (profile_query, {"geoid": geoid_2020}),
+            (map_context_query, {"geoid": geoid_2020}),
+            (history_query, {"geoid": geoid_2020}),
+            (availability_query, common),
+            (summary_query, common),
+            (match_query, common),
+            (trajectory_query, common),
+        ]
+        if self._forecast_release:
+            forecast_availability_table = self._table(
+                self._settings.serving_schema,
+                "serving_forecast_availability_current",
+            )
+            forecast_table = self._table(
+                self._settings.serving_schema,
+                "serving_forecast_current",
+            )
+            forecast_common = {
+                "geoid": geoid_2020,
+                "forecast_release_id": self._forecast_release["serving_release_id"],
+            }
+            queries.extend(
+                [
+                    (
+                        f"""
+                        SELECT *
+                        FROM {forecast_availability_table}
+                        WHERE geoid_2020 = :geoid
+                          AND serving_release_id = :forecast_release_id
+                        ORDER BY horizon_years
+                        """,
+                        forecast_common,
+                    ),
+                    (
+                        f"""
+                        SELECT *
+                        FROM {forecast_table}
+                        WHERE geoid_2020 = :geoid
+                          AND serving_release_id = :forecast_release_id
+                        ORDER BY horizon_years
+                        """,
+                        forecast_common,
+                    ),
+                ]
+            )
+        frames = self._executor.fetch_frames(queries)
         (
             profile,
             map_context,
@@ -511,17 +599,11 @@ class DatabricksNeighborhoodRepository:
             summaries,
             matches,
             trajectories,
-        ) = self._executor.fetch_frames(
-            [
-                (profile_query, {"geoid": geoid_2020}),
-                (map_context_query, {"geoid": geoid_2020}),
-                (history_query, {"geoid": geoid_2020}),
-                (availability_query, common),
-                (summary_query, common),
-                (match_query, common),
-                (trajectory_query, common),
-            ]
-        )
+        ) = frames[:7]
+        if self._forecast_release:
+            forecast_availability, forecasts = frames[7:9]
+        else:
+            forecast_availability, forecasts = pd.DataFrame(), pd.DataFrame()
         if len(profile) != 1:
             raise LookupError(f"No unique current profile exists for tract {geoid_2020}.")
         selected_geometry = map_context.loc[map_context["geoid_2020"] == geoid_2020]
@@ -536,6 +618,9 @@ class DatabricksNeighborhoodRepository:
             summaries=summaries,
             matches=matches,
             trajectories=trajectories,
+            forecast_release=dict(self._forecast_release),
+            forecast_availability=forecast_availability,
+            forecasts=forecasts,
             data_mode="live",
         )
 
@@ -635,6 +720,9 @@ class SampleNeighborhoodRepository:
             summaries=pd.DataFrame(self._payload["summaries"]),
             matches=pd.DataFrame(self._payload["matches"]),
             trajectories=pd.DataFrame(self._payload["trajectories"]),
+            forecast_release={},
+            forecast_availability=pd.DataFrame(),
+            forecasts=pd.DataFrame(),
             data_mode="sample",
         )
 
