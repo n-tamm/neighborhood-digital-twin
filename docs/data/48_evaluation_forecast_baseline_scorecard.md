@@ -16,9 +16,11 @@ majority-direction benchmark, and lift over that benchmark. It also records obse
 counts. Slices include overall performance, independent forecast-origin year, longitudinal
 cohort, Census region, geographic transfer, housing composition, ACS uncertainty, and state.
 
-These are point-forecast development metrics. Interval coverage and width belong here after the
-reserved calibration workflow exists, while final locked-test results must remain unopened until
-model and uncertainty choices are frozen.
+These are point-forecast development metrics used before finalization. Reserved-origin interval
+calibration now lives in `forecast_interval_calibration`, while the once-opened final point and
+interval results live in `forecast_locked_test_scorecard`. Keeping those products separate makes
+it clear which evidence was available for model selection and which evidence was used only for the
+final claim and release decision.
 
 The November 7, 2026 build contains 1,463 rows across seven forecast methods. Directional accuracy
 must always be read beside
