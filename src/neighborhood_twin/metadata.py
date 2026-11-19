@@ -257,6 +257,11 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Final locked-test point error, bias, interval coverage, and interval-width diagnostics.",
         "One row per horizon, evaluation slice, and slice value.",
     ),
+    "forecast_release_gate": TableMetadata(
+        "Frozen application-release decision comparing each champion with zero-change and its "
+        "locked interval-coverage requirement.",
+        "One row per active forecast horizon and finalization run.",
+    ),
     "forecast_current_prediction": TableMetadata(
         "Current model-ready tract predictions from the frozen champion and interval contracts.",
         "One row per current model-ready tract and active forecast horizon.",
@@ -448,6 +453,7 @@ EVALUATION_TABLES = {
     "forecast_baseline_scorecard",
     "forecast_interval_calibration",
     "forecast_locked_test_scorecard",
+    "forecast_release_gate",
     "similarity_baseline_summary",
     "historical_analogue_summary",
     "historical_analogue_scorecard",

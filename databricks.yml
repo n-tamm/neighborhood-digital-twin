@@ -1067,6 +1067,30 @@ resources:
               query_batch_size: "250"
               scale_sample_size: "1000"
               mlflow_experiment: ${var.analogue_tree_mlflow_experiment}
+    forecast_release_gate:
+      name: Neighborhood Digital Twin | 605 Evaluation | Forecast Release Gate
+      description: Converts frozen locked-test evidence into auditable application-release decisions by horizon.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: evaluation
+        run_order: "605"
+        lifecycle: release_gate
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: evaluate_forecast_release_gate
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/11_evaluate_forecast_release.py
+            base_parameters:
+              catalog: ${var.catalog}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              locked_prediction_table: forecast_locked_test_prediction
+              locked_scorecard_table: forecast_locked_test_scorecard
+              release_gate_table: forecast_release_gate
+              minimum_observation_count: "1000"
+              interval_coverage_tolerance: "0.10"
     similarity_communication_figures:
       name: Neighborhood Digital Twin | 800 Presentation | Similarity Communication Figures
       description: Renders five versioned similarity method, evaluation, coverage, and case-study figures.
@@ -1167,9 +1191,11 @@ resources:
               catalog: ${var.catalog}
               gold_schema: ${var.gold_schema}
               model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
               serving_schema: ${var.serving_schema}
               current_profile_table: gold_tract_profile_current
               current_prediction_table: forecast_current_prediction
+              release_gate_table: forecast_release_gate
               forecast_table: serving_forecast_current
               availability_table: serving_forecast_availability_current
               manifest_table: serving_release_manifest

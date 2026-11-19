@@ -41,6 +41,7 @@ from pyspark.sql import functions
 
 from neighborhood_twin.data.databricks import qualified_name
 from neighborhood_twin.forecast_finalization import FORECAST_CURRENT_PREDICTION_TABLE
+from neighborhood_twin.forecast_release import FORECAST_RELEASE_GATE_TABLE
 from neighborhood_twin.forecast_serving import (
     FORECAST_SERVING_AVAILABILITY_TABLE,
     FORECAST_SERVING_CURRENT_TABLE,
@@ -55,43 +56,43 @@ from neighborhood_twin.forecast_serving import (
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
 dbutils.widgets.text("gold_schema", "neighborhood_twin_gold", "Gold schema")
 dbutils.widgets.text("model_schema", "neighborhood_twin_model", "Model schema")
+dbutils.widgets.text("evaluation_schema", "neighborhood_twin_evaluation", "Evaluation schema")
 dbutils.widgets.text("serving_schema", "neighborhood_twin_serving", "Serving schema")
-dbutils.widgets.text(
-    "current_profile_table", "gold_tract_profile_current", "Current tract profile"
-)
+dbutils.widgets.text("current_profile_table", "gold_tract_profile_current", "Current tract profile")
 dbutils.widgets.text(
     "current_prediction_table",
     FORECAST_CURRENT_PREDICTION_TABLE,
     "Frozen current predictions",
 )
-dbutils.widgets.text(
-    "forecast_table", FORECAST_SERVING_CURRENT_TABLE, "Serving forecast output"
-)
+dbutils.widgets.text("release_gate_table", FORECAST_RELEASE_GATE_TABLE, "Locked-test release gate")
+dbutils.widgets.text("forecast_table", FORECAST_SERVING_CURRENT_TABLE, "Serving forecast output")
 dbutils.widgets.text(
     "availability_table",
     FORECAST_SERVING_AVAILABILITY_TABLE,
     "Serving forecast availability",
 )
-dbutils.widgets.text(
-    "manifest_table", SERVING_RELEASE_MANIFEST_TABLE, "Shared serving manifest"
-)
+dbutils.widgets.text("manifest_table", SERVING_RELEASE_MANIFEST_TABLE, "Shared serving manifest")
 
 catalog = dbutils.widgets.get("catalog").strip()
 gold_schema = dbutils.widgets.get("gold_schema").strip()
 model_schema = dbutils.widgets.get("model_schema").strip()
+evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
 serving_schema = dbutils.widgets.get("serving_schema").strip()
 current_profile_table = dbutils.widgets.get("current_profile_table").strip()
 current_prediction_table = dbutils.widgets.get("current_prediction_table").strip()
+release_gate_table = dbutils.widgets.get("release_gate_table").strip()
 forecast_table = dbutils.widgets.get("forecast_table").strip()
 availability_table = dbutils.widgets.get("availability_table").strip()
 manifest_table = dbutils.widgets.get("manifest_table").strip()
 if (
     current_prediction_table,
+    release_gate_table,
     forecast_table,
     availability_table,
     manifest_table,
 ) != (
     FORECAST_CURRENT_PREDICTION_TABLE,
+    FORECAST_RELEASE_GATE_TABLE,
     FORECAST_SERVING_CURRENT_TABLE,
     FORECAST_SERVING_AVAILABILITY_TABLE,
     SERVING_RELEASE_MANIFEST_TABLE,
@@ -99,28 +100,27 @@ if (
     raise ValueError("Forecast serving table names are fixed by the release contract")
 
 current_profile = spark.table(qualified_name(catalog, gold_schema, current_profile_table))
-current_predictions = spark.table(
-    qualified_name(catalog, model_schema, current_prediction_table)
-)
+current_predictions = spark.table(qualified_name(catalog, model_schema, current_prediction_table))
+release_gate = spark.table(qualified_name(catalog, evaluation_schema, release_gate_table))
 as_of_years = {
-    int(row[0])
-    for row in current_predictions.select("forecast_origin_year").distinct().collect()
+    int(row[0]) for row in current_predictions.select("forecast_origin_year").distinct().collect()
 }
 horizons = tuple(
-    sorted(
-        int(row[0])
-        for row in current_predictions.select("horizon_years").distinct().collect()
-    )
+    sorted(int(row[0]) for row in current_predictions.select("horizon_years").distinct().collect())
 )
 readiness_ids = {
-    row[0]
-    for row in current_predictions.select("model_readiness_build_id").distinct().collect()
+    row[0] for row in current_predictions.select("model_readiness_build_id").distinct().collect()
 }
 final_run_ids = {
-    row[0]
-    for row in current_predictions.select("forecast_final_run_id").distinct().collect()
+    row[0] for row in current_predictions.select("forecast_final_run_id").distinct().collect()
 }
-if len(as_of_years) != 1 or len(readiness_ids) != 1 or len(final_run_ids) != 1:
+gate_run_ids = {row[0] for row in release_gate.select("forecast_final_run_id").distinct().collect()}
+if (
+    len(as_of_years) != 1
+    or len(readiness_ids) != 1
+    or len(final_run_ids) != 1
+    or gate_run_ids != final_run_ids
+):
     raise RuntimeError("Current predictions must contain one as-of year and one source lineage")
 release = new_forecast_serving_release(
     as_of_year=next(iter(as_of_years)),
@@ -131,9 +131,13 @@ release = new_forecast_serving_release(
 
 # COMMAND ----------
 
-forecasts = build_serving_forecasts(current_predictions, current_profile, release).cache()
-availability = build_forecast_availability(current_profile, forecasts, release).cache()
-row_counts = validate_forecast_serving_outputs(forecasts, availability, release)
+forecasts = build_serving_forecasts(
+    current_predictions, current_profile, release_gate, release
+).cache()
+availability = build_forecast_availability(
+    current_profile, forecasts, release_gate, release
+).cache()
+row_counts = validate_forecast_serving_outputs(forecasts, availability, release_gate, release)
 manifest = build_forecast_release_manifest(spark, release, row_counts)
 
 # COMMAND ----------
@@ -143,9 +147,13 @@ published = ((forecast_table, forecasts), (availability_table, availability))
 for table, frame in published:
     raw_name = f"{catalog}.{serving_schema}.{table}"
     table_name = qualified_name(catalog, serving_schema, table)
-    if spark.catalog.tableExists(raw_name) and spark.table(raw_name).where(
-        functions.col("serving_release_id") == release.release_id
-    ).limit(1).count():
+    if (
+        spark.catalog.tableExists(raw_name)
+        and spark.table(raw_name)
+        .where(functions.col("serving_release_id") == release.release_id)
+        .limit(1)
+        .count()
+    ):
         raise RuntimeError(f"Serving release already exists in {raw_name}")
     writer = frame.write.format("delta").mode("append")
     if not spark.catalog.tableExists(raw_name):
@@ -155,9 +163,13 @@ for table, frame in published:
 # Publish the activation record last.
 manifest_raw_name = f"{catalog}.{serving_schema}.{manifest_table}"
 manifest_name = qualified_name(catalog, serving_schema, manifest_table)
-if spark.catalog.tableExists(manifest_raw_name) and spark.table(manifest_raw_name).where(
-    functions.col("serving_release_id") == release.release_id
-).limit(1).count():
+if (
+    spark.catalog.tableExists(manifest_raw_name)
+    and spark.table(manifest_raw_name)
+    .where(functions.col("serving_release_id") == release.release_id)
+    .limit(1)
+    .count()
+):
     raise RuntimeError(f"Serving release already exists in {manifest_raw_name}")
 manifest_writer = manifest.write.format("delta").mode("append")
 if not spark.catalog.tableExists(manifest_raw_name):
@@ -165,9 +177,11 @@ if not spark.catalog.tableExists(manifest_raw_name):
 manifest_writer.saveAsTable(manifest_name)
 
 for table, expected_count in row_counts.items():
-    published_count = spark.table(f"{catalog}.{serving_schema}.{table}").where(
-        functions.col("serving_release_id") == release.release_id
-    ).count()
+    published_count = (
+        spark.table(f"{catalog}.{serving_schema}.{table}")
+        .where(functions.col("serving_release_id") == release.release_id)
+        .count()
+    )
     if published_count != expected_count:
         raise RuntimeError(
             f"Published count differs for {table}: "
