@@ -262,6 +262,11 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "locked interval-coverage requirement.",
         "One row per active forecast horizon and finalization run.",
     ),
+    "forecast_final_evaluation_figure_manifest": TableMetadata(
+        "Versioned inventory of final forecast validation, locked-test, interval, and release "
+        "decision figures.",
+        "One row per figure in the current final forecast evaluation build.",
+    ),
     "forecast_current_prediction": TableMetadata(
         "Current model-ready tract predictions from the frozen champion and interval contracts.",
         "One row per current model-ready tract and active forecast horizon.",
@@ -454,6 +459,7 @@ EVALUATION_TABLES = {
     "forecast_interval_calibration",
     "forecast_locked_test_scorecard",
     "forecast_release_gate",
+    "forecast_final_evaluation_figure_manifest",
     "similarity_baseline_summary",
     "historical_analogue_summary",
     "historical_analogue_scorecard",

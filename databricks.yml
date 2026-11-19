@@ -1103,6 +1103,37 @@ resources:
               release_gate_table: forecast_release_gate
               minimum_observation_count: "1000"
               interval_coverage_tolerance: "0.10"
+    forecast_final_evaluation_figures:
+      name: Neighborhood Digital Twin | 606 Evaluation | Final Forecast Figures
+      description: Renders the frozen validation, locked-test, uncertainty, and release-gate forecast story.
+      tags:
+        project: neighborhood-digital-twin
+        pipeline_group: evaluation
+        run_order: "606"
+        lifecycle: report_refresh
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
+      tasks:
+        - task_key: render_final_forecast_evaluation
+          notebook_task:
+            notebook_path: ./notebooks/05_modeling/12_render_forecast_final_evaluation.py
+            base_parameters:
+              catalog: ${var.catalog}
+              model_schema: ${var.model_schema}
+              evaluation_schema: ${var.evaluation_schema}
+              selection_table: forecast_model_selection
+              locked_prediction_table: forecast_locked_test_prediction
+              release_gate_table: forecast_release_gate
+              figure_volume: ${var.evaluation_figure_volume}
+              figure_manifest_table: forecast_final_evaluation_figure_manifest
+          environment_key: forecast_final_figures
+      environments:
+        - environment_key: forecast_final_figures
+          spec:
+            environment_version: "2"
+            dependencies:
+              - matplotlib==3.9.2
     similarity_communication_figures:
       name: Neighborhood Digital Twin | 800 Presentation | Similarity Communication Figures
       description: Renders five versioned similarity method, evaluation, coverage, and case-study figures.
