@@ -261,6 +261,18 @@ resources:
             securable_type: TABLE
             securable_full_name: ${var.catalog}.${var.serving_schema}.serving_analogue_trajectory_current
             permission: SELECT
+        - name: current-forecasts
+          description: Quality-gated current tract forecasts and calibrated intervals.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_forecast_current
+            permission: SELECT
+        - name: forecast-availability
+          description: Per-tract forecast availability and locked-gate reasons.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.serving_schema}.serving_forecast_availability_current
+            permission: SELECT
   jobs:
     organize_project_schemas:
       name: Neighborhood Digital Twin | 000 Setup | Organize Project Schemas
