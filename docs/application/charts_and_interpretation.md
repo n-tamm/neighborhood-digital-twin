@@ -81,6 +81,21 @@ change afterward. A missing intermediate year remains a visible break. The selec
 concrete answer to "what happened next in this earlier example?" It is descriptive evidence and
 must not be labeled as the selected tract's predicted path.
 
+## Forecast and calibrated interval
+
+The forecast chart shows annualized FHFA HPI change on a horizontal axis. A blue point is the
+approved one-year prediction, its line is the 90% split-conformal interval, and a diamond is the
+state-current-trend baseline. Keeping the baseline visible matters because it is slightly better
+than the tree on one-year locked MAE even though the tree was frozen from the full validation
+evidence.
+
+The app does not draw a three-year point. That horizon failed its locked accuracy and interval
+coverage requirements. A warning gives the failed MAE and coverage comparison so the absence is
+understandable rather than looking like missing UI data.
+
+The interval describes model-error calibration from historical periods. It is not a probability
+that an individual home's value will fall in the range and cannot account for every future shock.
+
 ## Shared visual rules
 
 - Teal and navy identify the current selection or primary observed series; gold identifies
@@ -90,5 +105,5 @@ must not be labeled as the selected tract's predicted path.
 - Important charts have nearby definitions and limitations rather than relying only on tooltips.
 - Simplified geometry supports orientation and visual comparison only; it never changes a model
   feature, match rank, or forecast.
-- Forecast intervals and drivers will get their own visual semantics after the serving contract is
-  approved; they will not reuse analogue-range styling.
+- Forecast intervals use blue with a separate baseline diamond. Analogue outcome ranges remain
+  gold and are never presented as forecast uncertainty.

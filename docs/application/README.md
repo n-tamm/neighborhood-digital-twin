@@ -1,8 +1,9 @@
 # Application Documentation
 
-This folder documents the application that is implemented now. It does not describe scenarios,
-AI assistance, forecast outputs, or comparison features as completed when their serving contracts
-do not yet exist.
+This folder documents the application that is implemented now: current profiles, observed FHFA
+history, a quality-gated one-year forecast, historical analogues, maps, and explicit unavailable
+states. Scenario analysis and an AI question layer are not implemented and are not described as
+current product features.
 
 Read the files in this order:
 

@@ -183,8 +183,8 @@ def render_forecast_status(data: NeighborhoodData) -> None:
         if not data.forecast_release:
             boundary_title = "Forecast serving output is not published yet."
             boundary_text = (
-                "The forecasting workstream is still selecting the final point model and "
-                "calibrating uncertainty."
+                "This data mode does not contain an activated forecast release. The local "
+                "sample fixture intentionally omits production forecasts."
             )
         else:
             reasons = (
@@ -210,9 +210,7 @@ def render_forecast_status(data: NeighborhoodData) -> None:
                 "Current ACS profile available",
                 available=bool(profile.get("has_current_acs_profile")),
             ),
-            status_badge(
-                "FHFA history available", available=bool(profile.get("has_fhfa_history"))
-            ),
+            status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
             status_badge(
                 "Current forecast candidate", available=bool(profile.get("forecast_candidate"))
             ),
@@ -257,6 +255,17 @@ def render_forecast_status(data: NeighborhoodData) -> None:
         "The diamond is the state-trend baseline. The interval is calibrated from a reserved "
         "historical year and then evaluated on a later locked test; it is not a guarantee."
     )
+    withheld = data.forecast_availability.loc[
+        data.forecast_availability["availability_reason"] == "horizon_failed_locked_release_gate"
+    ]
+    for _, row in withheld.sort_values("horizon_years").iterrows():
+        st.warning(
+            f"The {int(row['horizon_years'])}-year forecast was withheld after the locked test. "
+            f"Its MAE was {float(row['champion_mae_log_change']):.3f}, compared with "
+            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its "
+            f"interval covered {float(row['empirical_interval_coverage']):.1%} of outcomes "
+            f"versus the {float(row['minimum_required_interval_coverage']):.0%} release minimum."
+        )
     first = data.forecasts.sort_values("horizon_years").iloc[0]
     st.markdown("#### What drives the model")
     st.write(str(first["driver_summary"]))
@@ -512,8 +521,9 @@ def render_methods(data: NeighborhoodData) -> None:
             - **Observed market history:** annual FHFA single-family tract HPI where available.
             - **Historical analogues:** ten earlier, distinct communities selected with weighted
               standardized distance and time-safe outcomes.
-            - **Forecast:** intentionally withheld until model selection and calibrated uncertainty
-              are published through a serving contract.
+            - **Forecast:** an approved one-year point estimate and calibrated interval where the
+              tract is eligible. The three-year candidate failed its locked release gate and is
+              shown as unavailable rather than being replaced with a weaker result.
             """
         )
         st.markdown("#### Important boundaries")
@@ -530,6 +540,7 @@ def render_methods(data: NeighborhoodData) -> None:
         lineage = {
             "Application mode": data.data_mode,
             "Analogue release": release.get("serving_release_id"),
+            "Forecast release": data.forecast_release.get("serving_release_id"),
             "Serving schema": release.get("serving_schema_version"),
             "Serving as of": release.get("serving_as_of_year"),
             "ACS release": profile.get("acs_release_year"),

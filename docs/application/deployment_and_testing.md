@@ -37,11 +37,11 @@ verified live data, caveats, and error handling.
 ## Implemented automated checks
 
 - configuration mode, warehouse, and SQL-identifier validation;
-- release-manifest completeness and validated-status checks;
+- independent analogue- and forecast-release completeness and validated-status checks;
 - real local fixture loading and horizon availability;
 - known-answer formatting and place labels;
 - polygon-map construction and selected-boundary layering;
-- one-connection batching for the seven neighborhood result sets;
+- one-connection batching for the nine neighborhood result sets when a forecast release exists;
 - preservation of missing HPI observations;
 - full Streamlit startup in sample mode with no rendered exception;
 - Ruff and mypy checks for the application modules; and
@@ -59,9 +59,11 @@ Before calling an app revision complete, check:
 1. the app process reaches a running state and the root page loads;
 2. a county search and an exact GEOID search both work;
 3. at least one available and one unavailable tract/horizon state render correctly;
-4. the active release ID is the same across availability, summary, match, explanation, and path;
+4. the active analogue release ID is the same across availability, summary, match, explanation,
+   and path, and the forecast tables share their own complete release ID;
 5. all ten live matches appear even though the local fixture contains only one;
-6. no analogue outcome is described as the selected tract's forecast;
+6. no analogue outcome is described as the selected tract's forecast, and the failed three-year
+   forecast appears as withheld rather than missing;
 7. desktop and narrow layouts retain readable titles, legends, tables, and caveats; and
 8. the service principal has no write permission and no access to raw or modeling tables.
 
@@ -98,3 +100,15 @@ figure error; Alaska reached the intentional 80-row cap. The New York example al
 the local boundary map remains available when a selected analogue horizon has no matches. This is
 a structural check of framing and empty-state behavior, not a substitute for viewing each map in
 a browser.
+
+## Forecast release verification
+
+On November 19, 2026, job 701 activated a forecast release with 46,719 one-year rows and 171,056
+availability rows across both supported horizons. Direct reconciliation found no invalid interval
+ordering. All 85,528 three-year rows are unavailable with
+`horizon_failed_locked_release_gate`; one-year gaps retain tract-level readiness reasons.
+
+The bundle granted the app service principal read-only access to the two forecast tables and the
+app restarted successfully. Live review should now confirm that an eligible tract shows the point,
+90% interval, state baseline, and release lineage, while the three-year warning communicates the
+locked failure metrics clearly.
