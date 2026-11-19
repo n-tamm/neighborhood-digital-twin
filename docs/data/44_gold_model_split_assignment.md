@@ -13,18 +13,17 @@
   model-fit and evaluation eligibility flags; holdout seed and method; build lineage.
 
 The locked temporal-test origins are 2024 for the one-year horizon, 2022 for three years, and 2020
-for five years. Calibration and validation origin assignments must stay inside one calendar decade.
-Their current origins are 2023 with validation 2021-2022 for one year, 2016 with validation
-2014-2015 for three years, and 2014 with validation 2013 for five years. Any target crossing a
-decade is marked `ineligible_target`; rows whose targets end after the locked test origin are
-marked `purged_pretest`.
+for five years. Current calibration origins are 2023, 2019, and 2015; validation origins are
+2021-2022, 2017-2018, and 2014. Rows whose targets end after the locked test origin are marked
+`purged_pretest`. Cross-2020 rows remain eligible only when their joined feature row belongs to the
+stable longitudinal cohort.
 
 One non-District-of-Columbia state per Census region is selected reproducibly with seed 699. The
 current holdouts are Maine, North Dakota, West Virginia, and New Mexico, covering 1,106 tracts in
 the model-ready panel. These states test transfer beyond the geographic development sample; they
 do not replace the separate out-of-time test.
 
-The table contains 2,090,658 rows across 63,367 tracts and three horizons in the original build.
-The decade-boundary rule changes the current split assignments and eligible target counts; rebuild
-the product before using it. Five-year split rows remain available for feasibility and historical
+The November 19 table contains 2,090,658 rows across 63,367 tracts and three horizons. Validation
+contains 101,703 one-year and 85,363 three-year rows. There are zero observed cross-2020 rows
+outside the stable cohort. Five-year split rows remain available for feasibility and historical
 reference, but the active forecast model does not train or score that horizon.

@@ -32,7 +32,11 @@ FORECAST_INTERVAL_TABLE = "forecast_interval_calibration"
 FORECAST_LOCKED_TEST_PREDICTION_TABLE = "forecast_locked_test_prediction"
 FORECAST_LOCKED_TEST_SCORECARD_TABLE = "forecast_locked_test_scorecard"
 FORECAST_CURRENT_PREDICTION_TABLE = "forecast_current_prediction"
-SUPPORTED_CHAMPIONS = ("regularized_linear", "gradient_boosted_trees")
+SUPPORTED_CHAMPIONS = (
+    "state_current_trend",
+    "regularized_linear",
+    "gradient_boosted_trees",
+)
 
 
 @dataclass(frozen=True)
@@ -201,22 +205,35 @@ def _score_role(
                 f"{specification.horizon_years}; found {sorted(origins)}"
             )
         prediction_origin = origins[0]
-        training = horizon_frame.where(
-            functions.col("target_is_observed")
-            & (functions.col("geographic_role") == "geographic_development")
-            & (functions.col("target_end_year") < prediction_origin)
-        )
-        if not training.limit(1).count() or not scoring.limit(1).count():
+        if not scoring.limit(1).count():
             raise ValueError(
-                f"Empty training or scoring frame for horizon {specification.horizon_years}"
+                f"Empty scoring frame for horizon {specification.horizon_years}"
             )
-        model = _fit_model(training, specification)
-        output = (
-            model.transform(scoring)
-            .select(*panel.columns, "prediction_cumulative_log_change")
-            .withColumn("model_name", functions.lit(specification.model_name))
-            .withColumn("model_training_cutoff_year", functions.lit(prediction_origin - 1))
-        )
+        if specification.model_name == "state_current_trend":
+            output = scoring.withColumn(
+                "prediction_cumulative_log_change",
+                functions.log1p(
+                    functions.col("state_origin_mean_annual_change_pct") / 100.0
+                )
+                * functions.col("horizon_years"),
+            ).withColumn("model_training_cutoff_year", functions.lit(None).cast("int"))
+        else:
+            training = horizon_frame.where(
+                functions.col("target_is_observed")
+                & (functions.col("geographic_role") == "geographic_development")
+                & (functions.col("target_end_year") < prediction_origin)
+            )
+            if not training.limit(1).count():
+                raise ValueError(
+                    f"Empty training frame for horizon {specification.horizon_years}"
+                )
+            output = (
+                _fit_model(training, specification)
+                .transform(scoring)
+                .select(*panel.columns, "prediction_cumulative_log_change")
+                .withColumn("model_training_cutoff_year", functions.lit(prediction_origin - 1))
+            )
+        output = output.withColumn("model_name", functions.lit(specification.model_name))
         outputs.append(output)
     combined = outputs[0]
     for output in outputs[1:]:
@@ -245,23 +262,36 @@ def _score_current(
             (functions.col("forecast_origin_year") == current_origin)
             & (functions.col("temporal_role") == "future_scoring")
         )
-        training = horizon_frame.where(
-            functions.col("target_is_observed")
-            & (functions.col("geographic_role") == "geographic_development")
-            & (functions.col("target_end_year") < current_origin)
-        )
-        if not training.limit(1).count() or not scoring.limit(1).count():
+        if not scoring.limit(1).count():
             raise ValueError(
-                f"Empty production training or scoring frame for horizon "
-                f"{specification.horizon_years}"
+                f"Empty production scoring frame for horizon {specification.horizon_years}"
             )
-        model = _fit_model(training, specification)
-        output = (
-            model.transform(scoring)
-            .select(*panel.columns, "prediction_cumulative_log_change")
-            .withColumn("model_name", functions.lit(specification.model_name))
-            .withColumn("model_training_cutoff_year", functions.lit(current_origin - 1))
-        )
+        if specification.model_name == "state_current_trend":
+            output = scoring.withColumn(
+                "prediction_cumulative_log_change",
+                functions.log1p(
+                    functions.col("state_origin_mean_annual_change_pct") / 100.0
+                )
+                * functions.col("horizon_years"),
+            ).withColumn("model_training_cutoff_year", functions.lit(None).cast("int"))
+        else:
+            training = horizon_frame.where(
+                functions.col("target_is_observed")
+                & (functions.col("geographic_role") == "geographic_development")
+                & (functions.col("target_end_year") < current_origin)
+            )
+            if not training.limit(1).count():
+                raise ValueError(
+                    f"Empty production training frame for horizon "
+                    f"{specification.horizon_years}"
+                )
+            output = (
+                _fit_model(training, specification)
+                .transform(scoring)
+                .select(*panel.columns, "prediction_cumulative_log_change")
+                .withColumn("model_training_cutoff_year", functions.lit(current_origin - 1))
+            )
+        output = output.withColumn("model_name", functions.lit(specification.model_name))
         outputs.append(output)
     combined = outputs[0]
     for output in outputs[1:]:
@@ -575,6 +605,8 @@ def validate_finalization_outputs(run: ForecastFinalizationRun) -> None:
         if target_required and frame.where(~functions.col("target_is_observed")).limit(1).count():
             raise RuntimeError(f"{role} output contains an unobserved target")
         if frame.where(
+            functions.col("model_training_cutoff_year").isNotNull()
+            &
             functions.col("model_training_cutoff_year")
             >= functions.col("forecast_origin_year")
         ).limit(1).count():

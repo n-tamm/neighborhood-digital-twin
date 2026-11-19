@@ -12,17 +12,16 @@
   and annualized FHFA changes or censor reason; temporal and geographic roles; downstream
   eligibility flags; source and build lineage.
 
-The November 7, 2026 build contains 2,090,658 rows, exactly reconciling to the split-assignment
-table. It spans 63,367 tracts and 2011-2025 origins. Observed targets total 571,237 at one year,
-380,562 at three years, and 203,694 at five years within this ACS-compatible feature window.
-Decade-crossing targets remain as censored rows with
-`target_censor_reason = 'crosses_decade_boundary'`; their split assignments carry
-`ineligible_target`. No observed panel target crosses a calendar-decade boundary. Locked temporal
-tests contain 42,082, 45,887, and 34,644 rows respectively.
+The November 19, 2026 build contains 2,090,658 rows, exactly reconciling to the split-assignment
+table. It spans 63,367 tracts and 2011-2025 origins. Observed targets total 614,217 at one year,
+506,147 at three years, and 398,725 at five years within this ACS-compatible feature window.
+Cross-2020 targets are retained, and a hard validation check
+confirms that every such modeling row uses the stable longitudinal cohort. Locked temporal tests
+contain 42,082, 45,887, and 34,644 rows respectively.
 
-The current eligible training rows cover nine origins (2011-2018 and 2020) at one year, three
-origins (2011-2013) at three years, and two origins (2011-2012) at five years. Validation origins
-are 2021-2022, 2014-2015, and 2013 respectively. The five-year rows remain in the data layer for
+The current eligible training rows cover ten origins (2011-2020) at one year, six origins
+(2011-2016) at three years, and three origins (2011-2013) at five years. Validation origins
+are 2021-2022, 2017-2018, and 2014 respectively. The five-year rows remain in the data layer for
 feasibility and historical reference; active forecast fitting and evaluation use one- and
 three-year horizons only.
 

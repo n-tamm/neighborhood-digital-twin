@@ -87,12 +87,12 @@ dbutils.widgets.text(
 )
 dbutils.widgets.text(
     "champions",
-    "1:regularized_linear,3:gradient_boosted_trees",
+    "1:gradient_boosted_trees,3:state_current_trend",
     "Frozen horizon:model mapping",
 )
 dbutils.widgets.text("linear_reg_param", "0.05", "Regularized-linear L2 parameter")
 dbutils.widgets.text(
-    "gbt_parameters", "1:2:50,3:4:50", "Horizon:maxDepth:maxIter mapping"
+    "gbt_parameters", "1:2:50,3:4:30", "Horizon:maxDepth:maxIter mapping"
 )
 dbutils.widgets.text("interval_coverage", "0.90", "Nominal interval coverage")
 dbutils.widgets.text(

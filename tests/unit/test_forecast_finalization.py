@@ -17,8 +17,8 @@ from neighborhood_twin.forecast_finalization import (
 
 def test_champion_specifications_require_distinct_supported_horizons() -> None:
     specifications = (
-        ChampionSpecification(1, "regularized_linear"),
-        ChampionSpecification(3, "gradient_boosted_trees", gbt_max_depth=2),
+        ChampionSpecification(1, "gradient_boosted_trees", gbt_max_depth=2),
+        ChampionSpecification(3, "state_current_trend"),
     )
     validate_champion_specifications(specifications)
     with pytest.raises(ValueError, match="repeat a horizon"):

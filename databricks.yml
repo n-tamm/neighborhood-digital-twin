@@ -994,9 +994,9 @@ resources:
               locked_test_prediction_table: forecast_locked_test_prediction
               locked_test_scorecard_table: forecast_locked_test_scorecard
               current_prediction_table: forecast_current_prediction
-              champions: "1:regularized_linear,3:gradient_boosted_trees"
+              champions: "1:gradient_boosted_trees,3:state_current_trend"
               linear_reg_param: "0.05"
-              gbt_parameters: "1:2:50,3:4:50"
+              gbt_parameters: "1:2:50,3:4:30"
               interval_coverage: "0.90"
               mlflow_experiment: ${var.forecast_finalization_mlflow_experiment}
     scalable_analogue_retrieval:
