@@ -111,12 +111,7 @@ def build_serving_forecasts(
 
     labels = current_profile.select(
         "geoid_2020",
-        "state_fips",
-        "state_abbreviation",
-        "state_name",
-        "county_geoid",
-        "county_name",
-        "tract_name",
+        functions.col("tract_name").alias("_profile_tract_name"),
     )
     approved_gate = release_gate.where(functions.col("release_eligible")).select(
         "horizon_years",
@@ -140,7 +135,7 @@ def build_serving_forecasts(
             "state_name",
             "county_geoid",
             "county_name",
-            "tract_name",
+            functions.col("_profile_tract_name").alias("tract_name"),
             "forecast_origin_year",
             "horizon_years",
             "target_end_year",
