@@ -193,12 +193,19 @@ for index, (label, values, color) in enumerate(series):
     axis.bar_label(bars, fmt="%.3f", padding=3, fontsize=8.5, color=NAVY)
 axis.set_xticks(x, [f"{h}-year horizon" for h in horizons])
 axis.set_ylabel("Mean absolute error in cumulative log HPI change")
-axis.set_title("The three-year model did not survive the later locked test", loc="left")
-axis.text(
-    0,
-    1.01,
+figure.suptitle(
+    "The three-year model did not survive the later locked test",
+    x=0.125,
+    y=0.98,
+    ha="left",
+    fontsize=17,
+    color=NAVY,
+)
+axis.set_title(
     "Lower is better. Locked results were opened only after model choices were frozen.",
-    transform=axis.transAxes,
+    loc="left",
+    pad=9,
+    fontsize=11,
     color=MUTED,
 )
 axis.grid(axis="y", color=GRID, linewidth=0.8)
@@ -238,7 +245,21 @@ axis.set_xticks(
 )
 axis.set_ylim(0, 100)
 axis.set_ylabel("Locked outcomes inside the interval")
-axis.set_title("Only the one-year uncertainty interval remained calibrated", loc="left")
+figure.suptitle(
+    "Only the one-year uncertainty interval remained calibrated",
+    x=0.125,
+    y=0.98,
+    ha="left",
+    fontsize=17,
+    color=NAVY,
+)
+axis.set_title(
+    "The application requires useful point accuracy and reliable uncertainty coverage.",
+    loc="left",
+    pad=9,
+    fontsize=11,
+    color=MUTED,
+)
 axis.grid(axis="y", color=GRID, linewidth=0.8)
 axis.set_axisbelow(True)
 axis.legend(frameon=False, loc="lower left")
@@ -269,12 +290,19 @@ axis.bar_label(observed_bars, fmt="%.3f", padding=3, fontsize=9, color=NAVY)
 axis.bar_label(predicted_bars, fmt="%.3f", padding=3, fontsize=9, color=NAVY)
 axis.set_xticks(x, [f"{h}-year horizon" for h in horizons])
 axis.set_ylabel("Mean cumulative log HPI change")
-axis.set_title("Persisting the 2022 state trend greatly overpredicted 2022–2025", loc="left")
-axis.text(
-    0,
-    1.01,
+figure.suptitle(
+    "Persisting the 2022 state trend greatly overpredicted 2022–2025",
+    x=0.125,
+    y=0.98,
+    ha="left",
+    fontsize=17,
+    color=NAVY,
+)
+axis.set_title(
     "Bars summarize eligible locked-test tracts; they are not current forecasts.",
-    transform=axis.transAxes,
+    loc="left",
+    pad=9,
+    fontsize=11,
     color=MUTED,
 )
 axis.axhline(0, color=GRID, linewidth=1)
