@@ -114,5 +114,6 @@ based on the combined evidence: local weight stability, feature-level interpreta
 sensitivity and hidden family gaps, and the expanded outcome comparison. PCA remains an internal
 audit method. The application policy is also frozen at ten distinct physical candidate tracts.
 
-The next branch should build current-neighborhood retrieval under this versioned representation.
-The locked temporal tests remain unopened.
+This result led to the current-neighborhood retrieval and serving workflows now used by the
+application. At the time of this selection, the separate forecast locked temporal tests were still
+unopened; they were later evaluated under the frozen forecast finalization contract.

@@ -20,6 +20,11 @@ for candidate in (Path.cwd(), *Path.cwd().parents):
 else:
     raise RuntimeError("Could not locate the deployed project src directory")
 
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import Imputer, VectorAssembler
+from pyspark.ml.regression import GBTRegressor
+from pyspark.sql import functions
+
 from neighborhood_twin.forecasting import (  # noqa: E402
     GBT_SEED,
     GBT_STEP_SIZE,
@@ -27,11 +32,6 @@ from neighborhood_twin.forecasting import (  # noqa: E402
     LINEAR_FEATURE_COLUMNS,
     gbt_temporal_cv_origin_years,
 )
-
-from pyspark.ml import Pipeline
-from pyspark.ml.feature import Imputer, VectorAssembler
-from pyspark.ml.regression import GBTRegressor
-from pyspark.sql import functions
 
 # COMMAND ----------
 
@@ -85,9 +85,7 @@ FEATURE_FAMILIES = {
     ),
 }
 ALL_FEATURES = LINEAR_FEATURE_COLUMNS
-if set(feature for family in FEATURE_FAMILIES.values() for feature in family) != set(
-    ALL_FEATURES
-):
+if set(feature for family in FEATURE_FAMILIES.values() for feature in family) != set(ALL_FEATURES):
     raise ValueError("Feature families must partition the registered model inputs")
 
 panel = spark.table("workspace.neighborhood_twin_gold.gold_modeling_panel")
@@ -97,8 +95,7 @@ training = panel.where(
     & functions.col("target_is_observed")
 )
 training_origins = [
-    int(row[0])
-    for row in training.select("forecast_origin_year").distinct().collect()
+    int(row[0]) for row in training.select("forecast_origin_year").distinct().collect()
 ]
 fold_years = gbt_temporal_cv_origin_years(
     training_origins,
@@ -142,16 +139,13 @@ with mlflow.start_run(run_name="one-year-training-only-feature-ablation") as run
             (functions.col("forecast_origin_year") < fold_year)
             & (functions.col("target_end_year") < fold_year)
         )
-        fold_validation = training.where(
-            functions.col("forecast_origin_year") == fold_year
-        )
+        fold_validation = training.where(functions.col("forecast_origin_year") == fold_year)
         if not fold_training.limit(1).count() or not fold_validation.limit(1).count():
             raise ValueError(f"Temporal fold {fold_year} is empty after purging")
 
         for variant_name, feature_columns in ABLATIONS.items():
             imputed_columns = tuple(
-                f"_{variant_name}_{index}_imputed"
-                for index in range(len(feature_columns))
+                f"_{variant_name}_{index}_imputed" for index in range(len(feature_columns))
             )
             pipeline = Pipeline(
                 stages=[
@@ -204,9 +198,7 @@ with mlflow.start_run(run_name="one-year-training-only-feature-ablation") as run
 
     mean_scores = {}
     for variant_name in ABLATIONS:
-        scores = [
-            row["mae"] for row in fold_results if row["variant"] == variant_name
-        ]
+        scores = [row["mae"] for row in fold_results if row["variant"] == variant_name]
         mean_scores[variant_name] = sum(scores) / len(scores)
         mlflow.log_metric(f"{variant_name}_mean_fold_mae", mean_scores[variant_name])
 
@@ -231,9 +223,7 @@ result = {
     },
     "mean_fold_mae": mean_scores,
     "delta_mae_vs_full_features": {
-        name: score - baseline_mae
-        for name, score in mean_scores.items()
-        if name != "full_features"
+        name: score - baseline_mae for name, score in mean_scores.items() if name != "full_features"
     },
     "fold_results": fold_results,
     "publishes_forecasts_or_scorecards": False,
