@@ -59,8 +59,27 @@ calibrated uncertainty interval, not a guarantee or a complete distribution of f
 
 ## Locked-test rule
 
-The one-year 2024 origin and three-year 2022 origin remain untouched by model selection and
-interval design. Job 504 may open them once under this frozen contract. Locked-test results will
-be reported as final evidence and will not trigger parameter changes or a second preferred model.
-Any later research iteration must receive a new contract version and must not replace the original
-locked-test result.
+The one-year 2024 origin and three-year 2022 origin were untouched by model selection and interval
+design. Job 504 opened them once under this frozen contract. Their results are final evidence and
+will not trigger parameter changes or a second preferred model. Any later research iteration must
+receive a new contract version and must not replace the original locked-test result.
+
+## Final locked result and release consequence
+
+Job 504 opened the frozen tests under finalization run
+`73a193b64d154d868d8e94c039858861`. Job 605 then applied the same release requirements to both
+horizons without choosing a replacement model.
+
+| Horizon | Locked MAE | Zero-change MAE | Empirical coverage | Release |
+|---|---:|---:|---:|---|
+| 1 year | 0.0599 | 0.0627 | 89.4% | Published |
+| 3 years | 0.2943 | 0.1566 | 48.2% | Withheld |
+
+The one-year tree passes because it improves on zero change and its coverage is consistent with
+the 90% target. State trend is slightly better on one-year locked MAE at 0.0592, so the application
+shows that baseline beside the frozen tree.
+
+The three-year state-trend method overpredicted the 2022-2025 period and failed both the accuracy
+and uncertainty requirements. It remains the reported locked result but is not an application
+forecast. The project will not use that outcome to retroactively promote another development
+candidate.

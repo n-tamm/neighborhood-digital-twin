@@ -16,7 +16,7 @@ Every bundle job has a sortable display name and four tags:
 - `lifecycle` distinguishes one-time, refresh, optional, downstream, and diagnostic jobs.
 
 The display names sort as `000 Setup`, `100-104 Bronze`, `200-205 Silver`, `300-302 Gold`,
-`400-401 Analysis`, `500-504 Modeling`, `600-604 Evaluation`, `700-701 Serving`, `800 Presentation`,
+`400-401 Analysis`, `500-504 Modeling`, `600-606 Evaluation`, `700-701 Serving`, `800 Presentation`,
 and `900 Metadata`.
 Jobs increment
 by one inside each three-digit layer range,
@@ -59,8 +59,10 @@ The bundle job keys remain stable even if a display label is clarified later.
 | 602 | Evaluation | `historical_analogue_selection` | After successful runs of 500 and 601 | Expands validation coverage, requires distinct physical candidates, and compares the provisional weighted representation with PCA before the application policy is frozen |
 | 603 | Evaluation | `scalable_analogue_retrieval` | After the weighted representation is frozen and job 503 establishes an exact current-query reference | Compares deterministic LSH shortlists with exhaustive exact top-ten matches on a stratified current-query benchmark |
 | 604 | Evaluation | `analogue_tree_retrieval` | After job 603 and from the same model-readiness build | Requires an exact KD-tree to reproduce the exhaustive benchmark, then measures indexed work on 1,000 and all eligible current queries |
+| 605 | Evaluation | `forecast_release_gate` | After the frozen job-504 locked result | Compares each horizon with zero change and its interval-coverage requirement; records approval or failure without selecting another model |
+| 606 | Evaluation | `forecast_final_evaluation_figures` | After job 605 or final forecast figure-code changes | Renders validation-versus-locked error, interval coverage, and mean observed-versus-predicted figures |
 | 700 | Serving | `analogue_serving_products` | After a successful current job 604 or when approved current analogues need refreshing | Publishes national exact matches, descriptive summaries, explicit availability, and an activation manifest; it does not train or select the method |
-| 701 | Serving | `forecast_serving_products` | After the approved job-504 finalization output changes | Publishes compact current forecasts, intervals, baseline context, explicit availability, and activation records; it does not fit a model |
+| 701 | Serving | `forecast_serving_products` | After job 605 approves at least one horizon | Publishes only approved forecasts plus complete availability, interval, baseline, gate context, and activation records; it does not fit a model |
 | 800 | Presentation | `similarity_communication_figures` | After current approved outputs from 601, 602, 604, and 700 | Renders five lineage-linked similarity figures; it reads governed evidence and does not retrain or retrieve matches |
 | 900 | Metadata | `table_metadata_pipeline` | Last, after any schema-overwriting job | Reapplies table descriptions, grains, and column comments |
 
@@ -90,10 +92,12 @@ The bundle job keys remain stable even if a display label is clarified later.
 500 Forecast + 601 Analogue audit --------------> 602 Expanded analogue selection
 302 Model readiness ----------------------------> 503 Current analogue retrieval
 500 Frozen forecast decision -------------------> 504 Calibration, locked test, current scoring
+504 Frozen final evidence ----------------------> 605 Forecast release gate
+605 Release decisions --------------------------> 606 Final forecast figures
 503 Exact current retrieval contract -----------> 603 Scalable retrieval benchmark
 603 Frozen exhaustive reference ----------------> 604 Exact tree retrieval benchmark
 604 Approved exact retrieval policy ------------> 700 National analogue serving release
-504 Frozen current forecast output -------------> 701 National forecast serving release
+605 Gate + 504 current predictions -------------> 701 National forecast serving release
 601/602/604 Evaluation + 700 Serving -----------> 800 Similarity communication figures
 
 All schema-overwriting paths -------------------> 900 Metadata
@@ -217,11 +221,15 @@ predictions from labels ending before each calibration origin, estimates the dec
 opens each locked temporal test once without retuning, and refits the same specifications for the
 latest current origin. Rerun 504 only when a documented final model contract changes; a rerun after
 examining locked-test results must never be used to improve the reported test performance.
-Job 701 is a packaging and validation boundary, not a modeling workflow. It reads the frozen
-current predictions from job 504, publishes one compact forecast row for every supported
-tract-horizon, records an unavailable reason for every other current tract, and activates the
-release only after both table contracts reconcile. Run job 900 after 701 so the new serving tables
-receive their registered descriptions and column comments.
+Job 605 converts that fixed evidence into a product decision. It requires at least 1,000 locked
+observations, MAE no worse than zero change, and coverage within ten percentage points of the
+nominal interval. It does not refit or promote a runner-up after seeing the test. Job 606 reads the
+same frozen result and publishes three report-ready figures.
+Job 701 is a packaging and validation boundary, not a modeling workflow. It joins job 504 current
+predictions with job 605 decisions, publishes rows only for approved horizons, and records an
+unavailable reason for every other current tract and horizon. It activates the release only after
+both table contracts reconcile. Run job 900 after 701 so the new serving tables receive their
+registered descriptions and column comments.
 The November 12 run reproduced all 58 query-horizon references exactly and directly queried all
 46,719 eligible current tracts in about 193 seconds at one year and 133 seconds at three years.
 It used about 9.5% to 9.8% of an exhaustive distance pass, so the exact tree is the approved engine

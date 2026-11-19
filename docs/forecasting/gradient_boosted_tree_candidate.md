@@ -76,10 +76,10 @@ reported rather than used to retune against validation. Positive mean signed err
 model-selection or promotion decision. Historical five-year scorecard rows remain archived but
 are not used in current candidate decisions.
 
-Do not select or register a champion based solely on these validation results. Feature-family
-ablation results below are exploratory training-CV evidence only; uncertainty calibration, a
-preregistered selection rule, and a separately authorized locked-test evaluation remain future
-work.
+This section records the evidence available at the candidate-development stage. The later frozen
+selection, uncertainty calibration, and locked-test decision are documented in
+[`final_model_selection_and_interval.md`](final_model_selection_and_interval.md). The ablation
+results below remain exploratory training-fold evidence rather than tract-level explanations.
 
 ### Feature-family ablation (training CV)
 

@@ -7,7 +7,8 @@
 ## Inputs
 
 The notebook reads `workspace.neighborhood_twin_gold.gold_modeling_panel` by default. That panel
-must be rebuilt from decade-safe historical targets and split assignments before fitting. Its
+must be rebuilt from the governed historical targets, stable-cross-vintage feature rules, and
+split assignments before fitting. Its
 widgets allow catalog, schema, input table, output table, regularization, and MLflow experiment
 paths to be changed explicitly. The model runner filters to the active one- and three-year
 horizons, even if an existing input panel also contains legacy five-year rows. The default
@@ -34,11 +35,11 @@ regularization is `0.05`.
 | [`forecast_baseline_scorecard`](../data/48_evaluation_forecast_baseline_scorecard.md) | `neighborhood_twin_evaluation` | One model, active horizon, slice, and slice-value summary |
 | MLflow run | Shared experiment | Parameters, aggregate metrics, run ID, and comparison lineage |
 
-The November 13, 2026 tuned forecast run (`5005b56099074eb897988c44b472f654`) contains 1,588,340
-validation predictions across 59,179 tracts and seven methods. The scorecard contains 1,463 sliced
-rows. All target windows are decade-safe; crossing targets are censored before fitting and
-validation. That historical run included an exploratory five-year horizon; active runs and reports
-now exclude it. The published run and its historical scorecard are not deleted.
+The corrected November 19, 2026 run (`f51ad8ff85c44fe5bbd665b20520f6e4`) scores the active one-
+and three-year horizons. Every fitted label ends before its validation origin. Cross-2020 feature
+rows are restricted to the stable tract cohort, while fully observed FHFA outcomes remain usable.
+The run's scorecard is the frozen development evidence used by job 504; it does not include the
+locked-test outcome.
 
 The GBT tuning implementation uses the latest three eligible training origins as expanding
 validation folds and only earlier origins with target endpoints strictly before the held-out
@@ -62,7 +63,7 @@ job should follow because the model job overwrites current Delta schemas.
 
 ## Operational boundaries
 
-- - The job is independent of the similarity job once both upstream inputs exist.
+- The job is independent of the similarity job once both upstream inputs exist.
 - It does not run source acquisition or rebuild the gold modeling panel.
 - It does not serialize or register an application model.
 - It does not publish predictions for calibration or locked-test roles.

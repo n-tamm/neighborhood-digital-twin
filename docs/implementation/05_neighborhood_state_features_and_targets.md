@@ -47,8 +47,8 @@ The longitudinal state and target contracts are now implemented as three additio
   rows across one-, three-, and five-year horizons.
 
 All three were published and passed their hard validation checks on October 26, 2026. Four
-separate model-readiness products were first published on October 29 and rebuilt on November 7
-after the forecast target and split contracts were made decade-safe:
+separate model-readiness products were first published on October 29 and rebuilt on November 19
+after the target and split contracts were corrected:
 
 - `gold_model_feature_historical` selects the latest ACS state available at each FHFA origin and
   adds point-in-time HPI history, county/state context, uncertainty, and cohort fields;
@@ -58,12 +58,16 @@ after the forecast target and split contracts were made decade-safe:
   preprocessing on the full dataset; and
 - `gold_model_readiness_summary` reports cohort and split coverage.
 
-The feature table contains 696,886 rows across 63,367 tracts and 2011-2025 origins. The split and panel tables each contain 2,090,658 tract-origin-horizon rows and reconcile exactly.
-Cross-decade targets have `target_censor_reason = 'crosses_decade_boundary'`; their split
-assignments carry `ineligible_target`. The rebuilt panel contains zero observed cross-decade
-targets. All hard availability, timing, uniqueness, leakage, and reconciliation checks passed.
-The decade-safe split has nine one-year, three three-year, and two five-year independent training
-origins, so the five-year horizon remains exploratory despite its many repeated tract rows.
+The corrected workflow keeps fully observed FHFA targets even when their window crosses
+2019-2020. It controls the real cross-vintage risk at the feature layer: any modeling row whose
+historical inputs cross the 2020 tract redesign must belong to the governed stable cohort. Direct
+checks found zero cross-2020 non-stable rows in the modeling panel. All hard availability, timing,
+uniqueness, leakage, and reconciliation checks passed.
+
+For active modeling, the one-year horizon trains on 2011-2020, validates on 2021-2022, calibrates
+on 2023, and locks 2024. The three-year horizon trains on 2011-2016, validates on 2017-2018,
+calibrates on 2019, purges 2020-2021, and locks 2022. Five-year rows remain available for future
+research but are not part of the current production forecast.
 
 ## Neighborhood-state contract
 

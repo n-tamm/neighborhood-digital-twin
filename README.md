@@ -1,51 +1,60 @@
 # Neighborhood Housing Intelligence & Digital Twin
 
-An interactive, map-based research platform for exploring how U.S. neighborhoods have changed, how a public single-family housing indicator may evolve, which past communities followed similar paths, and how model results respond to a small set of plausible scenarios.
+An interactive, map-based research platform for exploring how U.S. neighborhoods have changed,
+how a public single-family housing indicator may evolve, and which earlier communities looked
+similar before their later outcomes were known.
 
-This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work is the longitudinal data system and the models behind it: tract-level data integration, time-aware forecasting, uncertainty estimation, spatial analysis, historical analogues, and transparent scenario sensitivity. The application is where those pieces come together in a form people can actually explore.
+This is a data science capstone, not a neighborhood-ranking or home-investment tool. The main work
+is the longitudinal data system and the models behind it: tract-level data integration,
+time-aware forecasting, uncertainty estimation, geographic evaluation, and historical analogue
+retrieval. The application is where those pieces come together in a form people can explore.
 
 > **Project status:** Shared Databricks pipelines populate separate bronze, silver, gold, model,
-> evaluation, serving, and quality schemas. They include complete 2010-2024 ACS history for the 50
-> states and Washington, D.C.; national FHFA history; governed Census geography; point-in-time
-> modeling features; twelve EDA figures; and seven model-evaluation figures. The forecasting and
-> similarity workflows use frozen time and geographic assignments and tracked MLflow experiments.
-> Weighted historical matching with ten distinct communities is the selected analogue method; it
-> provides useful context but has not beaten the stronger forecast baselines. Job 700 now publishes
-> a validated national application release with 934,380 matches, 93,438 tract-horizon summaries,
-> explicit availability states for all 85,528 canonical tracts at both supported horizons,
-> 934,380 deterministic match explanations, and 2,803,140 aligned historical-path rows. The next
-> work is focused forecast improvement and uncertainty calibration and the interactive
-> application. Job 800 now publishes a reviewed five-figure similarity package and a standup-ready
-> walkthrough from the governed evaluation and serving outputs. Features below are planned unless
-> marked complete.
+> evaluation, serving, and quality schemas. The data covers national FHFA tract HPI through 2025,
+> 2010-2024 ACS history for the 50 states and Washington, D.C., governed Census geography, and
+> point-in-time model features. The live Databricks app serves current profiles, observed history,
+> historical analogues, and 46,719 approved one-year forecasts with calibrated intervals. The
+> one-year model passed its locked release gate; the three-year method failed accuracy and interval
+> coverage and is explicitly withheld. Similarity uses weighted standardized matching with ten
+> distinct historical communities and exact KD-tree batch retrieval. Current work is application
+> review, dependent similarity refresh, report integration, and final deployment polish.
 
-## What the finished product should do
+## What the implemented product does
 
-A user should be able to select a supported census tract and:
+A user can select a supported 2020 Census tract and:
 
-- review its housing mix, affordability, demographic, economic, development, and environmental history;
-- see a one-year FHFA single-family HPI forecast, with longer horizons only where the data supports them;
-- view uncertainty ranges beside every forecast rather than only a point estimate;
-- compare the model with persistence and regional baselines;
+- review its current housing mix, affordability, population, tenure, and coverage context;
+- inspect observed FHFA single-family HPI history;
+- see an approved one-year HPI forecast with a calibrated interval and state-trend baseline;
+- see a clear reason when a tract or horizon is unavailable;
 - find earlier tract-years that looked similar and see what happened afterward;
-- compare the tract with its neighbors or another selected area;
-- inspect the main factors associated with the model's prediction;
-- change a few bounded scenario assumptions and compare the resulting forecast distributions;
-- see warnings when a scenario is historically unusual or outside the model's reliable support.
+- inspect actual tract outlines for the selected neighborhood and matched communities;
+- review feature-family similarities and differences for an analogue; and
+- separate the primary forecast from descriptive historical-analogue evidence.
 
-The FHFA forecast does not cover multifamily prices or every home in a tract. The application will show the tract's broader housing-stock composition and make that limitation visible. The scenario laboratory will describe model sensitivity, not causal policy effects. The project will not predict individual home values, label neighborhoods as good or bad, or provide buy/sell recommendations.
+The FHFA forecast does not cover multifamily prices or every home in a tract. The application
+shows the broader housing-stock composition so that limitation stays visible. The project does not
+predict individual home values, label neighborhoods as good or bad, or provide buy/sell
+recommendations. Scenario simulation and a natural-language AI layer are possible future work,
+not current features.
 
 ## Core research question
 
-Can appropriately licensed public data support useful, transferable, interpretable, and uncertainty-aware models of neighborhood trajectories—and can those models power a credible interactive Neighborhood Digital Twin?
+Can appropriately licensed public data support useful, transferable, interpretable, and
+uncertainty-aware models of neighborhood housing trajectories—and can those models power a
+credible interactive neighborhood intelligence application?
 
-The project will also test whether spatial and metropolitan context improve forecasts, whether historical analogues add information beyond simple baselines, and whether uncertainty remains calibrated across locations, time periods, and levels of data coverage.
+The project also tests whether tract and regional context improves forecasts, whether historical
+analogues add information beyond simple baselines, and whether uncertainty remains calibrated
+across locations, time periods, and levels of data coverage.
 
 ## Working definition of the Digital Twin
 
 For this project, a Neighborhood Digital Twin is:
 
-> A versioned, time-indexed computational representation of a community that combines observed state, historical transitions, spatial context, forecast distributions, comparable historical states, and transparent scenario sensitivity in an interactive interface.
+> A versioned, time-indexed computational representation of a community that combines observed
+> state, historical transitions, geographic context, forecast uncertainty, and comparable
+> historical states in an interactive interface.
 
 The name does not imply a perfect replica of a neighborhood, live sensor coverage, or causal simulation. Those limits will remain visible in the application and final report.
 
@@ -54,105 +63,97 @@ The name does not imply a perfect replica of a neighborhood, live sensor coverag
 ```mermaid
 flowchart TB
     GIT["GitHub<br/>source of truth"] --> DAB["Databricks Asset Bundle<br/>validate and deploy"]
-    DAB --> JOBS["Numbered Databricks jobs<br/>000 setup through 900 metadata"]
+    DAB --> JOBS["Numbered Databricks jobs<br/>000-900"]
 
-    SRC["Public sources<br/>ACS, FHFA, and Census"] --> B["100-104 Bronze<br/>snapshots, manifests, and source tables"]
-    JOBS -.->|orchestrates| B
+    SRC["Public sources<br/>ACS, FHFA, Census"] --> B["100-104 Bronze<br/>snapshots and acquisition lineage"]
+    JOBS -.-> B
+    B --> S["200-205 Silver<br/>typed sources and governed geography"]
+    S --> G["300-302 Gold<br/>profiles, targets, point-in-time features, splits"]
+    G --> EDA["400-401 Analysis<br/>readiness summaries and EDA figures"]
 
-    B --> SS["200 Silver source tables<br/>typed and validated ACS and FHFA"]
-    B --> SG["201-205 Silver geography<br/>relationships, display geometry, and hierarchy"]
+    G --> FDEV["500 Forecast development<br/>baselines, linear, GBT, validation"]
+    FDEV --> FFINAL["504 Finalization<br/>calibration, locked test, current scoring"]
+    FFINAL --> FGATE["605 Release gate<br/>accuracy and interval coverage"]
+    FGATE --> FFIG["606 Final forecast figures"]
+    FGATE --> FSERVE["701 Forecast serving<br/>approved predictions and availability"]
 
-    SS --> GC["300 Gold current products<br/>tract profiles and candidate cohorts"]
-    SG --> GC
-    SS --> GH["301 Gold historical products<br/>aligned neighborhood states and direct targets"]
-    SG --> GH
-    GH --> GR["302 Gold model readiness<br/>point-in-time features, frozen splits, and modeling panel"]
+    G --> SIM["501-503 Similarity modeling<br/>historical analogue retrieval"]
+    SIM --> SEVAL["601-604 Similarity evaluation<br/>stability, selection, exact KD-tree"]
+    SEVAL --> SSERVE["700 Analogue serving<br/>matches, explanations, trajectories"]
+    SEVAL --> SFIG["800 Similarity figures"]
 
-    GC --> EDA["400-401 Analysis<br/>readiness summaries and 12 versioned EDA figures"]
-    GR --> EDA
+    FDEV --> MLF["Shared MLflow experiments"]
+    SIM --> MLF
+    FFINAL --> MLF
+    EDA --> EV["Evaluation and figure volumes"]
+    FFIG --> EV
+    SFIG --> EV
 
-    GR --> FM["500 Forecast baseline workflow"]
-    GC --> SM["501 Similarity baseline workflow"]
-    FM --> HA["502 Historical analogue baseline<br/>time-safe retrieval and outcome comparison"]
-    GR --> HA
-    FM --> MO["Model schema<br/>validation predictions and ranked matches"]
-    SM --> MO
-    HA --> MO
-    HA --> AR["601-604 Analogue evaluation<br/>stability, selection, and exact retrieval"]
-    FM --> MLF["Shared MLflow experiments"]
-    SM --> MLF
-    HA --> MLF
-    MO --> EV["Evaluation schema and 600 workflow<br/>scorecards, diagnostics, and 7 versioned figures"]
-    AR --> EV
-    MLF --> EV
+    FSERVE --> APP["Interactive Databricks<br/>Streamlit application"]
+    SSERVE --> APP
+    G --> APP
+    S --> APP
+    APP --> USER["Map, profile, one-year forecast,<br/>historical analogues, limitations"]
 
-    B -.->|quality checks| QM["Quality schema and 900 metadata<br/>reconciliation, table descriptions, and column comments"]
-    SS -.->|quality checks| QM
-    SG -.->|quality checks| QM
-    GR -.->|quality checks| QM
-    EV -.->|evaluation checks| QM
-
-    EV -.->|next| NF["Forecast ablations<br/>and uncertainty calibration"]
-    GH -.->|next| NA["Time-safe historical<br/>analogue evaluation"]
-    EV -.->|model-selection evidence| NF
-    AR --> SV["700 Serving schema<br/>analogues, explanations, paths, and manifest"]
-    AR --> PR["800 Presentation<br/>5 similarity figures and walkthrough"]
-    EV --> PR
-    SV --> PR
-    NF -.->|planned output| SV
-    SV --> APP["Interactive Databricks<br/>Streamlit application"]
-    PR -.->|communication design| APP
+    B -.-> META["900 Metadata and comments"]
+    S -.-> META
+    G -.-> META
+    EV -.-> META
+    FSERVE -.-> META
+    SSERVE -.-> META
 
     classDef control fill:#EEF2F7,stroke:#455A64,color:#263238,stroke-width:1.4px;
     classDef source fill:#FFFFFF,stroke:#78909C,color:#263238,stroke-width:1.4px;
     classDef implemented fill:#E5F3F1,stroke:#287271,color:#263238,stroke-width:1.6px;
-    classDef planned fill:#FFF4DD,stroke:#D99035,color:#263238,stroke-width:1.5px,stroke-dasharray:5 4;
     class GIT,DAB,JOBS control;
     class SRC source;
-    class B,SS,SG,GC,GH,GR,EDA,FM,SM,HA,AR,MO,MLF,EV,QM,SV,PR,APP implemented;
-    class NF planned;
+    class B,S,G,EDA,FDEV,FFINAL,FGATE,FFIG,FSERVE,SIM,SEVAL,SSERVE,SFIG,MLF,EV,META,APP,USER implemented;
 ```
 
-Teal nodes are implemented; gold nodes with dashed borders are the next planned delivery stages.
-The diagram reflects the current operational split: current and historical gold products are built
-separately, forecast and similarity work publish to dedicated model and evaluation schemas, and
-job 700 publishes approved current analogue releases to a dedicated serving schema. EDA, model,
-and similarity communication figures are versioned Databricks outputs. Job 800 reads approved
-evidence rather than retraining models. Quality checks run throughout the pipeline, while job 900
-reapplies table and column metadata after schema-overwriting jobs.
+The diagram shows implemented paths only. Forecast and similarity work publish to dedicated model,
+evaluation, and serving schemas before the application can read them. Jobs 605 and 701 are
+important product boundaries: a finalized forecast can remain in evaluation without being
+approved for the app. Quality checks run throughout the pipeline, while job 900 reapplies table
+and column metadata after schema-overwriting jobs.
 
 Databricks Free Edition is the shared environment for source snapshots, Delta tables,
 transformations, MLflow experiments, figures, and the primary private Streamlit application.
 GitHub remains the source of truth for code and review. The application reads the approved
-analogue serving release and narrow profile, history, and geometry tables rather than downloading
-national data or training models during a session. Because Databricks Apps require authenticated
+analogue and forecast releases plus narrow profile, history, and geometry tables rather than
+downloading national data or training models during a session. Because Databricks Apps require authenticated
 access, a separate public mirror remains a deployment fallback if the capstone needs an anonymous
 portfolio URL.
 
-## Initial data scope
+## Implemented data scope
 
-The core candidate sources are:
+The implemented sources are:
 
 - Federal Housing Finance Agency annual single-family census-tract House Price Index;
 - American Community Survey five-year estimates, margins of error, and housing-stock composition;
-- Census tract boundaries and geographic relationship files;
-- FRED or ALFRED economic series for national and regional context.
+- Census tract boundaries and geographic relationship files.
 
-Building permits, employment access, business activity, and environmental risk remain possible extensions. A source is added only when its timing, coverage, geography, licensing, and out-of-time value can be defended. See [DATA_SOURCES.md](DATA_SOURCES.md) for the source policy.
+Building permits, employment access, business activity, macroeconomic series, and environmental
+risk remain possible extensions. A source is added only when its timing, coverage, geography,
+licensing, and out-of-time value can be defended. See [DATA_SOURCES.md](DATA_SOURCES.md) for the
+source policy.
 
-## Modeling plan
+## Implemented modeling approach
 
-The initial model ladder is intentionally conservative:
+The model ladder is intentionally conservative:
 
 1. zero-change, historical-average, persistence, and regional baselines;
 2. a regularized linear model;
 3. one gradient-boosted tree model;
-4. spatial-context ablations;
-5. quantile or conformal uncertainty intervals;
+4. training-fold feature-family ablations;
+5. split-conformal uncertainty intervals;
 6. standardized-feature and PCA representations for historical analogues;
-7. trajectory clustering or learned embeddings only if the simpler approach is complete and a harder method adds measurable value.
+7. exact KD-tree batch retrieval after approximate LSH retrieval failed to reduce work.
 
-Forecast evaluation will use time-based splits and a separate geographic holdout to test transfer to metros the model did not see during training. Errors and coverage will also be reported by housing-stock composition. Historical analogues will be tested retrospectively by retrieving matches using only information available at an earlier date and then comparing their later outcomes with simple geographic and random alternatives. Random row splitting is not appropriate for repeated tract observations and overlapping ACS releases.
+Forecast evaluation uses time-based splits and deterministic state holdouts. Errors and coverage
+are also reported by housing-stock composition and other important slices. Historical analogues
+are tested retrospectively by retrieving matches using only information available at the query
+date and then examining known later outcomes. Random row splitting is not appropriate for repeated
+tract observations and overlapping ACS releases.
 
 ## Repository map
 
@@ -198,10 +199,10 @@ The repository has two execution environments:
 - **Databricks serverless jobs** run acquisition, ETL, validation, modeling, MLflow tracking, and
   figure generation against the shared Unity Catalog tables.
 
-The initial Streamlit application is implemented with current neighborhood profiles, observed FHFA
-history, and the validated historical-analogue release. Forecast serving, calibrated uncertainty,
-scenario sensitivity, and the locked-test release remain incomplete. The forecast view therefore
-shows an explicit unavailable state instead of a mock or validation prediction.
+The Streamlit application is implemented with current neighborhood profiles, observed FHFA
+history, the validated historical-analogue release, and a quality-gated one-year forecast release.
+The three-year horizon remains explicit but unavailable because it failed its locked test.
+Scenario sensitivity is not implemented.
 
 ### Prerequisites
 
@@ -246,7 +247,7 @@ python -m mypy src app/neighborhood_app
 python -m pytest
 ```
 
-A successful local check requires all three commandsâ€”Ruff, mypy, and pytestâ€”to pass. The tests use
+A successful local check requires all three commands—Ruff, mypy, and pytest—to pass. The tests use
 small committed fixtures; they do not download or process the national datasets.
 
 ### 2. Run the application locally
@@ -299,7 +300,7 @@ databricks apps get neighborhood-intelligence --profile neighborhood-twin --outp
 ```
 
 The app uses its own service principal, one `CAN_USE` SQL warehouse resource, and `SELECT` access
-only to the nine declared profile, history, geometry, manifest, and analogue tables. Sharing app
+only to the twelve declared profile, history, geometry, manifest, analogue, and forecast tables. Sharing app
 access is a separate deliberate workspace action; source deployment does not grant the entire
 workspace access.
 
@@ -328,6 +329,12 @@ databricks bundle run analogue_serving_products --profile neighborhood-twin -t t
 # Render the 7 model-evaluation figures from the two completed model runs.
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 
+# After the champion contract is frozen, finalize once, gate, visualize, and serve forecasts.
+databricks bundle run forecast_finalization --profile neighborhood-twin -t team
+databricks bundle run forecast_release_gate --profile neighborhood-twin -t team
+databricks bundle run forecast_final_evaluation_figures --profile neighborhood-twin -t team
+databricks bundle run forecast_serving_products --profile neighborhood-twin -t team
+
 # Render the reviewed 5-figure similarity package and standup walkthrough inputs.
 databricks bundle run similarity_communication_figures --profile neighborhood-twin -t team
 
@@ -339,7 +346,10 @@ The forecast and current-state similarity jobs are independent after their upstr
 The historical analogue job waits for model readiness and the forecast comparators. The evaluation
 figure job currently waits for forecast and current-state similarity. Job 800 reads the approved
 analogue audit, selection, exact-retrieval, and serving outputs; it does not retrain the method.
-These are development runs; they do not open or score the locked temporal test outcomes.
+Jobs 500-604 are development or similarity-evaluation workflows and do not open the forecast
+locked temporal outcomes. Job 504 is the deliberate exception: run it only after model choices
+and the interval method are frozen. Jobs 605, 606, and 701 read its unchanged outputs and do not
+retune the model.
 
 ### 5. Run only the stage affected by a change
 
@@ -350,7 +360,8 @@ pipeline:
 |---|---|
 | Documentation or local unit-test change | No Databricks job |
 | EDA summary or figure code | `data_readiness_eda`, `visual_eda`, then `table_metadata_pipeline` |
-| Forecast code | `forecast_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
+| Forecast development code | `forecast_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
+| Frozen forecast release packaging or figures | `forecast_release_gate`, `forecast_final_evaluation_figures`, `forecast_serving_products`, then `table_metadata_pipeline` |
 | Current-state similarity code | `similarity_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
 | Historical analogue code | `historical_analogue_baseline`, then `table_metadata_pipeline` |
 | Approved current-analogue serving release | `analogue_serving_products`, then `table_metadata_pipeline` |
@@ -374,9 +385,13 @@ scope, and stage-by-stage validation described in [the acquisition guide](docs/i
 |---|---|---|
 | Readiness summaries and 12 EDA figures | `notebooks/04_exploration/01_build_data_readiness.py`, `02_build_visual_eda.py`, and `03_render_eda_figures.py` | `workspace.neighborhood_twin_gold` tables and the `eda_figures` volume |
 | Forecast predictions and scorecards | `notebooks/05_modeling/01_run_forecast_baselines.py` | `workspace.neighborhood_twin_model.forecast_baseline_prediction`, `workspace.neighborhood_twin_evaluation.forecast_baseline_scorecard`, and the shared forecast MLflow experiment |
+| Final forecast calibration, locked test, and current scoring | `notebooks/05_modeling/10_finalize_forecast.py` | Selection, calibration, locked prediction, locked scorecard, and current prediction tables in the model/evaluation schemas plus the finalization MLflow experiment |
+| Forecast release decision | `notebooks/05_modeling/11_evaluate_forecast_release.py` | `workspace.neighborhood_twin_evaluation.forecast_release_gate` |
+| Final forecast figures | `notebooks/05_modeling/12_render_forecast_final_evaluation.py` | `forecast_final_evaluation_figure_manifest` and the final-forecast directory in the model-evaluation figure volume |
 | Similarity matches and diagnostics | `notebooks/05_modeling/02_run_similarity_baselines.py` | `workspace.neighborhood_twin_model.similarity_baseline_match`, `workspace.neighborhood_twin_evaluation.similarity_baseline_summary`, and the shared similarity MLflow experiment |
 | Historical matches, estimates, and evaluation | `notebooks/05_modeling/04_run_historical_analogue_baseline.py` | `historical_analogue_match` and `historical_analogue_prediction` in `workspace.neighborhood_twin_model`; `historical_analogue_summary` and `historical_analogue_scorecard` in `workspace.neighborhood_twin_evaluation`; and the shared historical-analogue MLflow experiment |
 | Current analogue application release | `notebooks/06_representations/01_build_analogue_serving_products.py` | Versioned matches, summaries, availability, and activation manifest in `workspace.neighborhood_twin_serving` |
+| Current forecast application release | `notebooks/06_representations/02_build_forecast_serving_products.py` | Versioned approved forecasts, complete availability, and activation records in `workspace.neighborhood_twin_serving` |
 | Seven model-evaluation figures | `notebooks/05_modeling/03_render_model_evaluation.py` | `workspace.neighborhood_twin_evaluation.model_evaluation_figures` and its manifest table |
 | Five similarity communication figures | `notebooks/08_final_analysis/00_render_similarity_communication.py` | `workspace.neighborhood_twin_evaluation.similarity_evaluation_figure_manifest` and the `similarity_evaluation_figures` volume |
 
@@ -431,11 +446,12 @@ source comment, but the dependency must be declared in the correct environment f
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
 forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
-initial forecast, current-state similarity, time-safe historical-analogue outputs, governed model
-diagnostics, and a versioned five-table national analogue serving contract. The similarity method,
-case review, stability testing, exact retrieval, explanations, annual paths, and reviewed visual
-walkthrough are implemented; forecast model selection and uncertainty and the interactive
-application remain. Current figure locations and reproduction steps are documented in the
+time-safe historical analogues, stability and retrieval evaluation, final forecast selection and
+uncertainty, explicit forecast release gates, and versioned application-serving contracts. The
+interactive Databricks application combines these products now. Remaining work is review and
+polish: refresh analogue outputs after upstream model-readiness changes, reconcile any partner
+forecast additions, complete report integration, and perform final application testing. Current
+figure locations and reproduction steps are documented in the
 [EDA figure guide](reports/EDA_FIGURES.md) and
 [model evaluation figure guide](reports/MODEL_EVALUATION_FIGURES.md), with the analogue package in
 the [similarity figure guide](reports/SIMILARITY_FIGURES.md).
