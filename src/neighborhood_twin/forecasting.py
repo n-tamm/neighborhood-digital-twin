@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from math import exp, log1p
 from typing import Any
 
-FORECAST_MODEL_SCHEMA_VERSION = "1.4.0"
+FORECAST_MODEL_SCHEMA_VERSION = "1.5.0"
 FORECAST_PREDICTION_TABLE = "forecast_baseline_prediction"
 FORECAST_SCORECARD_TABLE = "forecast_baseline_scorecard"
 FORECAST_MODEL_HORIZONS = (1, 3)
@@ -250,7 +250,7 @@ def baseline_predictions(frame: Any) -> Any:
 
 
 def _linear_model_predictions(frame: Any, *, reg_param: float) -> Any:
-    """Fit one regularized linear Spark pipeline per horizon and score validation rows."""
+    """Fit origin-safe linear pipelines and score each validation origin separately."""
 
     from pyspark.ml import Pipeline  # type: ignore[import-not-found]
     from pyspark.ml.feature import (  # type: ignore[import-not-found]
@@ -267,49 +267,76 @@ def _linear_model_predictions(frame: Any, *, reg_param: float) -> Any:
     outputs = []
     for horizon in sorted(row[0] for row in frame.select("horizon_years").distinct().collect()):
         horizon_frame = frame.where(functions.col("horizon_years") == int(horizon))
-        training = horizon_frame.where(
+        training_pool = horizon_frame.where(
             functions.col("eligible_for_point_model_fit")
             & functions.col("target_is_observed")
         )
-        validation = horizon_frame.where(
-            (functions.col("temporal_role") == "validation")
-            & functions.col("target_is_observed")
+        validation_origins = sorted(
+            int(row[0])
+            for row in horizon_frame.where(
+                (functions.col("temporal_role") == "validation")
+                & functions.col("target_is_observed")
+            )
+            .select("forecast_origin_year")
+            .distinct()
+            .collect()
         )
-        imputed = tuple(f"{column}__imputed" for column in LINEAR_FEATURE_COLUMNS)
-        pipeline = Pipeline(
-            stages=[
-                Imputer(
-                    strategy="median",
-                    inputCols=list(LINEAR_FEATURE_COLUMNS),
-                    outputCols=list(imputed),
-                ),
-                VectorAssembler(
-                    inputCols=list(imputed),
-                    outputCol="_unscaled_features",
-                    handleInvalid="error",
-                ),
-                StandardScaler(
-                    inputCol="_unscaled_features",
-                    outputCol="_scaled_features",
-                    withMean=True,
-                    withStd=True,
-                ),
-                LinearRegression(
-                    featuresCol="_scaled_features",
-                    labelCol="target_cumulative_log_change",
-                    predictionCol="prediction_cumulative_log_change",
-                    regParam=reg_param,
-                    elasticNetParam=0.0,
-                    maxIter=100,
-                    standardization=False,
-                ),
-            ]
-        )
-        output = pipeline.fit(training).transform(validation).select(
-            *frame.columns,
-            "prediction_cumulative_log_change",
-        )
-        outputs.append(output.withColumn("model_name", functions.lit("regularized_linear")))
+        for validation_origin in validation_origins:
+            training = training_pool.where(
+                functions.col("target_end_year") < validation_origin
+            )
+            validation = horizon_frame.where(
+                (functions.col("temporal_role") == "validation")
+                & functions.col("target_is_observed")
+                & (functions.col("forecast_origin_year") == validation_origin)
+            )
+            if not training.limit(1).count():
+                raise ValueError(
+                    f"No origin-safe linear training observations for {horizon}-year "
+                    f"validation origin {validation_origin}"
+                )
+            imputed = tuple(f"{column}__imputed" for column in LINEAR_FEATURE_COLUMNS)
+            pipeline = Pipeline(
+                stages=[
+                    Imputer(
+                        strategy="median",
+                        inputCols=list(LINEAR_FEATURE_COLUMNS),
+                        outputCols=list(imputed),
+                    ),
+                    VectorAssembler(
+                        inputCols=list(imputed),
+                        outputCol="_unscaled_features",
+                        handleInvalid="error",
+                    ),
+                    StandardScaler(
+                        inputCol="_unscaled_features",
+                        outputCol="_scaled_features",
+                        withMean=True,
+                        withStd=True,
+                    ),
+                    LinearRegression(
+                        featuresCol="_scaled_features",
+                        labelCol="target_cumulative_log_change",
+                        predictionCol="prediction_cumulative_log_change",
+                        regParam=reg_param,
+                        elasticNetParam=0.0,
+                        maxIter=100,
+                        standardization=False,
+                    ),
+                ]
+            )
+            output = (
+                pipeline.fit(training)
+                .transform(validation)
+                .select(*frame.columns, "prediction_cumulative_log_change")
+                .withColumn(
+                    "model_training_cutoff_year",
+                    functions.lit(validation_origin - 1),
+                )
+            )
+            outputs.append(
+                output.withColumn("model_name", functions.lit("regularized_linear"))
+            )
     if not outputs:
         raise ValueError("No forecast horizons were available to fit")
     combined = outputs[0]
@@ -449,18 +476,38 @@ def _gradient_boosted_tree_predictions(
             candidate_cv_mae=candidate_cv_mae,
         )
         selections.append(selection)
-        fitted_model = fit_tree(
-            training,
-            max_depth=selected_depth,
-            max_iter=selected_iter,
+        validation_origins = sorted(
+            int(row[0])
+            for row in validation.select("forecast_origin_year").distinct().collect()
         )
-        output = fitted_model.transform(validation).select(
-            *frame.columns,
-            "prediction_cumulative_log_change",
-        )
-        outputs.append(
-            output.withColumn("model_name", functions.lit("gradient_boosted_trees"))
-        )
+        for validation_origin in validation_origins:
+            origin_training = training.where(
+                functions.col("target_end_year") < validation_origin
+            )
+            origin_validation = validation.where(
+                functions.col("forecast_origin_year") == validation_origin
+            )
+            if not origin_training.limit(1).count():
+                raise ValueError(
+                    f"No origin-safe tree training observations for {horizon}-year "
+                    f"validation origin {validation_origin}"
+                )
+            fitted_model = fit_tree(
+                origin_training,
+                max_depth=selected_depth,
+                max_iter=selected_iter,
+            )
+            output = (
+                fitted_model.transform(origin_validation)
+                .select(*frame.columns, "prediction_cumulative_log_change")
+                .withColumn(
+                    "model_training_cutoff_year",
+                    functions.lit(validation_origin - 1),
+                )
+            )
+            outputs.append(
+                output.withColumn("model_name", functions.lit("gradient_boosted_trees"))
+            )
     if not outputs:
         raise ValueError("No forecast horizons were available to fit")
     combined = outputs[0]
@@ -718,6 +765,15 @@ def build_forecast_baseline_run(
     )
     if predictions.where(functions.col("temporal_role") != "validation").limit(1).count():
         raise ValueError("Baseline prediction output contains a non-validation row")
+    invalid_fitted_cutoff = predictions.where(
+        functions.col("model_name").isin("regularized_linear", "gradient_boosted_trees")
+        & (
+            functions.col("model_training_cutoff_year")
+            >= functions.col("forecast_origin_year")
+        )
+    ).limit(1)
+    if invalid_fitted_cutoff.count():
+        raise ValueError("A fitted validation prediction uses labels from its origin or later")
     scorecard = build_forecast_scorecard(predictions)
     return ForecastRun(
         run_id,
