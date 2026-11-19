@@ -606,9 +606,10 @@ def validate_finalization_outputs(run: ForecastFinalizationRun) -> None:
             raise RuntimeError(f"{role} output contains an unobserved target")
         if frame.where(
             functions.col("model_training_cutoff_year").isNotNull()
-            &
-            functions.col("model_training_cutoff_year")
-            >= functions.col("forecast_origin_year")
+            & (
+                functions.col("model_training_cutoff_year")
+                >= functions.col("forecast_origin_year")
+            )
         ).limit(1).count():
             raise RuntimeError(f"{role} output violates the training cutoff")
         if frame.groupBy("geoid_2020", "horizon_years").count().where(
