@@ -64,6 +64,8 @@ by FHFA; it should not be read as a quality score.
 The line chart uses only observations marked available. Missing annual values are not interpolated
 or filled. HPI is an index of single-family price movement, not a dollar-valued home estimate.
 Comparing index levels between unrelated tracts is less useful than reading change through time.
+For Connecticut, the application maps current FHFA planning-region tract identifiers through the
+audited bridge before retrieving history for the canonical 2020 tract shown on the map.
 
 ## Feature-family gap chart
 

@@ -81,6 +81,8 @@ until access is explicitly granted after live validation.
   demonstration value for an approved forecast.
 - Simplified geometry locates places on the map but is not used for similarity, adjacency, or
   distance claims.
+- Connecticut history uses the audited current-to-2020 identifier bridge so the profile, trend
+  chart, and canonical 2020 display outline refer to the same tract.
 - Live neighborhood result sets share one warehouse connection and are cached by tract so richer
   boundary maps do not require repeated SQL startup on tab or horizon changes.
 - State, county, and tract navigation lists are compact, parameterized, and cached separately. The

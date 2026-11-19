@@ -21,6 +21,7 @@ letters, search text is length-limited, and user values are passed as query para
 |---|---|
 | `gold_tract_profile_current` | Current labels, ACS profile, housing composition, coverage flags, and latest HPI context |
 | `silver_fhfa_tract_year` | Observed annual single-family HPI history |
+| `silver_connecticut_tract_bridge_2020_2024` | Current Connecticut FHFA identifiers mapped to canonical 2020 tracts |
 | `silver_tract_display_geometry_2020` | Simplified selected, nearby-context, and matched tract outlines plus display bounds |
 | `serving_release_manifest` | Select one complete validated analogue release |
 | `serving_analogue_availability_current` | Search universe, state/county/tract navigation, horizon availability, and unavailable reason |
@@ -31,6 +32,12 @@ letters, search text is length-limited, and user values are passed as query para
 
 The interface does not read the modeling panel, evaluation tables, raw snapshots, or bronze data.
 Every Databricks App table resource is `SELECT` only, and the warehouse permission is `CAN_USE`.
+
+Connecticut requires one additional identity step. Current FHFA rows use planning-region tract
+identifiers, while the application and display geometry use canonical 2020 tract GEOIDs. The
+history query applies the audited one-to-one Connecticut bridge before filtering on the selected
+tract. Other states retain their source GEOID directly. Without this step, a Connecticut profile
+can correctly report available FHFA history while the chart query returns no rows.
 
 ## Geometry query and performance boundary
 
@@ -56,6 +63,11 @@ The state map requires one canonical named state identity. Its aggregation exclu
 rows with missing state labels and limits the mapped view to the 50 states and District of
 Columbia. Text search remains the access path for territories and for records that cannot be
 placed on Plotly's state geometry.
+
+All maps use canonical 2020 tract outlines, including Connecticut. Current profile data,
+historical matches, and display geometry therefore share one map identity even when a newer source
+uses planning-region codes. The bridge maps identifiers only; it does not reshape or area-weight
+tract geometry.
 
 ## Release-selection rule
 

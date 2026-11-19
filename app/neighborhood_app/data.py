@@ -428,11 +428,23 @@ class DatabricksNeighborhoodRepository:
             LIMIT 80
             """
         history_query = f"""
-            SELECT observation_year, annual_change_pct, hpi, hpi_available,
-                   annual_change_available, silver_build_id
-            FROM {self._table(self._settings.silver_schema, "silver_fhfa_tract_year")}
-            WHERE geoid = :geoid
-            ORDER BY observation_year
+            SELECT
+              h.observation_year,
+              h.annual_change_pct,
+              h.hpi,
+              h.hpi_available,
+              h.annual_change_available,
+              h.silver_build_id
+            FROM {self._table(self._settings.silver_schema, "silver_fhfa_tract_year")} h
+            LEFT JOIN {
+                self._table(
+                    self._settings.silver_schema,
+                    "silver_connecticut_tract_bridge_2020_2024",
+                )
+            } b
+              ON h.geoid = b.geoid_current
+            WHERE coalesce(b.geoid_2020, h.geoid) = :geoid
+            ORDER BY h.observation_year
             """
         availability_query = f"""
             SELECT *
