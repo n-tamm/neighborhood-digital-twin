@@ -171,6 +171,8 @@ def test_live_repository_batches_neighborhood_queries_and_loads_geometry() -> No
 
     assert len(executor.batch_queries) == 7
     assert "st_asgeojson" in executor.batch_queries[1][0].lower()
+    assert "silver_connecticut_tract_bridge_2020_2024" in executor.batch_queries[2][0]
+    assert "coalesce(b.geoid_2020, h.geoid)" in executor.batch_queries[2][0]
     assert neighborhood.bounds["minimum_longitude"] == -86.5
     assert neighborhood.map_context["geoid_2020"].tolist() == ["01001020300"]
 

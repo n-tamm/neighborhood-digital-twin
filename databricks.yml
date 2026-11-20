@@ -210,6 +210,12 @@ resources:
             securable_type: TABLE
             securable_full_name: ${var.catalog}.${var.silver_schema}.silver_fhfa_tract_year
             permission: SELECT
+        - name: connecticut-tract-bridge
+          description: Canonical 2020 mapping for current Connecticut tract identifiers.
+          uc_securable:
+            securable_type: TABLE
+            securable_full_name: ${var.catalog}.${var.silver_schema}.silver_connecticut_tract_bridge_2020_2024
+            permission: SELECT
         - name: tract-display-geometry
           description: Simplified tract geometry used only for display.
           uc_securable:

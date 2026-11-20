@@ -1,6 +1,6 @@
 # Project Readiness and Next Implementation Steps
 
-This is the working handoff as of November 13, 2026. The broader design remains in the
+This is the working handoff as of November 19, 2026. The broader design remains in the
 [roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
 
 ## Current answer
@@ -57,14 +57,20 @@ not be added until a model result or required app view shows a specific gap.
 
 ## Baseline modeling checkpoint
 
-- Job `500 Modeling | Forecast Baselines` completed on November 7 and published 1,588,340
-  validation predictions across 59,179 tracts and seven methods, plus 1,463 sliced scorecard rows.
-- Gradient-boosted trees has the lowest validation MAE/RMSE at one year (0.0707/0.0902) and three
-  years (0.0721/0.0933). Regularized linear is better at five years (0.1033/0.1332 versus
-  0.1286/0.1603 for the tree).
-- Five-year evidence is especially exploratory: only two training origins and one validation
-  origin support it. These validation results do not select a champion or justify opening the
-  locked temporal test.
+- The November 13 job-500 run added training-only temporal tuning for the gradient-boosted-tree
+  challenger. The one-year tree selected depth 2 and 50 iterations; three years retains the fixed
+  depth-4/50 settings because fewer than two purge-safe tuning folds are available.
+- At one year, the tuned tree has slightly lower MAE than regularized linear (0.07173 versus
+  0.07199), while linear has lower RMSE and bias. Their ranking changes by validation origin, so
+  there is no clear champion. At three years, the tree leads MAE and RMSE, but the short training
+  history makes this evidence less secure.
+- Active forecast decisions now cover one and three years only. Historical five-year rows remain
+  in the published scorecard and need to be retired from active reports on the next clean rerun.
+- The blanket calendar-decade censoring rule is now a review gate. FHFA publishes one continuous
+  annual tract dataset and the project already governs cross-vintage ACS use through the stable
+  tract cohort. The team must either document why FHFA outcomes cannot cross 2019-2020 or version
+  a corrected target and split contract before model selection. See the
+  [forecast and app readiness review](docs/forecasting/forecast_app_readiness_review.md).
 - Job `501 Modeling | Similarity Baselines` published 120 matches for six review queries under
   standardized raw and six-component PCA representations. PCA retains 95.5% of standardized
   variance.
@@ -284,9 +290,9 @@ dimension of lived experience are already represented.
   uncertainty slices.
 - Keep recording source, feature, target, split, parameters, metrics, environment, and artifacts
   in MLflow; the first shared experiment is now established.
-- The gradient-boosted-tree challenger is already compared on the published validation rows. Run
-  feature-family ablations and inspect origin-level and subgroup results before selecting a
-  champion.
+- The gradient-boosted-tree challenger and one-year feature-family ablation are complete. Resolve
+  the target-contract question, then inspect origin-level and subgroup results under the final
+  contract before selecting a champion.
 - Use the reserved calibration origins for prediction intervals, then open the locked tests only
   after point-model and uncertainty choices are final.
 - Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
@@ -418,7 +424,7 @@ The next checkpoint is complete when:
 - the team has an evidence-based decision on nonlinear forecasting, analytical adjacency, and any
   additional source family.
 
-The baseline and first nonlinear comparison are complete. The next checkpoint is feature-family
-ablation, validation-origin and subgroup review, a documented model-selection decision, and
-calibration using only the reserved calibration origins. The locked temporal tests must remain
-unopened until those choices are frozen.
+The baseline, first nonlinear comparison, and training-fold feature ablation are complete. The next
+checkpoint is the target-contract decision, a clean validation rerun and figure refresh, a
+documented model-selection decision, and calibration using only the reserved calibration origins.
+The locked temporal tests must remain unopened until those choices are frozen.

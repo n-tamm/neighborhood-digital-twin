@@ -20,7 +20,10 @@ results are historical artifacts and are excluded from current comparisons.
    output tables, and publication guards.
 5. [Evaluation and current results](evaluation_and_results.md) defines each metric and records what
    the current validation run does and does not establish.
-6. [Local meeting-demo notebook](../../notebooks/05_modeling/06_local_forecast_demo.ipynb) downloads
+6. [Forecast and application readiness review](forecast_app_readiness_review.md) explains what the
+   merged forecasting work establishes, the open target-contract decision, and the sequence needed
+   before application integration.
+7. [Local meeting-demo notebook](../../notebooks/05_modeling/06_local_forecast_demo.ipynb) downloads
    and caches a deterministic 500-tract subset of the governed one-year `gold_modeling_panel`
    training and validation rows. It reuses the production feature registry, fits local
    scikit-learn equivalents, including a GBT configured to mirror the production workflow's
@@ -29,10 +32,7 @@ results are historical artifacts and are excluded from current comparisons.
    (2, 3, 4, 5, 7, and 8) from small aggregate-table downloads. Install local dependencies with
    `py -3.11 -m pip install -e ".[local-forecast]"`;
    Databricks CLI OAuth is needed only to download or refresh the local cache. These subset results
-   are illustrative, not national results. The separate [command-line demo](../../scripts/forecast_demo.py)
-   remains a synthetic-data proof of concept.
-7. The equivalent [command-line demo](../../scripts/forecast_demo.py) is available when a
-   notebook interface is not convenient.
+   are illustrative, not national results.
 
 The current implementation is for development only. Calibration, prediction intervals, final model
 selection, and locked-test evaluation are not yet implemented.
