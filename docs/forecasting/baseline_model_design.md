@@ -4,8 +4,10 @@
 
 The first forecast workflow is designed to establish honest difficulty, not to search many
 algorithms. Every method predicts the same cumulative log-change target on the same validation
-population, restricted to windows that remain within a calendar decade. A fitted model only earns
-further development if it improves on transparent rules in a consistent and interpretable way.
+population. Cross-2020 feature histories are restricted to the governed stable-tract cohort;
+valid FHFA outcome windows are not discarded simply because they cross a calendar-decade
+boundary. A fitted model only earns further development if it improves on transparent rules in a
+consistent and interpretable way.
 
 ## Fixed prediction rules
 
@@ -79,6 +81,8 @@ frozen validation, calibration, and locked-test rows for their intended roles.
   deterioration when HPI history or regional context was removed. It did not justify dropping any
   family; see the [ablation results](gradient_boosted_tree_candidate.md#feature-family-ablation-training-cv).
 - No tract adjacency or distance feature is present because current geometry is display-only.
-- Forecast windows that cross a calendar-decade boundary are censored before fitting and scoring.
-- The linear model produces point predictions only; uncertainty is not calibrated.
+- Cross-2020 feature histories are permitted only for the governed stable-tract cohort. Fully
+  observed FHFA outcomes are not censored merely because they cross 2019-2020.
+- Job 500 methods produce point predictions only. Job 504 calibrates the final selected method's
+  interval from a separate reserved origin.
 - Coefficients should not be described as causal effects.

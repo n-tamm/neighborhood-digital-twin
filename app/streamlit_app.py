@@ -14,6 +14,7 @@ import streamlit as st
 from neighborhood_app.charts import (
     analogue_map_figure,
     feature_gap_figure,
+    forecast_interval_figure,
     housing_mix_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
@@ -174,45 +175,108 @@ def render_overview(data: NeighborhoodData) -> None:
 
 
 def render_forecast_status(data: NeighborhoodData) -> None:
-    """Reserve the forecast experience without displaying an unapproved prediction."""
+    """Render approved forecasts or an explicit unavailable state without substitution."""
 
     profile = data.profile
     st.subheader("Forecast model")
+    if data.forecasts.empty:
+        if not data.forecast_release:
+            boundary_title = "Forecast serving output is not published yet."
+            boundary_text = (
+                "This data mode does not contain an activated forecast release. The local "
+                "sample fixture intentionally omits production forecasts."
+            )
+        else:
+            reasons = (
+                data.forecast_availability["availability_reason"].dropna().astype(str).unique()
+                if not data.forecast_availability.empty
+                else ["No availability record was published"]
+            )
+            boundary_title = "An approved forecast is unavailable for this tract."
+            boundary_text = "Reason: " + ", ".join(reasons) + "."
+        st.markdown(
+            f"""
+            <div class="model-boundary">
+              <strong>{boundary_title}</strong><br>
+              {boundary_text} This application will not substitute a validation result,
+              historical analogue outcome, or fabricated number for an approved forecast.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown("#### Current tract readiness")
+        readiness = [
+            status_badge(
+                "Current ACS profile available",
+                available=bool(profile.get("has_current_acs_profile")),
+            ),
+            status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
+            status_badge(
+                "Current forecast candidate", available=bool(profile.get("forecast_candidate"))
+            ),
+        ]
+        st.markdown(" ".join(readiness), unsafe_allow_html=True)
+        return
+
+    forecast_as_of_year = int(data.forecasts["forecast_origin_year"].max())
     st.markdown(
-        """
+        f"""
         <div class="model-boundary">
-          <strong>Forecast serving output is not published yet.</strong><br>
-          The forecasting workstream is still selecting the final point model and calibrating
-          uncertainty. This application will not substitute a validation result, historical
-          analogue outcome, or fabricated number for the approved forecast.
+          <strong>Approved tract forecast as of {forecast_as_of_year}.</strong><br>
+          The point estimate and interval forecast FHFA single-family tract HPI. They are not an
+          individual-home valuation, a forecast for multifamily prices, or an investment rating.
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown("#### What this screen will contain")
-    items = st.columns(3)
-    with items[0]:
-        metric_card("Primary horizon", "1 year", "Cumulative FHFA tract HPI change")
-    with items[1]:
-        metric_card("Secondary horizon", "3 years", "Shown only after final evaluation")
-    with items[2]:
-        metric_card("Uncertainty", "Required", "Interval displayed beside every point estimate")
-    st.markdown("#### Current tract readiness")
-    readiness = [
-        status_badge(
-            "Current ACS profile available",
-            available=bool(profile.get("has_current_acs_profile")),
-        ),
-        status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
-        status_badge(
-            "Current forecast candidate", available=bool(profile.get("forecast_candidate"))
-        ),
+    cards = st.columns(len(data.forecasts))
+    for card, (_, row) in zip(
+        cards,
+        data.forecasts.sort_values("horizon_years").iterrows(),
+        strict=True,
+    ):
+        with card:
+            metric_card(
+                f"{int(row['horizon_years'])}-year annualized forecast",
+                format_percent(row["prediction_annualized_change_pct"]),
+                (
+                    f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
+                    f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
+                    f"through {int(row['target_end_year'])}"
+                ),
+            )
+    st.plotly_chart(
+        forecast_interval_figure(data.forecasts),
+        width="stretch",
+        key="approved_forecast_intervals",
+        config={"displayModeBar": False},
+    )
+    st.caption(
+        "The diamond is the state-trend baseline. The interval is calibrated from a reserved "
+        "historical year and then evaluated on a later locked test; it is not a guarantee."
+    )
+    withheld = data.forecast_availability.loc[
+        data.forecast_availability["availability_reason"] == "horizon_failed_locked_release_gate"
     ]
-    st.markdown(" ".join(readiness), unsafe_allow_html=True)
+    for _, row in withheld.sort_values("horizon_years").iterrows():
+        st.warning(
+            f"The {int(row['horizon_years'])}-year forecast was withheld after the locked test. "
+            f"Its MAE was {float(row['champion_mae_log_change']):.3f}, compared with "
+            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its "
+            f"interval covered {float(row['empirical_interval_coverage']):.1%} of outcomes "
+            f"versus the {float(row['minimum_required_interval_coverage']):.0%} release minimum."
+        )
+    first = data.forecasts.sort_values("horizon_years").iloc[0]
+    st.markdown("#### What drives the model")
+    st.write(str(first["driver_summary"]))
     st.info(
-        "When the forecast contract is published, this view will separate the model estimate, "
-        "calibrated interval, baseline comparison, and model drivers. Historical analogues remain "
-        "a separate evidence source."
+        "Historical analogues remain a separate evidence source. Their observed later outcomes "
+        "do not set or widen this forecast interval."
+    )
+    st.caption(
+        f"Forecast release {data.forecast_release.get('serving_release_id', 'unavailable')} · "
+        f"model {first['model_name']} for the primary horizon · "
+        f"nominal coverage {float(first['nominal_coverage']):.0%}"
     )
 
 
@@ -457,8 +521,9 @@ def render_methods(data: NeighborhoodData) -> None:
             - **Observed market history:** annual FHFA single-family tract HPI where available.
             - **Historical analogues:** ten earlier, distinct communities selected with weighted
               standardized distance and time-safe outcomes.
-            - **Forecast:** intentionally withheld until model selection and calibrated uncertainty
-              are published through a serving contract.
+            - **Forecast:** an approved one-year point estimate and calibrated interval where the
+              tract is eligible. The three-year candidate failed its locked release gate and is
+              shown as unavailable rather than being replaced with a weaker result.
             """
         )
         st.markdown("#### Important boundaries")
@@ -475,6 +540,7 @@ def render_methods(data: NeighborhoodData) -> None:
         lineage = {
             "Application mode": data.data_mode,
             "Analogue release": release.get("serving_release_id"),
+            "Forecast release": data.forecast_release.get("serving_release_id"),
             "Serving schema": release.get("serving_schema_version"),
             "Serving as of": release.get("serving_as_of_year"),
             "ACS release": profile.get("acs_release_year"),
@@ -698,7 +764,10 @@ def main() -> None:
                 f"{horizon_years}-year analogues",
                 available=data.horizon_available(horizon_years),
             ),
-            status_badge("Forecast pending", available=False),
+            status_badge(
+                f"{horizon_years}-year forecast",
+                available=data.forecast_horizon_available(horizon_years),
+            ),
         ]
         st.markdown(" ".join(status_html), unsafe_allow_html=True)
         st.write("")

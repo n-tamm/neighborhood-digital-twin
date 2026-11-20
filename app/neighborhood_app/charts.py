@@ -186,6 +186,71 @@ def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
     return _layout(figure, height=330)
 
 
+def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
+    """Compare approved annualized forecasts, calibrated intervals, and state-trend baselines."""
+
+    figure = go.Figure()
+    if forecasts.empty:
+        return _layout(figure, height=300)
+    ordered = forecasts.sort_values("horizon_years").copy()
+    ordered["horizon_label"] = ordered["horizon_years"].map(
+        lambda value: f"{int(value)}-year horizon"
+    )
+    point = ordered["prediction_annualized_change_pct"].astype(float)
+    lower = ordered["prediction_lower_annualized_change_pct"].astype(float)
+    upper = ordered["prediction_upper_annualized_change_pct"].astype(float)
+    figure.add_scatter(
+        x=point,
+        y=ordered["horizon_label"],
+        mode="markers",
+        marker={"size": 13, "color": TEAL, "line": {"color": TEXT, "width": 1}},
+        error_x={
+            "type": "data",
+            "symmetric": False,
+            "array": upper - point,
+            "arrayminus": point - lower,
+            "color": TEAL_LIGHT,
+            "thickness": 4,
+            "width": 8,
+        },
+        customdata=ordered[
+            [
+                "prediction_lower_annualized_change_pct",
+                "prediction_upper_annualized_change_pct",
+                "target_end_year",
+                "model_name",
+            ]
+        ],
+        hovertemplate=(
+            "Annualized forecast %{x:.1f}%<br>"
+            "%{customdata[0]:.1f}% to %{customdata[1]:.1f}% interval<br>"
+            "Through %{customdata[2]} · %{customdata[3]}<extra>Approved forecast</extra>"
+        ),
+        name="Forecast and calibrated interval",
+    )
+    figure.add_scatter(
+        x=ordered["baseline_prediction_annualized_change_pct"],
+        y=ordered["horizon_label"],
+        mode="markers",
+        marker={"size": 11, "color": GOLD, "symbol": "diamond"},
+        hovertemplate="State-trend baseline %{x:.1f}%<extra>Baseline</extra>",
+        name="State-trend baseline",
+    )
+    figure.add_vline(x=0, line_color=MUTED, line_width=1)
+    figure.update_xaxes(
+        title="Annualized FHFA HPI change",
+        ticksuffix="%",
+        gridcolor=GRID,
+        zeroline=False,
+    )
+    figure.update_yaxes(title=None, showgrid=False, categoryorder="array")
+    figure.update_layout(
+        showlegend=True,
+        legend={"orientation": "h", "y": -0.28, "x": 0},
+    )
+    return _layout(figure, height=340, margin_top=12)
+
+
 def neighborhood_context_map_figure(
     profile: Mapping[str, Any],
     bounds: Mapping[str, Any],

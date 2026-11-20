@@ -14,13 +14,16 @@ role. It intentionally counts years rather than tract rows.
 
 ## Interpretation
 
-The decade-safe split has nine one-year training origins, three three-year origins, and only two
-five-year origins. One year is primary; five years remains especially exploratory. Millions of
-repeated tract rows provide cross-sectional detail but do not create additional independent market
-periods.
+The original figure showed nine one-year training origins, three three-year origins, and only two
+five-year origins under the earlier calendar-decade restriction. That arbitrary restriction has
+since been removed. The durable interpretation remains: longer horizons have fewer independent
+market periods than their row counts suggest, because millions of repeated tract rows add
+cross-sectional detail without creating new historical time periods. A refreshed version of this
+figure should be generated before it is used in the final report.
 
 Calibration and locked-test cells show reserved data. Their presence in the assignment contract
-does not mean those outcomes have been used for model choice.
+does not mean those outcomes were used for model choice. The finalization workflow opened the
+locked rows only after the one- and three-year champions and interval method were frozen.
 
 ## Limits
 

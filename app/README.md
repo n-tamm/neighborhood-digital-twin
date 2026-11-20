@@ -3,9 +3,9 @@
 This folder contains the first working Neighborhood Housing Intelligence application. It is a
 map-first Streamlit interface that lets a user select a 2020 Census tract, review its current
 community and housing profile, inspect observed FHFA single-family HPI history, and explore
-approved historical analogues. Forecasting has a deliberate unavailable state until the
-forecasting workstream publishes a selected model, calibrated interval, and versioned serving
-contract.
+approved historical analogues. Live mode also shows the approved one-year FHFA HPI forecast,
+calibrated interval, state-trend baseline, and explicit locked-gate state for the withheld
+three-year horizon. The reduced local fixture intentionally keeps forecasting unavailable.
 
 The interface uses a deep navy theme with high-contrast teal, blue, and gold semantics across the
 application and its maps. The primary map combines a visible selected-tract point with its
@@ -77,8 +77,10 @@ until access is explicitly granted after live validation.
   the multifamily market.
 - Historical analogue outcomes are observed evidence from earlier communities, not forecasts or
   causal comparisons.
-- The forecast tab never substitutes an analogue statistic, validation prediction, or fabricated
-  demonstration value for an approved forecast.
+- The forecast tab shows only the approved one-year release. It never substitutes an analogue
+  statistic, validation prediction, or fabricated demonstration value for an unavailable horizon.
+- The three-year method failed its locked accuracy and uncertainty gates and is shown as withheld,
+  not silently replaced.
 - Simplified geometry locates places on the map but is not used for similarity, adjacency, or
   distance claims.
 - Connecticut history uses the audited current-to-2020 identifier bridge so the profile, trend

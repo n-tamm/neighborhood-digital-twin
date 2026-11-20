@@ -1,91 +1,101 @@
 # Forecast Evaluation and Current Results
 
-## Metric definitions
+## What is being evaluated
 
-| Metric | Interpretation |
+The target is cumulative log change in FHFA single-family tract HPI from a forecast origin to its
+future endpoint. One year is the primary horizon. Three years is a secondary horizon with fewer
+independent historical origins.
+
+The workflow deliberately separates four kinds of evidence:
+
+- **Training folds** tune the one-year tree without reading validation outcomes.
+- **Validation origins** compare methods and support the frozen selection.
+- **Calibration origins** estimate an absolute-residual interval radius after selection.
+- **Locked origins** provide the final, once-opened test. Their results are never used to choose a
+  replacement method or improve the reported score.
+
+## How to read the metrics
+
+| Metric | Plain-language meaning |
 |---|---|
-| MAE | Average absolute miss in cumulative log change; primary method comparison |
-| RMSE | Root mean squared miss; reacts more strongly to large errors |
-| Median absolute error | Typical absolute miss |
-| 90th-percentile absolute error | Tail threshold below which 90% of absolute misses fall |
-| Mean signed error | Average actual minus predicted change; positive means underprediction |
-| Annualized error | Error transformed into annual percentage points for readability |
-| R-squared | Squared-error improvement over predicting the validation target mean |
-| Skill versus zero | `1 - candidate error / zero-change error`; positive values improve on zero |
-| Directional lift | Directional accuracy minus an always-majority-direction rule |
+| MAE | Average absolute miss in cumulative log HPI change; the primary point-error metric |
+| RMSE | Similar to MAE but places more weight on unusually large misses |
+| 90th-percentile absolute error | A tail-error threshold; 90% of absolute misses are smaller |
+| Mean signed error | Average actual minus predicted change; negative values mean overprediction |
+| R-squared | Squared-error improvement over predicting the evaluation-set mean |
+| Empirical interval coverage | Share of locked outcomes falling inside the published interval |
+| Mean interval width | How broad the uncertainty range is after converting it to annualized points |
 
-These metrics answer different questions. A method can improve MAE relative to zero change while
-having negative R-squared or systematic bias. Selection therefore cannot use one number.
+No single metric is sufficient. A method can improve MAE but be biased, unstable across years, or
+poorly calibrated. Counts and subgroup slices are retained for the same reason.
 
-Active model evaluation now includes only one- and three-year horizons. Five-year results from
-earlier exploratory runs are excluded from current comparisons and reports; their original
-scorecard records remain historical artifacts.
+## Corrected validation evidence
 
-## Current decade-safe validation results
+Job 500 run `f51ad8ff85c44fe5bbd665b20520f6e4` evaluated only rows whose labels were available before
+their validation origin. Cross-2020 features are allowed only for the governed stable-tract
+cohort; valid FHFA targets are not discarded merely because an endpoint falls in a new decade.
 
-The latest published scorecard, built November 13, 2026
-(`5005b56099074eb897988c44b472f654`), evaluates target windows whose origin and endpoint are in
-the same calendar decade. The active validation origins are 2021-2022 (one year) and 2014-2015
-(three years). The GBT uses the training-only tuning procedure described in the
-[candidate design](gradient_boosted_tree_candidate.md); no validation or locked-test outcome was
-used to select its parameters.
+| Horizon | Frozen method | Validation MAE | Validation RMSE | Main reason for selection |
+|---|---|---:|---:|---|
+| 1 year | Gradient-boosted trees | 0.0733 | 0.0929 | Best combined MAE, tail error, and balance across 2021-2022 |
+| 3 years | State current trend | 0.0666 | 0.0896 | Clearly better overall than the fitted tree and linear model in 2017-2018 |
 
-| Horizon | Lowest MAE | Lowest RMSE | Observations | Interpretation |
-|---|---|---|---:|---|
-| 1 year | Gradient-boosted trees: 0.0717 | Regularized linear: 0.0911 | 101,703 | GBT has marginally lower MAE; linear has lower RMSE. |
-| 3 years | Gradient-boosted trees: 0.0721 | Gradient-boosted trees: 0.0933 | 83,254 | Only three training origins; the GBT retains fixed parameters because there are not enough purged tuning folds. |
+The one-year result was not uniform: state trend won 2021 and the tree won 2022. The three-year
+result showed that a transparent market baseline could outperform more complex tract models in
+development. Both points matter when interpreting the later locked test.
 
-GBT improves over zero-change MAE by 39.6% and 56.3% at one and three years. For the newly tuned
-one-year model, MAE is slightly worse than the prior fixed depth-4/50-iteration GBT (0.0717 versus
-0.0707), and its RMSE (0.0915) is also slightly worse (previously 0.0902). The one-year validation
-result therefore does not show an improvement from tuning; validation remains an evaluation set,
-not a basis for another parameter choice.
+## Interval calibration
 
-Mean signed log error (`actual - prediction`) for the tree is +0.0291 at one year and -0.0176 at
-three years. Positive values indicate underprediction. These are validation findings, not a
-champion decision or an estimate from the locked temporal test.
+Job 504 used a 90% split-conformal absolute-residual interval. The one-year calibration origin had
+41,017 observations and produced a cumulative-log radius of 0.1222. The three-year calibration
+origin had 39,563 observations and produced a radius of 0.2675.
 
-## Directional accuracy
+These are distribution-free residual intervals, but they are not timeless guarantees. Each
+horizon has many tracts but only one independent calibration origin, so a market-regime change can
+still break coverage.
 
-Approximately 90.2% of one-year validation outcomes are positive and 94.6% at three years. Raw
-directional accuracy is consequently high for the active methods, while lift over the
-majority-direction rule is near zero. Direction accuracy alone is not evidence that the model
-distinguishes which tracts will appreciate.
+## Locked-test results
+
+| Horizon | Locked period | Observations | Champion MAE | Zero MAE | State-trend MAE | Coverage | Result |
+|---|---|---:|---:|---:|---:|---:|---|
+| 1 year | 2024-2025 | 42,082 | 0.0599 | 0.0627 | 0.0592 | 89.4% | Release gate passed |
+| 3 years | 2022-2025 | 45,887 | 0.2943 | 0.1566 | 0.2943 | 48.2% | Release gate failed |
+
+The one-year tree beats zero change, and its 89.4% coverage is close to the stated 90% level. The
+state-trend baseline is slightly better on locked MAE, so the correct conclusion is not that the
+tree dominates every simple method. The pre-frozen tree is retained and the state baseline is
+shown beside it in the application.
+
+The three-year method failed in a practically important way. Mean predicted cumulative log change
+was 0.442, while mean observed change was 0.149. Persisting the unusually strong 2022 statewide
+trend for three years caused systematic overprediction. The interval also captured fewer than
+half of the outcomes.
+
+## Release gate
+
+Job 605 applies the same fixed minimum requirements to every horizon:
+
+1. At least 1,000 locked observations.
+2. Champion MAE no worse than zero-change MAE.
+3. Empirical coverage no more than ten percentage points below the nominal interval coverage.
+
+The gate does not search for a new model after reading the test. It publishes the one-year horizon
+and records the three-year reasons as
+`worse_than_zero_change_mae;interval_coverage_below_threshold`.
 
 ## Required interpretation slices
 
-Review overall metrics alongside:
+The scorecards retain results by Census region, held-out state role, stable versus post-2020
+cohort, housing composition, ACS uncertainty, and origin year. The one-year locked result is
+fairly consistent across these slices. The three-year failure appears across regions and cohorts,
+which supports the regime-failure interpretation rather than a single geography bug.
 
-- forecast-origin year, which reveals temporal instability;
-- held-out versus development states, which tests geographic transfer;
-- stable versus broad geography cohort;
-- single-family housing-share band;
-- ACS uncertainty band;
-- Census region and state; and
-- observation and tract counts.
+## What the evidence supports
 
-The [model-evaluation figure documentation](../model_evaluation/README.md) explains each current
-diagnostic separately.
+- A usable one-year forecast with an honestly evaluated uncertainty interval.
+- A visible state-trend comparator rather than a claim that complexity always wins.
+- Withholding the three-year forecast from the product.
+- Reporting regime sensitivity as a substantive result.
 
-The published evaluation figures have not yet been rerendered from the November 13 tuned run; the
-metrics above are from the current scorecard, while those visual diagnostics still reflect the
-prior forecast build.
-
-## What the current run establishes
-
-- The tree has the lowest validation MAE at one and three years and the lowest RMSE at three
-  years; regularized linear has the lowest one-year RMSE.
-- All compared target windows remain within a calendar decade; cross-decade targets are censored
-  and excluded from fitting and validation.
-- Directional accuracy has little lift over the majority-direction baseline.
-- Results do not justify promoting a champion or opening the locked temporal test.
-
-## What it does not establish
-
-- A separate one-year feature-family ablation used training-only temporal folds; it did not alter
-  the published validation scorecard or justify removing any feature family. See the
-  [training-CV results](gradient_boosted_tree_candidate.md#feature-family-ablation-training-cv).
-- No prediction interval has been calibrated.
-- No champion has been frozen.
-- No locked temporal test has been opened.
-- No forecast has been approved for application serving.
+It does not support an individual-home valuation, a causal neighborhood forecast, an investment
+recommendation, or retuning the three-year method against the locked outcome.

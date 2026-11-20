@@ -22,7 +22,8 @@ In the November 7, 2026 validation run, gradient-boosted trees has the lowest MA
 
 - Compare methods within a horizon, not raw cumulative errors across different horizon lengths.
 - Lowest MAE does not establish calibration, low bias, or stable performance.
-- These are validation results; locked temporal tests remain unopened.
+- These are validation results from before finalization. Locked temporal-test results were opened
+  later under the frozen model contract and are reported in the final forecast figure build.
 
 **Source:** [`forecast_baseline_scorecard`](../../data/48_evaluation_forecast_baseline_scorecard.md)
 

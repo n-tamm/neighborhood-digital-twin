@@ -235,6 +235,42 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "across overall, geography, cohort, housing-composition, and state slices.",
         "One row per model, horizon, slice name, and slice value.",
     ),
+    "forecast_model_selection": TableMetadata(
+        "Frozen per-horizon champion choices with their published validation evidence and "
+        "estimator settings.",
+        "One row per active forecast horizon and finalization run.",
+    ),
+    "forecast_calibration_prediction": TableMetadata(
+        "Reserved-origin predictions used only to estimate the frozen forecast interval radius.",
+        "One row per calibration tract and active forecast horizon.",
+    ),
+    "forecast_interval_calibration": TableMetadata(
+        "Finite-sample absolute-residual interval settings estimated from development-state "
+        "calibration rows.",
+        "One row per active forecast horizon and finalization run.",
+    ),
+    "forecast_locked_test_prediction": TableMetadata(
+        "Final point and interval predictions for the once-opened locked temporal tests.",
+        "One row per locked-test tract and active forecast horizon.",
+    ),
+    "forecast_locked_test_scorecard": TableMetadata(
+        "Final locked-test point error, bias, interval coverage, and interval-width diagnostics.",
+        "One row per horizon, evaluation slice, and slice value.",
+    ),
+    "forecast_release_gate": TableMetadata(
+        "Frozen application-release decision comparing each champion with zero-change and its "
+        "locked interval-coverage requirement.",
+        "One row per active forecast horizon and finalization run.",
+    ),
+    "forecast_final_evaluation_figure_manifest": TableMetadata(
+        "Versioned inventory of final forecast validation, locked-test, interval, and release "
+        "decision figures.",
+        "One row per figure in the current final forecast evaluation build.",
+    ),
+    "forecast_current_prediction": TableMetadata(
+        "Current model-ready tract predictions from the frozen champion and interval contracts.",
+        "One row per current model-ready tract and active forecast horizon.",
+    ),
     "similarity_baseline_match": TableMetadata(
         "Reviewable current-state neighborhood matches from standardized raw and PCA "
         "representations.",
@@ -375,6 +411,15 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "Aligned observed annual FHFA paths following each approved historical match.",
         "One row per serving release, current query, match rank, and trajectory-year offset.",
     ),
+    "serving_forecast_current": TableMetadata(
+        "Versioned current tract forecasts with calibrated intervals, baseline context, and "
+        "scope notes approved for application display.",
+        "One row per serving release, current tract, and active forecast horizon.",
+    ),
+    "serving_forecast_availability_current": TableMetadata(
+        "Explicit current forecast availability and unavailable reason for every profile tract.",
+        "One row per serving release, current profile tract, and active forecast horizon.",
+    ),
     "serving_release_manifest": TableMetadata(
         "Validated serving-table inventory whose rows activate an application release.",
         "One row per serving release, component, and published table.",
@@ -393,6 +438,10 @@ TABLE_METADATA: dict[str, TableMetadata] = {
 
 MODEL_TABLES = {
     "forecast_baseline_prediction",
+    "forecast_model_selection",
+    "forecast_calibration_prediction",
+    "forecast_locked_test_prediction",
+    "forecast_current_prediction",
     "similarity_baseline_match",
     "historical_analogue_match",
     "historical_analogue_prediction",
@@ -407,6 +456,10 @@ MODEL_TABLES = {
 
 EVALUATION_TABLES = {
     "forecast_baseline_scorecard",
+    "forecast_interval_calibration",
+    "forecast_locked_test_scorecard",
+    "forecast_release_gate",
+    "forecast_final_evaluation_figure_manifest",
     "similarity_baseline_summary",
     "historical_analogue_summary",
     "historical_analogue_scorecard",
@@ -431,6 +484,8 @@ SERVING_TABLES = {
     "serving_analogue_availability_current",
     "serving_analogue_explanation_current",
     "serving_analogue_trajectory_current",
+    "serving_forecast_current",
+    "serving_forecast_availability_current",
     "serving_release_manifest",
 }
 
@@ -502,6 +557,35 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "target_is_observed": "True when both FHFA target endpoints are available and positive.",
     "target_censor_reason": "Explicit reason a horizon-specific target is unavailable.",
+    "selected_model_name": "Frozen champion model selected for the forecast horizon.",
+    "prediction_lower_cumulative_log_change": (
+        "Lower calibrated bound for cumulative FHFA HPI log change."
+    ),
+    "prediction_upper_cumulative_log_change": (
+        "Upper calibrated bound for cumulative FHFA HPI log change."
+    ),
+    "prediction_lower_annualized_change_pct": (
+        "Annualized percentage change implied by the lower interval bound."
+    ),
+    "prediction_upper_annualized_change_pct": (
+        "Annualized percentage change implied by the upper interval bound."
+    ),
+    "nominal_coverage": "Declared target coverage of the calibrated prediction interval.",
+    "empirical_interval_coverage": (
+        "Observed share of evaluated targets contained by the calibrated interval."
+    ),
+    "interval_radius_cumulative_log_change": (
+        "Finite-sample calibration quantile added to and subtracted from the point forecast."
+    ),
+    "calibration_observation_count": (
+        "Development-state calibration residuals used to estimate the interval radius."
+    ),
+    "model_training_cutoff_year": (
+        "Latest target endpoint permitted in training for this prediction; always before origin."
+    ),
+    "forecast_available": "True when a validated current forecast row exists for the tract.",
+    "driver_summary": "Plain-language, noncausal explanation of the approved model evidence.",
+    "driver_explanation_method": "Declared method supporting the displayed model explanation.",
     "modeling_cohort": (
         "Stable longitudinal cohort or broader post-2020-only cohort available to the row."
     ),

@@ -50,16 +50,16 @@ def test_split_rules_derive_point_in_time_calibration_and_validation_years() -> 
         {
             "horizon_years": 3,
             "locked_test_origin_year": 2022,
-            "calibration_origin_year": 2016,
-            "validation_start_origin_year": 2014,
-            "validation_end_origin_year": 2015,
+            "calibration_origin_year": 2019,
+            "validation_start_origin_year": 2017,
+            "validation_end_origin_year": 2018,
         },
         {
             "horizon_years": 5,
             "locked_test_origin_year": 2020,
-            "calibration_origin_year": 2014,
-            "validation_start_origin_year": 2013,
-            "validation_end_origin_year": 2013,
+            "calibration_origin_year": 2015,
+            "validation_start_origin_year": 2014,
+            "validation_end_origin_year": 2014,
         },
     ]
 
@@ -118,13 +118,13 @@ def test_temporal_split_roles_purge_labels_unknown_at_the_locked_origin() -> Non
         target_end_year=2022,
         target_is_observed=True,
         rule=rules[3],
-    ) == "ineligible_target"
+    ) == "calibration"
     assert temporal_split_role(
-        forecast_origin_year=2016,
-        target_end_year=2019,
+        forecast_origin_year=2017,
+        target_end_year=2020,
         target_is_observed=True,
         rule=rules[3],
-    ) == "calibration"
+    ) == "validation"
     assert temporal_split_role(
         forecast_origin_year=2021,
         target_end_year=2024,
@@ -148,7 +148,7 @@ def test_temporal_split_roles_purge_labels_unknown_at_the_locked_origin() -> Non
     }
 
 
-def test_validation_origins_skip_decade_crossing_windows() -> None:
+def test_validation_origins_preserve_recent_cross_2020_windows() -> None:
     rules = {
         rule.horizon_years: rule
         for rule in build_split_rules(
@@ -163,31 +163,24 @@ def test_validation_origins_skip_decade_crossing_windows() -> None:
         2022,
     )
     assert (rules[3].validation_start_origin_year, rules[3].validation_end_origin_year) == (
-        2014,
-        2015,
+        2017,
+        2018,
     )
-    assert (rules[3].calibration_origin_year, rules[5].calibration_origin_year) == (2016, 2014)
+    assert (rules[3].calibration_origin_year, rules[5].calibration_origin_year) == (2019, 2015)
     assert (rules[5].validation_start_origin_year, rules[5].validation_end_origin_year) == (
-        2013,
-        2013,
+        2014,
+        2014,
     )
-    for origin in (2014, 2015):
+    for origin in (2017, 2018):
         assert temporal_split_role(
             forecast_origin_year=origin,
             target_end_year=origin + 3,
             target_is_observed=True,
             rule=rules[3],
         ) == "validation"
-    for origin in (2017, 2018, 2019):
-        assert temporal_split_role(
-            forecast_origin_year=origin,
-            target_end_year=origin + 3,
-            target_is_observed=True,
-            rule=rules[3],
-        ) == "ineligible_target"
     assert temporal_split_role(
-        forecast_origin_year=2013,
-        target_end_year=2018,
+        forecast_origin_year=2014,
+        target_end_year=2019,
         target_is_observed=True,
         rule=rules[5],
     ) == "validation"

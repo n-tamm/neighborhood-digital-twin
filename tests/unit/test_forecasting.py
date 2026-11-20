@@ -12,8 +12,8 @@ import pytest
 
 from neighborhood_twin.forecasting import (
     LINEAR_FEATURE_COLUMNS,
-    active_forecast_model_horizons,
     acs_uncertainty_band,
+    active_forecast_model_horizons,
     annualized_rate_from_cumulative_log,
     cumulative_log_from_annual_rate,
     gbt_temporal_cv_origin_years,

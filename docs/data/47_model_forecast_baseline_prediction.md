@@ -16,6 +16,7 @@ percentage predictions and errors make the results easier to interpret, while th
 cohort, geography, housing composition, and run lineage remain available for evaluation.
 
 The November 7, 2026 run contains 1,588,340 validation predictions across 59,179 tracts and seven
-methods. Validation targets are observed and remain within their forecast-origin calendar decade.
-The model schema keeps these generated outputs separate from curated gold inputs and future
-application-serving tables.
+methods. Validation targets are observed and follow the current tract-vintage eligibility contract;
+they are no longer removed merely because a target window crosses a calendar-decade boundary. The
+model schema keeps these development outputs separate from curated gold inputs, locked evidence,
+and application-serving tables.

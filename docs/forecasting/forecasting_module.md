@@ -8,7 +8,7 @@
 
 The module contains reusable forecast logic. It validates the input contract, builds the five
 fixed baselines, fits regularized-linear and gradient-boosted-tree pipelines for the active one- and
-three-year horizons, filters decade-crossing targets from fitting and validation, adds readable
+three-year horizons, enforces origin-safe label availability, adds readable
 prediction and residual fields, and builds sliced evaluation scorecards. It does not read or write
 a Databricks table directly; orchestration and publication belong to the notebook. Five-year rows
 may remain in the upstream panel, but they are excluded from model fitting, predictions, and
@@ -84,7 +84,8 @@ forecast-origin years.
 - Locked-evaluation flags must agree with the frozen split contract.
 - Published predictions are rejected if any non-validation temporal role appears.
 - Model runs select only the active one- and three-year horizons from the input panel.
-- Targets spanning two calendar decades are censored and cannot be fitted or scored.
+- Cross-2020 modeling rows must satisfy the stable-tract feature contract; calendar decades alone
+  do not determine target eligibility.
 - GBT tuning folds use only eligible training origins, purge overlapping target windows, and fall
   back to fixed parameters if fewer than two usable folds exist.
 - A run fails if no horizon can be fit.

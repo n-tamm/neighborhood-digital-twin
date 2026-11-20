@@ -52,6 +52,8 @@ must wait for both so its manifest describes one consistent pair of runs.
 
 ## Current boundary
 
-The workflow displays development evidence from jobs 500 and 501. It does not yet visualize the
-separate job-502 historical-analogue results, calibrated uncertainty, a nonlinear comparison,
-application evaluation, or locked temporal test results.
+Job 600 remains the shared development-diagnostics workflow for the original forecast and
+similarity baselines. Historical-analogue communication figures are now produced by job 800, and
+the final validation, locked-test, interval-coverage, and release-decision forecast figures are
+produced separately by job 606. That separation preserves the lineage and purpose of each figure
+set rather than silently replacing the earlier seven-figure development build.

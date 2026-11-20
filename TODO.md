@@ -1,430 +1,139 @@
-# Project Readiness and Next Implementation Steps
+# Current Project State and Next Work
 
-This is the working handoff as of November 19, 2026. The broader design remains in the
-[roadmap](ROADMAP.md) and [implementation guide](docs/implementation/README.md).
+This is the implementation handoff as of November 19, 2026. It records what is actually running,
+what the current evidence supports, and what should happen next. Detailed execution order remains
+in [the pipeline runbook](docs/PIPELINE_RUN_ORDER.md).
 
 ## Current answer
 
-The approved source and feature-preparation pipeline is complete, and the first forecasting,
-current-state similarity, and historical-analogue baselines now run in Databricks. The project has
-reproducible public-source acquisition, bronze and silver transformations, governed geography,
-current and historical gold products, point-in-time model features, fixed evaluation assignments,
-a joined modeling panel, tracked experiments, validation-only forecast scorecards, reviewable
-neighborhood matches, seven versioned model-evaluation figures, and retrospective analogue
-evaluation. Model outputs and diagnostics now live outside gold in dedicated model and evaluation
-schemas. There is no unresolved data-integrity or leakage failure blocking the next model stage.
+The public-data pipeline, current historical-analogue system, first production forecast release,
+and interactive Databricks application are implemented. The application now combines current
+community context, observed FHFA history, approved historical analogues, and a quality-gated
+one-year forecast with a calibrated interval. The three-year forecast candidate remains in the
+evaluation record but is deliberately unavailable in the app because it failed the locked test.
 
-This does not mean the whole project is complete. Forecast model selection, calibrated
-uncertainty, and the interactive application still need to be built. The national analogue
-serving workflow publishes matches, summaries, availability, deterministic explanations, and
-annual historical paths as one validated release. Job 800 now turns that release and its approved
-evaluation evidence into five reviewed figures and a standup-ready walkthrough.
-Historical-analogue case review, bounded stability testing, expanded representation selection,
-exact current-neighborhood retrieval, and scalable retrieval evaluation are complete. Exact
-indexed retrieval is validated for all 46,719 eligible current tracts. New source families should
-not be added until a model result or required app view shows a specific gap.
+The remaining work is no longer basic pipeline construction. It is coordinated refresh work,
+application review, report integration, and targeted model research that must preserve the
+already opened locked-test result.
 
-## Data checkpoint
+## Data and pipeline checkpoint
 
-- ACS covers all 765 required state-release pairs for the 50 states and Washington, D.C., from
-  2010 through 2024.
-- FHFA tract HPI history is national through 2025.
-- The valid hierarchy contains country, Census region, Census division, state, county, and tract.
-- Pre-2020 ACS history uses the governed 59,607-tract stable geography subset; later releases keep
-  roughly 84,400 supported tracts.
-- `gold_model_feature_historical` contains 696,886 point-in-time rows across 63,367 tracts and
-  2011-2025 forecast origins.
-- `gold_model_split_assignment` and `gold_modeling_panel` each contain 2,090,658
-  tract-origin-horizon rows and reconcile exactly.
-- `gold_model_readiness_summary` contains 95 governed cohort, feature-completeness, ACS
-  uncertainty, housing-mix, and split summaries.
-- Maine, North Dakota, West Virginia, and New Mexico are the deterministic held-out states, one per
-  Census region.
-- All hard key, timing, availability, leakage, split, and reconciliation checks passed. Forecast
-  targets crossing a calendar-decade boundary are censored with
-  `target_censor_reason = 'crosses_decade_boundary'`; their split rows are marked
-  `ineligible_target` and excluded from fitting and evaluation. The rebuilt panel has zero
-  observed cross-decade targets.
-- The decade-safe split has nine one-year, three three-year, and two five-year independent training
-  origins. Validation origins are 2021-2022, 2014-2015, and 2013 for the one-, three-, and
-  five-year horizons; calibration origins are 2023, 2016, and 2014. Locked test origins remain
-  2024, 2022, and 2020.
-- Each new table has a Databricks description and column comments, a per-table document, and a
-  small real sample in `data/samples/`.
-- The 29 Databricks jobs use numbered layer ranges (`000`, `100-104`, `200-205`, `300-302`,
-  `400-401`, `500-503`, `600-604`, `700`, `800`, and `900`), grouping tags, and the maintained
-  [pipeline run-order guide](docs/PIPELINE_RUN_ORDER.md).
+- ACS covers all 50 states and Washington, D.C., for 2010-2024. FHFA tract HPI history extends
+  through 2025.
+- The governed geography hierarchy is country, Census region, Census division, state, county,
+  and 2020 Census tract. ZIP codes are not forced into this hierarchy.
+- Longitudinal features crossing the 2020 tract redesign are limited to the reviewed 59,607-tract
+  stable cohort. Post-2020-only tracts remain available for current profiles and later-origin
+  modeling where no cross-vintage claim is needed.
+- Fully observed FHFA targets are no longer removed merely because they cross 2019-2020. The
+  stable-cohort rule controls the feature history that crosses the redesign. The rebuilt panel has
+  no cross-2020 non-stable modeling row.
+- One-year training uses 2011-2020 origins, validation uses 2021-2022, calibration uses 2023, and
+  the locked test uses 2024. Three-year training uses 2011-2016, validation uses 2017-2018,
+  calibration uses 2019, 2020-2021 are purged, and the locked test uses 2022.
+- Jobs 301, 302, 500, 504, 605, 701, 400, 401, 600, 606, and 900 have been run successfully from
+  the corrected contract. Metadata, validation summaries, and report-ready figures are current.
 
-## Baseline modeling checkpoint
+## Forecast checkpoint
 
-- The November 13 job-500 run added training-only temporal tuning for the gradient-boosted-tree
-  challenger. The one-year tree selected depth 2 and 50 iterations; three years retains the fixed
-  depth-4/50 settings because fewer than two purge-safe tuning folds are available.
-- At one year, the tuned tree has slightly lower MAE than regularized linear (0.07173 versus
-  0.07199), while linear has lower RMSE and bias. Their ranking changes by validation origin, so
-  there is no clear champion. At three years, the tree leads MAE and RMSE, but the short training
-  history makes this evidence less secure.
-- Active forecast decisions now cover one and three years only. Historical five-year rows remain
-  in the published scorecard and need to be retired from active reports on the next clean rerun.
-- The blanket calendar-decade censoring rule is now a review gate. FHFA publishes one continuous
-  annual tract dataset and the project already governs cross-vintage ACS use through the stable
-  tract cohort. The team must either document why FHFA outcomes cannot cross 2019-2020 or version
-  a corrected target and split contract before model selection. See the
-  [forecast and app readiness review](docs/forecasting/forecast_app_readiness_review.md).
-- Job `501 Modeling | Similarity Baselines` published 120 matches for six review queries under
-  standardized raw and six-component PCA representations. PCA retains 95.5% of standardized
-  variance.
-- The raw and PCA top-10 lists overlap by 5.5 matches on average. Both search nationally rather
-  than collapsing to same-state results, but the moderate overlap means representation choice is
-  consequential and still needs case review and time-safe retrospective evaluation.
-- Job `502 Modeling | Historical Analogue Baseline` now evaluates earlier tract-year matches whose
-  later outcomes were known by each query date. It published 640 matches, 224 analogue and
-  comparator predictions, four retrieval summaries, and 147 sliced scorecard rows for 16 queries
-  at each of the one- and three-year horizons.
-- Historical retrieval is nationally broad: 95.0% to 97.5% of matches cross a state boundary.
-  Weighted-standardized and PCA top-ten results overlap by only 20.8% at one year and 27.1% at
-  three years, so individual case review and stability testing are required before either becomes
-  the application default.
-- Every analogue estimate beat zero change on the sampled queries, but none beat the state-trend
-  or regularized-linear comparators. The strongest analogue MAE is 0.0839 at one year and 0.0919
-  at three years, compared with state-trend MAE of 0.0758 and 0.0587. The current evidence supports
-  historical analogues as interpretable context and a secondary estimate, not the primary
-  forecast.
-- Directional accuracy is not currently informative by itself. Positive outcomes make up about
-  90.2% of one-year validation rows and more than 97% at longer horizons, and the strongest models
-  add essentially no directional lift over always predicting that majority direction.
-- Both jobs record reproducible parameters and metrics in shared MLflow experiments. The first
-  forecast attempt exposed a missing shared experiment parent folder; the notebooks now create it
-  idempotently so a fresh workspace does not require a manual MLflow setup step.
-- Job `600 Evaluation | Model Diagnostics` published seven versioned PNGs and a run-linked
-  manifest in `neighborhood_twin_evaluation`. The figures cover accuracy, skill over zero change,
-  bias and tail error, geographic transfer, housing composition, similarity representation, and
-  independent forecast-origin stability. All seven passed publication checks and visual review.
-- The expanded visual EDA run published twelve checked PNGs. It adds tract-vintage coverage,
-  feature completeness, split-origin evidence, improved tract maps, dissolved county displays,
-  and a national state-coverage view. Display geometry remains prohibited for spatial modeling.
-- Job `601 Evaluation | Historical Analogue Audit` published 6,720 variant matches, 672 complete
-  query-variant stability rows, and 600 deterministic case-review rows. It reproduces job 502,
-  contains no future or self matches, and retains all 21 variants for each of the 32 queries.
-- Small feature-family weight changes retain 93.4% of the weighted top ten on average and are
-  exactness-certified. Full family removals retain 37.6%; removing market trajectory is most
-  disruptive at 16.6%, showing that it strongly controls the present match definition.
-- Five- and seven-component PCA variants retain 50.9% of the six-component list on average and
-  sometimes hide a large original-family gap. This made weighted standardized retrieval the
-  provisional choice entering the expanded evaluation; PCA remained the comparison lens.
-- Seventeen of 32 baseline query lists repeat a physical tract at multiple years. The certified
-  distinct-tract variants retain 93.1% of neighbors and restore ten distinct communities, so the
-  application should use a distinct-community policy.
-- Job `602 Evaluation | Historical Analogue Selection` expanded the evidence to 88 one-year and
-  90 three-year query tract-years. It published 3,560 matches, 1,246 predictions, four retrieval
-  summaries, 322 scorecard rows, and 78 selected-versus-eligible coverage rows.
-- The first live coverage review found that an otherwise balanced sample missed the under-25%
-  single-family group at one year. The corrected workflow adds deterministic, outcome-blind
-  supplements for missing housing, size, or ACS-uncertainty categories. The final run covers every
-  eligible required category; rare categories with one case remain coverage checks, not reliable
-  subgroup estimates.
-- Weighted analogue MAE is lower overall than PCA at both horizons: 0.0788 versus 0.0823 at one
-  year and 0.1022 versus 0.1098 at three years when comparing each representation's better
-  aggregation. Regularized linear remains more accurate at 0.0682 and 0.0801.
-- Weighted standardized distance and ten distinct physical communities are now the frozen
-  application retrieval policy. PCA remains an internal audit lens, and analogues remain secondary
-  historical context rather than the primary forecast.
-- Job `503 Modeling | Current Analogue Retrieval` now applies that policy to selected 2025
-  neighborhoods. Its first live run published 60 exact matches and six summaries for one Arizona,
-  Michigan, and Pennsylvania tract under MLflow run
-  `ff3ad7a038ce4d4180110a7a9adcbab1`.
-- Every current query returned ten distinct matches, and direct SQL checks found no self-match,
-  future outcome, locked temporal-test candidate, unapproved representation, or falsely calibrated
-  outcome-range row. Metadata covers all 33 match columns and all 35 summary columns.
-- Exact job-503 retrieval took about 14 minutes for three tracts. It is the reference result for
-  evaluating a scalable index or precomputed product, not a viable on-click application query.
-- Current historical-analogue coverage is narrower than profile coverage: 46,719 tracts have a
-  2025 model-ready query row, compared with 83,359 current ACS similarity candidates and 84,396
-  current ACS profiles. The application needs an explicit unavailable state unless a separate
-  ACS-only fallback is designed and evaluated.
-- Job `603 Evaluation | Scalable Analogue Retrieval` benchmarked exact retrieval and three
-  random-projection LSH configurations for 29 stratified current queries at one- and three-year
-  horizons. The final schema-1.1 run published 2,320 matches, 174 query-level evaluations, eight
-  configuration summaries, and 19 coverage rows under MLflow run
-  `3dd5aaa6c4ce47d88ef752a1d5e20f6b`.
-- All configurations returned complete top-ten lists with 100% physical-community recall. A new
-  tract-year-state metric exposed one narrow-LSH three-year query with 90% state recall, even
-  though it retained the same ten tract identifiers. That single changed historical year shifted
-  the query's median analogue outcome by 0.049 cumulative log-change units.
-- The tested LSH design is rejected for serving. Its shortlists retain 88.7% to 99.9% of the full
-  query-candidate cross-product and take about three to five times as long as exact retrieval in
-  the same cached benchmark. The high fidelity comes from doing almost all of the original work.
-- The benchmark contains no self, future-outcome, locked-test, incomplete-list, or duplicate-tract
-  violation. All required region, cohort, housing-mix, community-size, and ACS-uncertainty groups
-  are represented. Job 900 reapplied descriptions and comments to every new table column.
-- Job `604 Evaluation | Exact Tree Retrieval` replaced the unsuccessful LSH direction with an exact
-  KD-tree under the same frozen representation. It published 580 benchmark matches, 58 query-level
-  checks, two horizon summaries, and six scale rows under MLflow run
-  `fae78721154347039d41864bad2e871a`.
-- Every benchmark community, tract-year state, and rank matches job 603's exhaustive reference.
-  Outcome drift is zero within a `1e-12` numerical tolerance, and no self, future-outcome, locked,
-  or incomplete result passed publication.
-- The index directly queried all 46,719 eligible current tracts in about 193 seconds at one year
-  and 133 seconds at three years. It computed about 9.5% to 9.8% of one exhaustive pair pass while
-  using roughly 57.8 MB and 37.9 MB for the two horizon trees.
-- Exact KD-tree retrieval is now selected for batch generation of the application analogue tables.
-  The application should read compact published matches and explanations; it should not rebuild
-  the index or scan the wide modeling panel during a user request.
-- Job `700 Serving | Current Analogue Products` published release
-  `analogue-20261112T220655832818Z` with 934,380 ranked matches, 93,438 tract-horizon summaries,
-  and 171,056 availability rows. It covers 46,719 eligible current tracts at both one and three
-  years and preserves an explicit result for all 85,528 canonical current-profile rows per
-  horizon. The complete serverless job took 433 seconds. The activation manifest reconciles all
-  three tables to model-readiness build
-  `20261107T185721624743Z` and job-604 run `fae78721154347039d41864bad2e871a`.
-- Schema-1.1 release `analogue-20261113T132155097077Z` extends that same population with 934,380
-  deterministic match explanations and 2,803,140 annual trajectory rows. Its five-table manifest
-  activated only after one-to-one explanation keys and every path endpoint reconciled.
-- All 467,190 one-year paths are complete. At three years, 444,093 paths are complete and 23,097
-  contain at least one explicit intermediate gap; all endpoints remain observed. The application
-  must show these gaps rather than connecting across them as if values were observed.
-- The explanation output shows that housing structure is most often the closest family and recent
-  market trajectory is most often the largest difference. These are representation diagnostics,
-  not causal findings. Imputation counts are stored with every match explanation.
-- Per horizon, unavailable states are now concrete: 1,121 tracts lack a current ACS profile, 1,037
-  lack enough current similarity features, 19,443 lack FHFA history, and 17,208 lack the complete
-  model-ready market features used by the selected representation. The application must show
-  these reasons rather than silently changing the matching method.
-- The live run first exposed an interface mismatch between `query_geoid_2020` in retrieved matches
-  and `geoid_2020` in the availability contract. No release had been activated. The contract now
-  resolves either governed name explicitly, the corrected run passed, and job 900 confirmed
-  comments on all 113 columns across the original four serving tables. After schema 1.1, job 900
-  also confirmed all 43 explanation and 26 trajectory column comments.
+### Frozen development choices
 
-## Important interpretation limits
+- The one-year champion is a Spark gradient-boosted tree with depth 2 and 50 iterations. Its
+  corrected validation MAE is 0.0733 in cumulative log HPI change.
+- The three-year development choice is the state-current-trend baseline. Its corrected validation
+  MAE is 0.0666. This choice was frozen before calibration and locked-test outcomes were read.
+- Prediction intervals use a 90% split-conformal absolute-residual radius estimated from one
+  reserved calibration origin per horizon.
 
-- FHFA describes a filtered single-family market. It is not a forecast of multifamily prices or
-  every home in a tract. Coverage and error must be reported by housing composition.
-- ACS annual releases are overlapping five-year estimates, not independent one-year samples.
-- The 59,607 source tracts in the stable geography cohort become 45,967 stable tracts in the
-  model-feature table after requiring a usable FHFA origin and an ACS release available by that
-  date. This is model-sample attrition, not a failed geography mapping.
-- The one-year horizon has nine training origins and is the primary result. Three years has three
-  and is secondary. Five years has two and should remain exploratory with simple models.
-- The broad post-2020 cohort appears only in later origins. Report stable-cohort performance
-  separately so geographic expansion is not mistaken for temporal model deterioration or gain.
-- County and state trend features are implemented. True tract adjacency is not: the current
-  geometry is approved for display only.
-- The current feature and modeling tables are analytical products, not application serving
-  tables. They are too wide and contain evaluation-only rows and fields.
-- Current metrics and figures are validation evidence. They do not replace calibrated interval
-  evaluation or the locked temporal test, which must remain unopened until model choices freeze.
+### Locked results and release decision
 
-## Decisions to freeze before the next model iteration
+| Horizon | Locked observations | Champion MAE | Zero-change MAE | Interval coverage | Decision |
+|---|---:|---:|---:|---:|---|
+| 1 year | 42,082 | 0.0599 | 0.0627 | 89.4% | Published |
+| 3 years | 45,887 | 0.2943 | 0.1566 | 48.2% | Withheld |
 
-The baseline and nonlinear challenger have made these choices concrete. The team should review
-them before model selection, calibration, or retrospective analogue work:
+The one-year champion clears the minimum release rules: at least 1,000 observations, MAE no worse
+than zero change, and empirical interval coverage within ten percentage points of the nominal 90%
+level. It is not uniformly best—the state-trend baseline has slightly lower one-year locked MAE—
+so the app displays that baseline beside the model rather than claiming universal superiority.
 
-1. **Forecast horizons:** keep one year as the primary result, three years as secondary, and
-   either retain five years as explicitly exploratory or remove it from the MVP.
-2. **Target contract:** model cumulative log change in the FHFA single-family HPI, then transform
-   it into a readable percentage for presentation. Do not relabel it as the entire housing market.
-3. **Evaluation populations:** use the stable cohort for the cleanest like-for-like temporal
-   comparison and report the broader post-2020 cohort separately as a current-coverage transfer
-   test.
-4. **Geographic holdout:** review whether Maine, North Dakota, West Virginia, and New Mexico are
-   sufficient as the final geographic transfer test. They provide regional diversity but are
-   relatively small states. Additional blocked state validation can supplement them without
-   changing the locked contract.
-5. **Feature registry:** mark every field as forecasting, similarity, display, quality, scenario,
-   or evaluation-only. Freeze units and missingness rules before building preprocessing pipelines.
-6. **Model selection rule:** review the current gradient-boosted-tree comparison and relevant
-   origin and subgroup evidence before deciding whether it merits further work. Do not search many
-   model families or use the locked tests for selection.
+The three-year method fails both accuracy and interval-coverage requirements. Persisting the
+unusually high 2022 statewide annual trend for three years produced mean predicted cumulative log
+growth of 0.442 versus 0.149 observed. This is a genuine temporal-regime failure, not a geography
+mapping error. It must remain in the final results and must not be retuned away using the locked
+outcome.
 
-Changing one of the frozen target or split definitions later should create a new contract version
-rather than silently replacing the meaning of an existing result.
+### Current serving release
 
-## Data additions under consideration
+- Job 701 publishes 46,719 approved one-year forecasts from a 2025 origin with valid point,
+  baseline, and interval fields.
+- Every one of the 85,528 current profile tracts has an availability row for both one- and
+  three-year horizons.
+- The entire three-year horizon is marked `horizon_failed_locked_release_gate`; tract-level
+  one-year gaps retain model-readiness reasons rather than silently falling back.
+- Three final forecast figures are versioned in Databricks and exported locally under the ignored
+  `reports/generated/model-evaluation/forecast-final-20261119T173650231784Z/` review directory.
 
-No new source is required before baseline forecasting and similarity work. The first results
-should determine whether added data is worth its timing, geography, and validation cost.
+## Similarity checkpoint
 
-- **Bounded ACS expansion:** the current state is strongest on housing, tenure, income, rent, and
-  value. If similarity results feel too housing-centric, consider a small expansion covering age,
-  education, poverty or employment, household composition, and commuting. This is the least
-  disruptive way to broaden the community representation because it reuses the existing ACS
-  source, geography, and release logic.
-- **Slow ACS change features:** the current model-ready table primarily contains point-in-time
-  ACS levels. After the baseline, test a few slow or non-overlapping changes rather than noisy
-  annual differences between overlapping five-year releases.
-- **Analytical tract geometry:** add only if true adjacency, distance, or neighbor features remain
-  part of the selected model. Current geometry remains display-only.
-- **CBSA or metro membership:** add only if metro comparison, metro context, or metro holdouts
-  become an explicit application or evaluation requirement.
-- **Macroeconomic, permits, development, environmental, or business data:** defer until an
-  ablation, failed application view, or scenario requirement identifies a specific gap.
+- Weighted standardized distance with ten distinct physical tracts remains the selected
+  historical-analogue representation. PCA remains an audit lens.
+- The exact KD-tree retrieval design reproduced the exhaustive reference and supports national
+  batch generation.
+- The active analogue release contains ranked matches, summaries, availability, deterministic
+  match explanations, and observed annual outcome trajectories.
+- Analogue outcomes remain descriptive historical context. They are not the primary forecast and
+  are not a causal estimate.
 
-Until any expansion is implemented, describe the product as housing-focused neighborhood
-intelligence rather than implying that health, amenities, development, environment, and every
-dimension of lived experience are already represented.
+The corrected historical target and model-readiness build is newer than the active analogue
+release. Before the final report and deployment freeze, rerun the dependent similarity sequence
+from the earliest workflow whose inputs changed, then republish jobs 700 and 800. Do not mix old
+similarity metrics with a newly rebuilt candidate pool without recording the lineage change.
+
+## Application checkpoint
+
+- The Databricks app is live at
+  `https://neighborhood-intelligence-3866391918408215.aws.databricksapps.com`.
+- The live repository independently selects complete analogue and forecast releases so it cannot
+  mix partial table versions.
+- The Forecast tab shows the one-year point estimate, 90% interval, state-trend baseline, target
+  scope, driver summary, and release lineage.
+- The three-year horizon is shown as withheld with the locked MAE, zero-change comparison, and
+  failed coverage requirement.
+- Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
+  visible points at national extent and canonical tract outlines at local extent.
+- Sample mode remains intentionally small and does not contain a production forecast. Live app
+  review must therefore be performed in Databricks.
 
 ## Immediate next sequence
 
-### 0. Review and freeze contracts
+1. **Review the live forecast experience.** Check a mix of eligible and ineligible tracts across
+   regions, confirm the interval and baseline language is understandable, and confirm that the
+   withheld three-year state is obvious rather than looking like missing data.
+2. **Refresh dependent similarity outputs.** Rebuild only the workflows affected by the corrected
+   historical target/model-readiness lineage, validate changes, and republish the analogue serving
+   and communication products.
+3. **Create the integrated model story.** Combine the corrected validation, locked-test,
+   uncertainty, release-gate, and analogue results in the report and standup materials. Preserve
+   the distinction between development evidence and final locked evidence.
+4. **Perform application acceptance testing.** Verify content delivery, empty states, maps,
+   Connecticut behavior, release IDs, responsiveness, and practical usefulness. Avoid substituting
+   click analytics for correctness and clarity.
+5. **Polish and freeze deployment.** Remove stale generated artifacts, confirm every final figure
+   can be reproduced, run the full test suite and bundle validation, and record the final commit
+   and Databricks release IDs.
 
-- Approve the horizon, target, cohort, geographic-holdout, feature-role, and model-selection
-  decisions above.
-- Record any revision through a new schema or contract version before fitting models.
-- Leave the locked temporal tests unopened during all following development work.
+## Research after the reported three-year result
 
-### 1. Forecasting comparison: baseline and GBT challenger implemented
+Any new three-year work is a separate research iteration. Plausible directions include damped
+trend baselines, direct modeling of change relative to a state or national market path, and
+regime-aware calibration using more independent origins. Those methods may be useful for a future
+version, but they cannot replace or relabel the already opened three-year locked result in this
+capstone.
 
-- Profile feature missingness and eligible-row attrition by horizon, origin year, region, held-out
-  state, housing mix, ACS uncertainty, and stable versus broad cohort.
-- Review the implemented zero-change, persistence, recent-history, county/state, and regularized
-  linear results rather than adding another baseline family immediately.
-- Review the regularized-linear and gradient-boosted-tree preprocessing and feature registry.
-- Use cumulative log HPI change as the modeling target and transform predictions only for
-  reporting.
-- Compare every model on identical published validation rows; do not inspect the locked tests for
-  model choice.
-- Record MAE, RMSE, median and 90th-percentile absolute error, signed bias, R-squared, skill over
-  zero change, directional lift over the majority rule, and subgroup results.
-- Report stable-cohort and broader post-2020 results separately, as well as housing-mix and ACS
-  uncertainty slices.
-- Keep recording source, feature, target, split, parameters, metrics, environment, and artifacts
-  in MLflow; the first shared experiment is now established.
-- The gradient-boosted-tree challenger and one-year feature-family ablation are complete. Resolve
-  the target-contract question, then inspect origin-level and subgroup results under the final
-  contract before selecting a champion.
-- Use the reserved calibration origins for prediction intervals, then open the locked tests only
-  after point-model and uncertainty choices are final.
-- Add fold- or origin-aware uncertainty around comparison metrics where the number of independent
-  origins supports it; do not present tract-row counts as the number of independent replications.
+## Known repository follow-up
 
-### 2. Similarity and historical analogues: implemented, preserve through app integration
-
-- Preserve weighted standardized distance and ten distinct physical communities as the frozen
-  production retrieval policy. Keep PCA and tract-year matches available for development audit.
-- Preserve job-602 sample coverage, subgroup counts, and later-outcome comparisons. Do not convert
-  one-case rare-category checks into performance claims, and do not open the locked temporal test.
-- Preserve the implemented stability, case-review, distance, geography, coverage, and
-  later-outcome evidence as the baseline for future changes.
-- Preserve useful ACS-based similarity for multifamily-heavy or FHFA-uncovered communities even
-  when later-outcome evaluation is unavailable.
-- Preserve job 503 as the exact reference implementation. Do not use its roughly 14-minute batch
-  runtime as an on-click application path.
-- Preserve job 603 as evidence that broad random-projection LSH buckets do not improve this
-  workload. Do not approve or further tune the tested configurations without a new hypothesis
-  that materially reduces the candidate-pair share.
-- Preserve job 604 as the approved retrieval implementation. It must continue to reproduce the
-  job-603 reference before any representation or candidate-pool change is promoted.
-- Preserve job 700 as the application publication boundary. It must use the approved job-604 run,
-  publish versioned national matches and summaries, retain an availability row for every current
-  tract and horizon, and write its activation manifest only after all checks pass.
-- Quantify and expose current retrieval eligibility. Historical analogues are currently available
-  for 46,719 model-ready 2025 tracts, not all 84,396 current ACS profiles.
-- Decide whether unsupported tracts should show an explained unavailable state or receive a
-  separately versioned ACS-only similarity fallback. Do not silently impute the missing market
-  trajectory family and call it the same representation.
-- Preserve the deterministic explanation and trajectory contracts in schema 1.1. The application
-  should read their stored family gaps, highlighted values, annual paths, and missingness flags;
-  it should not reconstruct model logic or interpolate missing points during a request.
-- Preserve job-800 build `20261114T204019949707Z` as the current reviewed communication baseline.
-  Its five figures cover the workflow, stability and representation choice, later-outcome utility,
-  current availability, and an Oakland County example. The standup notebook reads those governed
-  outputs in sequence and does not retrain the method.
-- Keep the figure manifest tied to one audit run, selection run, exact-tree run, and complete
-  serving release. Refresh job 800 only after one of those approved inputs or the visual design
-  changes, inspect every new image at full resolution, and run job 900 afterward.
-- Integrate the compact job-700 serving release into the application rather than querying
-  `gold_modeling_panel` or the wide audit tables. Render stored feature-family gaps and observed
-  paths, keep intermediate gaps visible, and show the stored unavailable reason when no complete
-  result exists.
-
-### 3. Application foundation: implemented, review and extend deliberately
-
-- The first Streamlit neighborhood explorer is implemented in `app/` with tract search, a map-first
-  profile, housing composition, observed FHFA history, evidence-availability states, historical
-  analogue summaries and matches, stored explanations, observed post-match paths, and release
-  lineage.
-- The UI reads one complete validated job-700 release and never reads `gold_modeling_panel`.
-  Profiles, FHFA history, and display geometry currently use narrow read-only gold/silver table
-  resources until their serving products are versioned.
-- Forecasting is intentionally unavailable in the UI. Do not replace it with analogue statistics,
-  validation predictions, or demonstration values while forecast selection and interval
-  calibration remain open.
-- The local default uses a visibly labeled reduced real-data fixture. The private Databricks App
-  `neighborhood-intelligence` is the live target and uses a dedicated service principal with one
-  `CAN_USE` warehouse resource and `SELECT` access only to the declared tables.
-- The focused app contract and startup suite passes locally. The private live app reached running
-  state, returned HTTP 200, selected the validated release, and rendered all ten matches per
-  horizon without an exception. Manual exact-GEOID search, unavailable-state, desktop and narrow
-  layout, legend, caveat, and accessibility review remain.
-- The first map refinement replaces point markers with actual simplified tract polygons. The main
-  map shows the selected tract within a capped local tract context; analogue results use matched
-  outlines, rank labels, and side-by-side footprint views with land-area labels. Live neighborhood
-  loading fell from 11.57 to 6.22 seconds in a warm-warehouse comparison after seven result sets
-  were moved onto one connection. Visual review across dense urban, rural, coastal, Alaska, and
-  Hawaii examples remains necessary before the map design is final.
-- Next app work should integrate the approved forecast serving contract, then compare forecast and
-  historical-analogue evidence without blending their interpretation. Scenario sensitivity and an
-  optional conversational layer remain deferred.
-
-### 4. Model and product decisions
-
-- Decide whether the current gradient-boosted-tree results justify further development or whether
-  the simpler regularized-linear model is preferable for supported horizons.
-- Decide whether analytical adjacency, CBSA membership, or macroeconomic data would answer a
-  demonstrated gap. None is required before the baseline checkpoint.
-- Select and calibrate one uncertainty method using the reserved calibration origins.
-- Publish versioned forecast, interval, explanation, analogue, and evaluation tables only after
-  validation passes.
-- Preserve the dedicated `neighborhood_twin_model` and `neighborhood_twin_evaluation` schemas so
-  gold remains the governed analytical input layer rather than a mixture of inputs and model runs.
-
-### 5. Serving and integration
-
-- Extend the implemented analogue serving release with forecast, interval, profile/history, and
-  display-geometry products as those components are approved.
-- Connect the application to the serving contract, then add forecasts, analogues, explanations,
-  and guarded scenario sensitivity.
-- Add application contract tests, smoke tests, accessibility review, and deployment runbooks.
-- Use the Databricks App as the primary authenticated deployment; evaluate a public Streamlit
-  mirror only after the serving contract is stable and an anonymous portfolio URL is required.
-
-## Parallel ownership for two people
-
-| Workstream | Primary responsibility | Shared boundary |
-|---|---|---|
-| Forecasting | Missingness/attrition review, baseline ladder, MLflow tracking, linear and selected nonlinear model, interval calibration | Owns modeling-panel filters, forecast artifacts, and model-evaluation tables |
-| Similarity and app | Representation registry, current and retrospective retrieval, case review, Streamlit descriptive shell | Owns analogue outputs, match explanations, and serving-interface prototype |
-
-Both workstreams use the published feature and split contracts without changing them privately.
-One person should temporarily own shared edits to `databricks.yml` and table metadata. App work can
-proceed against current profiles while model work runs; forecast and analogue pages should wait
-for approved output tables rather than mock analytical claims.
-
-## Definition of the next checkpoint
-
-The next checkpoint is complete when:
-
-- one focused nonlinear forecast candidate has been compared with the regularized-linear and
-  state-trend baselines on identical validation rows;
-- forecast selection uses subgroup, bias, tail-error, and independent-origin evidence rather than
-  only overall MAE;
-- one uncertainty method has been calibrated and evaluated on the reserved calibration origins;
-- the implemented exact analogue precomputation, explanations, trajectories, runtime, refresh,
-  and unavailable-result behavior remain documented and contract-tested;
-- the reviewed similarity visual package and standup walkthrough remain reproducible from governed
-  model, evaluation, and serving outputs;
-- compact, versioned forecast and analogue serving tables exist, with release lineage and no UI
-  dependency on `gold_modeling_panel`;
-- a descriptive application shell reads the documented serving interface and handles unsupported
-  tracts honestly;
-- the locked temporal tests remain untouched during model selection;
-- the application clearly separates observed ACS, observed FHFA history, model forecasts,
-  historical analogues, and scenario sensitivity; and
-- the team has an evidence-based decision on nonlinear forecasting, analytical adjacency, and any
-  additional source family.
-
-The baseline, first nonlinear comparison, and training-fold feature ablation are complete. The next
-checkpoint is the target-contract decision, a clean validation rerun and figure refresh, a
-documented model-selection decision, and calibration using only the reserved calibration origins.
-The locked temporal tests must remain unopened until those choices are frozen.
+Two partner-created forecasting files still need the repository's exact AI-assistance disclosure.
+The contributor's actual model label must be confirmed rather than guessed. The local forecast
+demonstration notebook also contains language from the retired calendar-decade rule and should be
+refreshed or clearly marked historical before final submission.

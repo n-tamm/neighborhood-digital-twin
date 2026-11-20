@@ -1,8 +1,10 @@
 # Model Evaluation Documentation
 
-This folder documents the implemented evaluation rendering workflow and each of its seven current
-figures. The forecast figures use validation data only. The similarity figure reports
-unsupervised representation diagnostics. None is a locked-test or application-release result.
+This folder documents the seven-figure development-evaluation workflow. Its forecast figures use
+validation data only, and its similarity figure reports unsupervised representation diagnostics.
+The later final forecast build is documented in the
+[model-evaluation figure guide](../../reports/MODEL_EVALUATION_FIGURES.md); that separate build
+contains the locked-test, interval-coverage, and release-decision evidence.
 
 ## Reading order
 

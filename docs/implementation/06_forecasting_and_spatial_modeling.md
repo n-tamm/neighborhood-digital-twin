@@ -1,193 +1,142 @@
-# 06 — Forecasting and Spatial Modeling
+# 06 — Forecasting Implementation
 
-## Purpose
+## Purpose and target
 
-The forecasting stage tests whether public tract-level context improves on strong, simple expectations about future movement in the FHFA single-family HPI. It does not forecast prices for multifamily housing or the value of every home in a tract. The goal is not to try every algorithm. It is to establish a fair baseline ladder, select one defensible nonlinear model, and measure what spatial and feature-family additions contribute out of time.
+The implemented forecast estimates cumulative change in FHFA's single-family tract House Price
+Index. One year is the primary product horizon; three years was evaluated as a secondary horizon.
+The result is a neighborhood-market index forecast, not an individual property valuation, a
+multifamily forecast, or an investment recommendation.
 
-## Evaluation splits before models
+The stored target is:
 
-Freeze split definitions before tuning:
+```text
+log(HPI at the target endpoint / HPI at the forecast origin)
+```
 
-- early forecast origins for initial training;
-- later origins for model comparison and tuning;
-- a separate calibration period for uncertainty when needed;
-- latest complete origins as the locked temporal test;
-- one or more complete metros held out for geographic transfer.
+The application converts that value to an annualized percentage for readability while retaining
+the cumulative-log value for evaluation and lineage.
 
-Use expanding-window or rolling-origin evaluation. Do not randomly split tract-year rows. Adjacent observations from the same tract share history, and ACS releases overlap.
+## Point-in-time data contract
 
-The split contract is frozen in `gold_model_split_assignment`. Every forecast target must begin and
-end in the same calendar decade; crossing targets are explicitly censored. The data layer retains
-one-, three-, and five-year split assignments, but active model runs score only the one- and
-three-year horizons. Their locked test origins are 2024 and 2022, calibration origins are 2023 and
-2016, and validation origins are 2021-2022 and 2014-2015. Five-year results are excluded from
-active evaluation. Labels that end after the applicable locked test origin are purged. Maine,
-North Dakota, West Virginia, and New Mexico are held out as the deterministic geographic transfer
-sample. If the team changes this contract, it should create a new split version rather than
-overwrite the meaning of the existing evaluation.
+The estimator reads `gold_modeling_panel`, which joins three governed products:
 
-The independent-year count is the binding limitation. The active horizons have nine one-year and
-three three-year training origins. The five-year split has only two training origins and is not
-scored by the active model. Repeated tract rows provide cross-sectional information but do not turn
-a small number of time origins into a large temporal sample. The one-year horizon is primary and
-three years is secondary.
+- point-in-time ACS, HPI history, and regional context from `gold_model_feature_historical`;
+- direct future HPI outcomes from `gold_forecast_target_historical`; and
+- frozen temporal and geographic roles from `gold_model_split_assignment`.
 
-The broader post-2020-only tract cohort first appears in validation and later periods because it
-does not have stable pre-2020 geography. Report it separately from the stable longitudinal cohort.
-Otherwise a change in the evaluated tract population could be mistaken for a change in temporal
-forecast performance. The broader slice remains useful as a realistic test of current national
-coverage, but the stable slice is the cleaner like-for-like time comparison.
+Features use only source releases available by the forecast origin. Labels used for fitting must
+end strictly before the origin being scored. No random row split is allowed because neighboring
+years from the same tract share history and ACS five-year estimates overlap.
 
-## Baseline ladder
+Pre-2020 ACS releases use the governed 59,607-tract stable 2010-to-2020 cohort. A modeling row may
+cross the tract redesign only when its feature history satisfies that stable-cohort rule. FHFA
+outcomes are not discarded solely because their endpoint falls in a new calendar decade.
 
-Each active horizon should include the baselines it can support:
+## Frozen temporal roles
 
-1. **Zero change:** no future HPI movement.
-2. **Historical average:** tract or region follows its prior mean change.
-3. **Persistence:** future change follows the most recent observed change.
-4. **Regional trend:** tract follows recent county or CBSA movement.
-5. **Regularized linear model:** lagged HPI plus the approved core feature set.
+| Horizon | Training | Validation | Calibration | Purged | Locked test | Current scoring |
+|---|---|---|---|---|---|---|
+| 1 year | 2011-2020 | 2021-2022 | 2023 | None | 2024 | 2025 |
+| 3 years | 2011-2016 | 2017-2018 | 2019 | 2020-2021 | 2022 | 2025 |
 
-Baselines use the same rows, split, and metrics as the candidate model. A baseline should not receive less careful timing simply because it is simple.
+Maine, North Dakota, West Virginia, and New Mexico provide deterministic regional geographic
+transfer checks. They are not substitutes for the later temporal test.
 
-### Implemented development scaffold
+## Development methods
 
-Job `500 Modeling | Forecast Baselines` implements the comparison workflow. It reads
-`gold_modeling_panel`, fits no preprocessing outside the published training rows, and publishes
-validation predictions for one- and three-year horizons from zero change, latest-change
-persistence, recent three-year mean, county trend, state trend, one L2-regularized linear model,
-and a Spark gradient-boosted-tree candidate. The output scorecard uses MAE,
-RMSE, median and 90th-percentile absolute error, signed bias, annualized percentage-point error,
-R-squared, directional accuracy, skill over zero change, coverage, cohort, geography, housing
-mix, and state slices. MLflow records the feature list, target, regularization, and aggregate
-validation metrics.
+Job 500 compares all methods on identical validation rows:
 
-The workflow is intentionally not a final model. It does not use calibration rows, does not open
-the locked temporal tests, and does not serialize an application model yet. Its purpose is to
-establish honest difficulty, expose weak slices, and compare a nonlinear candidate with simpler
-methods. Five-year results from prior exploratory runs are excluded from current model comparisons;
-their historical records are retained.
+1. Zero change.
+2. Latest tract change persistence.
+3. Recent three-year tract mean.
+4. County current trend.
+5. State current trend.
+6. L2-regularized linear regression.
+7. Spark gradient-boosted trees.
 
-The November 7, 2026 decade-safe run is a historical baseline. On its one- and three-year horizons,
-gradient-boosted trees had the best MAE (0.0707 and 0.0721). Current evaluation excludes its
-five-year results.
+The two fitted candidates use median imputation learned inside their training data. The linear
+pipeline also standardizes features inside the fold. GBT tuning uses purged expanding-origin
+training folds; validation and locked outcomes never select its depth or iteration count.
 
-Directional accuracy is also checked against the majority direction, not interpreted alone.
-Positive outcomes account for about 90.2% and 94.6% of one- and three-year validation targets. The
-strongest models currently add almost no directional lift over that base rate, despite apparently
-high raw accuracy. This makes MAE skill, signed bias, tail error, and origin-level stability more
-informative than the unadjusted direction percentage.
+The feature registry covers recent HPI history, county/state context, community scale, occupancy
+and tenure, housing structure, affordability, ACS timing, and ACS margins of error. Simplified
+map geometry is never an input.
 
-The next forecast iteration should inspect subgroup scorecards and residual maps, then run a small
-feature-family ablation. If results are not consistent across geography, housing mix, cohort, ACS
-uncertainty, and time, improve the feature or target contract before broad model search.
-Calibration rows and locked tests remain untouched until the point-model choice is frozen.
+## Frozen selection
 
-## Candidate nonlinear model
+The corrected job-500 validation run is `f51ad8ff85c44fe5bbd665b20520f6e4`.
 
-The nonlinear candidate is Spark ML `GBTRegressor`, trained separately for each active horizon on
-`eligible_for_point_model_fit` rows with median imputation fitted only on that horizon's training
-rows. A purge-safe, expanding-origin search selects tree depth and iteration count when enough
-training folds are available; step size 0.05, subsampling 0.8, and seed 699 stay fixed. The
-one-year search currently selects depth 2 with 50 iterations; the three-year horizon retains the
-depth-4/50-iteration fallback because it lacks enough folds. The local Jupyter demo mirrors the
-one-year settings with scikit-learn's GBT implementation, so its estimator and scores are not
-identical to Spark ML.
+- **One year:** GBT, depth 2 and 50 iterations. Validation MAE 0.0733 and RMSE 0.0929.
+- **Three years:** state current trend. Validation MAE 0.0666 and RMSE 0.0896.
 
-Fit separate direct models for the active horizons. Do not recursively feed one-year forecasts into
-later years for the MVP. Each active horizon can have its own eligible population, preprocessing,
-parameters, calibration, and limitation statement.
+Selections were written down before job 504 read either calibration or locked outcomes. The
+project permits a different model family by horizon because the amount and behavior of historical
+evidence differ.
 
-Start from `gold_modeling_panel` and filter with its published eligibility fields. Do not rebuild
-splits in a notebook. The shared feature table intentionally contains raw values: imputation,
-scaling, encoding, feature selection, and any target-aware transformation must be fitted inside
-the appropriate training fold.
+## Finalization and uncertainty
 
-## Training pipeline
+Job 504 refits each frozen method separately for calibration, locked testing, and current scoring.
+For fitted models, every training label must end before the scored origin. The direct state-trend
+baseline has no fitted training cutoff but uses only origin-year information.
 
-The complete estimator should include training-fitted preprocessing and model logic. A run records:
+The interval method is a 90% split-conformal absolute-residual interval:
 
-- source, geography, feature, and target versions;
-- split definition and eligible-row counts;
-- feature list and preprocessing configuration;
-- model family, parameters, seed, and library versions;
-- metrics by fold and important slices;
-- serialized estimator and schema signature;
-- code commit and configuration hash.
+1. Score the reserved calibration origin with the frozen method.
+2. Calculate the finite-sample corrected 90th percentile of absolute residuals.
+3. Add and subtract that radius from later cumulative-log predictions.
+4. Evaluate locked coverage and interval width without changing the method.
 
-MLflow is the planned experiment registry in Databricks. A small local run may use the same metadata structure without requiring a hosted tracking server.
+The one-year radius is 0.1222 from 41,017 calibration rows. The three-year radius is 0.2675 from
+39,563 rows. These intervals do not assume normally distributed errors, but each horizon still
+has only one independent calibration year.
 
-## Spatial context
+## Locked result
 
-Add spatial information through explicit, lagged features before considering a graph model:
+Finalization run `73a193b64d154d868d8e94c039858861` produced:
 
-- weighted neighbor HPI change at prior periods;
-- neighbor volatility or dispersion;
-- county and CBSA recent trend;
-- deviation of the tract from its regional trend;
-- optional accessibility or distance context if later admitted.
+| Horizon | Champion MAE | Zero-change MAE | Empirical coverage | Main finding |
+|---|---:|---:|---:|---|
+| 1 year | 0.0599 | 0.0627 | 89.4% | Useful and approximately calibrated |
+| 3 years | 0.2943 | 0.1566 | 48.2% | Large overprediction and failed uncertainty |
 
-Spatial features must be computable for new or held-out locations without using their future targets. Record neighbor count and missingness. An island tract needs a documented fallback rather than silently receiving zero.
+The three-year miss was systematic: mean prediction was 0.442 cumulative log change, compared
+with 0.149 observed. The unusually strong 2022 state trend did not persist through 2025.
 
-County and state contemporaneous trend features are available for the first nonspatial baseline.
-True tract-neighbor features are not yet approved because the current geometry is simplified for
-display. The baseline and first nonlinear model should proceed without adjacency; add analytical
-geometry only if the nonspatial comparison leaves a specific question worth the added pipeline
-and validation work.
+## Release gate and serving
 
-## Required ablations
+Job 605 creates one release decision per horizon. A horizon must have at least 1,000 locked rows,
+beat or tie zero change on MAE, and achieve coverage no more than ten percentage points below its
+nominal target. The job does not search for another model.
 
-Compare at least:
+The one-year horizon passes. The three-year horizon fails accuracy and coverage and is withheld.
+Job 701 therefore publishes:
 
-1. HPI history only;
-2. HPI plus regional and macro context;
-3. HPI plus housing and affordability features;
-4. HPI plus socioeconomic context;
-5. HPI plus neighbor context;
-6. approved full model.
+- 46,719 one-year current forecasts from a 2025 origin;
+- point, lower, upper, and state-baseline fields;
+- locked-test and release-gate context for explanation;
+- one availability row per current tract and horizon; and
+- a complete manifest written only after both serving tables reconcile.
 
-The ablation should use the same split and model settings where practical. Its purpose is to measure feature-family value, not to produce the highest possible number for each row.
+The application reads these compact serving products, never the wide modeling panel.
 
-## Model selection
+## Evaluation outputs
 
-Use mean absolute error as the primary point metric and inspect RMSE, median absolute error, directional accuracy against a majority-direction baseline, and performance relative to persistence and regional baselines. Report coverage and error by housing-stock composition as well as time, geography, HPI history length, and ACS quality. Selection should also consider calibration potential, geographic transfer, stability, runtime, and clarity.
+Validation scorecards include MAE, RMSE, signed bias, tail error, R-squared, zero-change skill,
+origin-year stability, geographic transfer, stable/broad cohort, housing composition, Census
+region, state, and ACS uncertainty.
 
-Choose the champion on validation results, write the decision record, and stop broad model search. The locked test is for estimating final performance, not picking a winner.
+Locked scorecards retain the same important slices plus interval coverage and annualized interval
+width. Job 606 renders three final figures covering validation versus locked MAE, locked interval
+coverage, and mean observed versus predicted change.
 
-Coverage must be reported alongside error. FHFA represents a filtered single-family market, and
-earlier EDA showed substantially lower target coverage in heavily multifamily tracts. The model
-can still use housing composition to describe where it is operating, but its output must not be
-reframed as a forecast for the entire local housing market. The ACS inputs are overlapping
-five-year estimates, so a non-overlapping-release sensitivity check is preferable where the
-remaining origin count permits it.
+## Spatial scope
 
-## Required outputs
+County and state market context is implemented through point-in-time aggregate features. True
+tract adjacency, spatial lag models, and distance-weighted neighbor effects are not implemented.
+The available tract geometry is simplified for display and explicitly prohibited from modeling.
 
-- fitted baseline implementations;
-- candidate horizon-specific pipelines;
-- MLflow or equivalent run records;
-- validation scorecard by horizon and split;
-- feature-family and spatial ablations;
-- residual maps and error slices;
-- approved model manifest and draft model card;
-- prediction contract for downstream calibration and serving.
+## Future research boundary
 
-The initial prediction and scorecard contracts are documented as
-`neighborhood_twin_model.forecast_baseline_prediction` and
-`neighborhood_twin_evaluation.forecast_baseline_scorecard`. They remain development artifacts
-rather than application serving tables. Job `600 Evaluation | Model Diagnostics` turns the
-current scorecards into versioned, run-linked figures without recalculating or selecting models.
-
-## Acceptance checks
-
-- no row from the future influences a training transformation;
-- baseline and model scores use identical eligible rows;
-- model output is reproducible with the recorded environment and seed;
-- geographic holdout aggregates exclude held-out future targets;
-- evaluation separates target availability and error by housing-stock composition;
-- all predictions carry model, feature, target, and split versions;
-- a complex model that fails to add meaningful value is reported honestly rather than hidden.
-
-## Handoff
-
-Stage 07 calibrates uncertainty and prepares explanations from frozen candidate predictions. Stage 10 owns the locked final evaluation. The application receives only approved predictions and metadata, not an open-ended experiment table.
+A later three-year iteration could test damped persistence, change relative to a state/national
+path, or regime-aware calibration. It must receive a new contract and future evaluation data. The
+reported 2022-2025 locked result cannot be replaced or relabeled after seeing its outcome.

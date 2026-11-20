@@ -124,6 +124,16 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 78. [`serving_analogue_explanation_current`](78_serving_analogue_explanation_current.md)
 79. [`serving_analogue_trajectory_current`](79_serving_analogue_trajectory_current.md)
 80. [`similarity_evaluation_figure_manifest`](80_evaluation_similarity_figure_manifest.md)
+81. [`forecast_model_selection`](81_model_forecast_model_selection.md)
+82. [`forecast_calibration_prediction`](82_model_forecast_calibration_prediction.md)
+83. [`forecast_interval_calibration`](83_evaluation_forecast_interval_calibration.md)
+84. [`forecast_locked_test_prediction`](84_model_forecast_locked_test_prediction.md)
+85. [`forecast_locked_test_scorecard`](85_evaluation_forecast_locked_test_scorecard.md)
+86. [`forecast_current_prediction`](86_model_forecast_current_prediction.md)
+87. [`forecast_release_gate`](87_evaluation_forecast_release_gate.md)
+88. [`forecast_final_evaluation_figure_manifest`](88_evaluation_forecast_final_evaluation_figure_manifest.md)
+89. [`serving_forecast_current`](89_serving_forecast_current.md)
+90. [`serving_forecast_availability_current`](90_serving_forecast_availability_current.md)
 
 ### Gold exploration and readiness
 
@@ -204,19 +214,19 @@ Mexico are held out for geographic transfer checks. All hard leakage, timing, ke
 reconciliation checks passed. The only warning is substantive rather than a pipeline error: the
 five-year horizon has three independent training origins and must remain exploratory.
 
-The first model-development outputs were published on October 30, 2026. The dedicated model
-schema contains 1,369,401 validation forecast predictions and 120 current-state similarity
-matches. The evaluation schema contains 1,248 sliced forecast scorecard rows, two similarity
-representation summaries, and a seven-row figure manifest. These are development products rather
-than final claims: interval calibration, time-safe retrospective similarity evaluation, and the
-locked temporal tests remain outstanding.
+Forecast development outputs remain separate from final evidence. The validation prediction and
+scorecard tables support candidate comparison without exposing the locked period. On November 19,
+2026, job 504 froze the selected one- and three-year methods, generated 81,908 reserved-origin
+calibration predictions, opened 87,969 locked temporal-test rows once, and scored 93,438 current
+tract-horizon rows. Job 605 then applied the predeclared release gate. The one-year gradient-boosted
+model passed; the three-year state-trend model was worse than zero change and its interval coverage
+was too low, so that horizon was withheld rather than retuned against the final test.
 
-The first application-serving component was published on November 12 and expanded under schema
-1.1 on November 13. The current validated release contains 934,380 approved matches, 93,438
-tract-horizon summaries, 171,056 availability rows, 934,380 deterministic explanations,
-2,803,140 annual trajectory rows, and a five-row activation manifest. It covers 46,719 model-ready
-current tracts at both one and three years while retaining an explicit availability state for all
-85,528 canonical tract profiles at each horizon. Job 900 confirmed comments on all 43 explanation
-and 26 trajectory columns. Job 800 also publishes a five-row similarity figure manifest for the
-reviewed report and standup build; job 900 confirmed comments on all 14 of its columns. Forecasts
-and calibrated intervals are not yet serving tables.
+The analogue serving release contains 934,380 approved matches, 93,438 tract-horizon summaries,
+171,056 availability rows, 934,380 deterministic explanations, and 2,803,140 annual trajectory
+rows. The separate forecast release now adds 46,719 approved one-year forecasts and 171,056
+explicit tract-horizon availability rows. Every current profile tract therefore has an availability
+state even when it is outside the forecast cohort or the requested horizon failed evaluation. Job
+606 publishes three final forecast figures with immutable model-run lineage, and job 900 has
+successfully applied the corresponding table and column comments across the model, evaluation,
+and serving schemas.

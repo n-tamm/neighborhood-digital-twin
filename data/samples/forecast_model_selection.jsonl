@@ -1,0 +1,2 @@
+{"horizon_years":1,"selected_model_name":"gradient_boosted_trees","validation_mae_log_change":0.07326083588683667,"validation_rmse_log_change":0.09289476355571633,"forecast_final_run_id":"73a193b64d154d868d8e94c039858861"}
+{"horizon_years":3,"selected_model_name":"state_current_trend","validation_mae_log_change":0.06658922917328115,"validation_rmse_log_change":0.08960893894199984,"forecast_final_run_id":"73a193b64d154d868d8e94c039858861"}

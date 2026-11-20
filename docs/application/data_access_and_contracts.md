@@ -29,6 +29,8 @@ letters, search text is length-limited, and user values are passed as query para
 | `serving_analogue_match_current` | Approved top-ten ranked historical matches |
 | `serving_analogue_explanation_current` | Stored feature-family and feature-level comparisons |
 | `serving_analogue_trajectory_current` | Observed post-match annual HPI paths |
+| `serving_forecast_availability_current` | Per-tract and per-horizon availability, locked release decision, and unavailable reason |
+| `serving_forecast_current` | Approved current point forecasts, intervals, state baseline, scope notes, and evaluation context |
 
 The interface does not read the modeling panel, evaluation tables, raw snapshots, or bronze data.
 Every Databricks App table resource is `SELECT` only, and the warehouse permission is `CAN_USE`.
@@ -80,13 +82,19 @@ The current analogue schema is version `1.1`. The application displays the relea
 lineage in the Methods tab. A future schema change should add an explicit compatibility check
 before new fields are used.
 
-## Current compromises and next contract
+Forecast releases are selected independently. A forecast release is active only when the manifest
+contains validated rows for both `serving_forecast_current` and
+`serving_forecast_availability_current`. This lets the app use the newest complete forecast
+without pretending it shares a build ID with the analogue release. Every forecast query uses the
+selected forecast release ID.
 
-The analogue products are fully serving-oriented. The current profile and FHFA history are compact
-enough for this foundation but still come from gold and silver. They should move behind a versioned
-profile/history serving release when the forecasting contract is published.
+The forecast release may contain fewer published horizons than its availability table. That is
+intentional: the current release publishes one-year predictions while every three-year
+availability row records `horizon_failed_locked_release_gate`.
 
-The next forecast contract must contain, at minimum, tract and horizon keys, target definition,
-point estimate, lower and upper interval, as-of year, model and feature versions, baseline result,
-availability reason, release status, and enough driver information for a stable explanation. The
-app should continue showing its current unavailable state until that contract passes validation.
+## Current compromises
+
+The analogue and forecast model products are serving-oriented. Current profile and FHFA history
+remain compact reads from gold and silver rather than a shared versioned profile/history release.
+That is acceptable for the current capstone build but means their lineage is displayed separately
+from the two model releases.

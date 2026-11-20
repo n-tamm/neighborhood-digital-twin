@@ -14,6 +14,7 @@ import pandas as pd
 import pytest
 from neighborhood_app.charts import (
     analogue_map_figure,
+    forecast_interval_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
     state_browser_map_figure,
@@ -47,6 +48,29 @@ def test_hpi_chart_does_not_plot_unavailable_observations() -> None:
 
     assert list(figure.data[0].x) == [2022, 2024]
     assert list(figure.data[0].y) == [200.0, 225.0]
+
+
+def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
+    """Approved forecasts should display uncertainty without blending in the baseline."""
+
+    forecasts = pd.DataFrame(
+        {
+            "horizon_years": [1, 3],
+            "target_end_year": [2026, 2028],
+            "model_name": ["regularized_linear", "gradient_boosted_trees"],
+            "prediction_annualized_change_pct": [2.0, 3.0],
+            "prediction_lower_annualized_change_pct": [-1.0, 0.5],
+            "prediction_upper_annualized_change_pct": [5.0, 5.5],
+            "baseline_prediction_annualized_change_pct": [1.5, 1.8],
+        }
+    )
+
+    figure = forecast_interval_figure(forecasts)
+
+    assert len(figure.data) == 2
+    assert list(figure.data[0].x) == [2.0, 3.0]
+    assert list(figure.data[0].error_x.arrayminus) == [3.0, 2.5]
+    assert list(figure.data[1].x) == [1.5, 1.8]
 
 
 def test_formatters_preserve_interpretable_units() -> None:
