@@ -38,8 +38,7 @@ validated endpoint.
 
 ## Validated release
 
-Release `analogue-20261113T132155097077Z` contains 2,803,140 rows. All 467,190 one-year match paths
-are complete. At three years, 444,093 of 467,190 paths are complete and 23,097 retain at least one
-explicit missing intermediate observation; there are 29,804 missing intermediate points in total.
-Every endpoint is observed and reconciles to the published match outcome. Job 900 confirmed
-comments on all 26 columns.
+Current release `analogue-20261121T163609734965Z` contains 2,803,140 rows. Publication revalidated
+the expected offset count for every path, one observed endpoint per match, and endpoint agreement
+with the published later outcome. Intermediate three-year gaps remain explicit rather than being
+interpolated. Job 900 reapplied the table description and all column comments after publication.

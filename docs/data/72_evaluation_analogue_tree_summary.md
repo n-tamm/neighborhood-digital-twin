@@ -14,9 +14,10 @@ query-candidate pass. It can exceed one if repeated expansion performs more work
 pass, so it is a ratio rather than a bounded share. Selection requires exact fidelity and a
 material work or runtime improvement; neither condition is inferred from a successful job alone.
 
-The live trees build in under half a second and occupy about 57.8 MB at one year and 37.9 MB at
-three years. On the 29-query reference, the tree computes about 9.3% to 9.6% of the distances in
-one exhaustive pass while reproducing every rank.
+In the current corrected-lineage run, the one-year tree indexes 562,597 historical states and the
+three-year tree indexes 452,689. On the 29-query reference, both reproduce every match and rank.
+The full 46,719-query retrieval uses about 9.4% to 9.5% of the distance work of an exhaustive
+pass.
 
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.

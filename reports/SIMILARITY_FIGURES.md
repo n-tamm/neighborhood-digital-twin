@@ -2,11 +2,11 @@
 
 ## Current reviewed build
 
-- **Build ID:** `20261114T204019949707Z`
+- **Build ID:** `20261121T204510966976Z`
 - **Databricks job:** `800 Presentation | Similarity Communication Figures`
-- **Job run:** `336408681381236` (successful in 60 seconds)
+- **Job run:** `887982270644008` (successful in 61 seconds)
 - **Managed volume:**
-  `/Volumes/workspace/neighborhood_twin_evaluation/similarity_evaluation_figures/build_id=20261114T204019949707Z/`
+  `/Volumes/workspace/neighborhood_twin_evaluation/similarity_evaluation_figures/build_id=20261121T204510966976Z/`
 - **Manifest:**
   `workspace.neighborhood_twin_evaluation.similarity_evaluation_figure_manifest`
 - **Case study:** Oakland County, Michigan, tract `26125144200`, three-year horizon
@@ -44,11 +44,12 @@ performance; figures 2 through 4 provide the broader evaluation and coverage evi
 
 ## Visual review
 
-The latest visual revision replaced crowded vertical utility labels with two horizontal horizon
-comparisons and moved case-study rank labels inside larger map markers. The governed build then
-passed its five-file identity, lineage, and minimum-size gates; files range from 150,932 to
-352,266 bytes. Labels were checked against the manifest and source-table results. Job 900 run
-`882753226732037` then completed successfully and reapplied table and column metadata.
+The latest visual review corrected the utility title so it does not imply that every forecast
+comparator beats analogues at both horizons, and corrected the coverage note to distinguish
+85,528 tracts per horizon from 171,056 tract-horizon rows. The governed build passed its five-file
+identity, lineage, and minimum-size gates; files range from 154,297 to 354,645 bytes. All five PNGs
+were inspected after rendering. Job 900 run `477954237899280` then completed successfully and
+reapplied table and column metadata.
 
 ## Standup walkthrough
 

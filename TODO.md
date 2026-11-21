@@ -85,10 +85,16 @@ outcome.
 - Analogue outcomes remain descriptive historical context. They are not the primary forecast and
   are not a causal estimate.
 
-The corrected historical target and model-readiness build is newer than the active analogue
-release. Before the final report and deployment freeze, rerun the dependent similarity sequence
-from the earliest workflow whose inputs changed, then republish jobs 700 and 800. Do not mix old
-similarity metrics with a newly rebuilt candidate pool without recording the lineage change.
+The full dependent sequence was refreshed on November 21 from jobs 501 through 604, then jobs 700,
+800, 600, and 900. Active release `analogue-20261121T163609734965Z` is tied to corrected
+model-readiness build `20261119T161033445114Z` and exact-tree run
+`344fbe71819f4a779b36701a5fdaf7b8`. Both horizons provide ten matches for 46,719 eligible tracts;
+all 85,528 current tracts retain an explicit availability row per horizon.
+
+The expanded validation result still supports weighted standardized matching over PCA. The
+distance-weighted analogue MAE is 0.0794 at one year and 0.0840 at three years. Analogues beat zero
+change at both horizons but do not beat the best forecast comparator, so their application role
+remains historical context and a secondary estimate.
 
 ## Application checkpoint
 
@@ -110,18 +116,17 @@ similarity metrics with a newly rebuilt candidate pool without recording the lin
 1. **Review the live forecast experience.** Check a mix of eligible and ineligible tracts across
    regions, confirm the interval and baseline language is understandable, and confirm that the
    withheld three-year state is obvious rather than looking like missing data.
-2. **Refresh dependent similarity outputs.** Rebuild only the workflows affected by the corrected
-   historical target/model-readiness lineage, validate changes, and republish the analogue serving
-   and communication products.
+2. **Review the refreshed analogue experience.** Check available and unavailable tracts, both
+   horizons, match explanations, geographic diversity, observed path gaps, and release lineage.
 3. **Create the integrated model story.** Combine the corrected validation, locked-test,
    uncertainty, release-gate, and analogue results in the report and standup materials. Preserve
    the distinction between development evidence and final locked evidence.
 4. **Perform application acceptance testing.** Verify content delivery, empty states, maps,
    Connecticut behavior, release IDs, responsiveness, and practical usefulness. Avoid substituting
    click analytics for correctness and clarity.
-5. **Polish and freeze deployment.** Remove stale generated artifacts, confirm every final figure
-   can be reproduced, run the full test suite and bundle validation, and record the final commit
-   and Databricks release IDs.
+5. **Polish and freeze deployment.** Select the report figures, confirm report values against the
+   final manifests, complete the remaining course deliverables, rerun the clean-checkout gates,
+   and tag the reviewed commit. Do not rerun frozen models merely to improve reported results.
 
 ## Research after the reported three-year result
 

@@ -46,6 +46,12 @@ outcome averaged 0.149. It is a systematic overprediction, not a few isolated tr
 Job 600 publishes seven versioned diagnostics from the current validation scorecard and similarity
 summary:
 
+- **Current build:** `20261121T204651124557Z`
+- **Databricks job run:** `213227950122594`
+- **Manifest:** `workspace.neighborhood_twin_evaluation.model_evaluation_figure_manifest`
+- **Validation:** seven unique figure sequences, one forecast run, one similarity run, and file
+  sizes from 106,671 to 162,530 bytes
+
 1. MAE by method and horizon.
 2. Skill relative to zero change.
 3. Bias and 90th-percentile error.

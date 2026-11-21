@@ -264,11 +264,11 @@ predictions with job 605 decisions, publishes rows only for approved horizons, a
 unavailable reason for every other current tract and horizon. It activates the release only after
 both table contracts reconcile. Run job 900 after 701 so the new serving tables receive their
 registered descriptions and column comments.
-The November 12 run reproduced all 58 query-horizon references exactly and directly queried all
-46,719 eligible current tracts in about 193 seconds at one year and 133 seconds at three years.
-It used about 9.5% to 9.8% of an exhaustive distance pass, so the exact tree is the approved engine
-for the batch serving-table build. Job 604 remains evaluation evidence rather than an application
-refresh; job 700 applies its approved policy nationally.
+The November 21 refresh reproduced all 58 query-horizon references exactly and directly queried
+all 46,719 eligible current tracts in about 189 seconds at one year and 158 seconds at three years.
+It used about 9.4% to 9.5% of an exhaustive distance pass, so the exact tree remains the approved
+engine for the batch serving-table build. Job 604 remains evaluation evidence rather than an
+application refresh; job 700 applies its approved policy nationally.
 
 Job 700 rebuilds the training-only feature preprocessing for each approved horizon, constructs the
 exact KD-tree, and retrieves ten distinct historical tracts for every eligible current tract. It
@@ -291,6 +291,10 @@ five-table run completed in 470 seconds. All one-year paths and all endpoints ar
 three-year match paths retain explicit intermediate gaps. Run job 900 after a successful contract
 change so the new table and column comments are applied.
 
+The current corrected-lineage release is `analogue-20261121T163609734965Z`. It retains the same
+five table counts and eligibility population while pointing to model-readiness build
+`20261119T161033445114Z` and exact-tree run `344fbe71819f4a779b36701a5fdaf7b8`.
+
 Job 800 reads the approved job-601 stability evidence, job-602 selection scorecard, job-604 scale
 measurements, and latest complete schema-1.1 job-700 release. It publishes five PNGs and one
 current manifest in `neighborhood_twin_evaluation`. The figures explain method flow, stability and
@@ -299,10 +303,10 @@ case. It does not fit preprocessing, change feature weights, retrieve matches, o
 tests. Run it after a relevant upstream analytical change or a reviewed visual-design change, then
 run job 900 so the manifest receives its table and column metadata.
 
-The current reviewed job-800 run is `336408681381236`. It completed in 60 seconds and published
-build `20261114T204019949707Z` with five manifest rows. Job 900 run `882753226732037` then
-confirmed the manifest table description and all 14 column comments. The current build and its
-source lineage are documented in `reports/SIMILARITY_FIGURES.md`.
+The current reviewed job-800 run is `887982270644008`. It completed in 61 seconds and published
+build `20261121T204510966976Z` with five manifest rows. Job 900 run `477954237899280` then
+reapplied metadata. The current build and its source lineage are documented in
+`reports/SIMILARITY_FIGURES.md`.
 
 ### Find the MLflow experiments
 

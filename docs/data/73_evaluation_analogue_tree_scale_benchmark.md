@@ -14,10 +14,10 @@ examples. It does not publish national match rows yet. This keeps retrieval-meth
 separate from the later serving-table contract and prevents a failed index experiment from
 becoming an application dependency.
 
-The full run directly queried all 46,719 eligible 2025 tracts. One-year retrieval took about 193
-seconds and three-year retrieval took about 133 seconds, at roughly 242 and 352 queries per second.
-The index used about 9.5% to 9.8% of an exhaustive distance pass. Only two one-year queries needed
-one expansion from 64 to 128 states; no three-year query needed expansion.
+The current run directly queried all 46,719 eligible 2025 tracts. One-year retrieval took about
+189 seconds and three-year retrieval took about 158 seconds, at roughly 247 and 296 queries per
+second. The index used about 9.4% to 9.5% of an exhaustive distance pass. Only two one-year queries
+needed one expansion from 64 to 128 states; no three-year query needed expansion.
 
 The managed Databricks table is authoritative. Its table description and column comments are
 applied from source-controlled metadata after schema-overwriting pipeline runs.
