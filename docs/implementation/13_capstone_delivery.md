@@ -51,3 +51,25 @@ If the full pipeline is too large for a review run, include a small legally redi
 - [ ] Secrets, absolute personal paths, raw restricted data, and unused files are absent.
 - [ ] AI appendix and team contribution statement match the final work.
 - [ ] The three-to-five-minute video or poster and gallery post are complete.
+
+## Current submission gaps
+
+The November 21, 2026 repository review found that the implementation evidence is substantially
+in place, but the submission package is not yet complete:
+
+- the final written report has not been added, so its word count, integrated citations, three
+  selected visuals, numerical interpretation, mentor-feedback response, and team contribution
+  statement cannot yet be verified;
+- the three-to-five-minute video or poster and the external gallery post are not present in the
+  repository;
+- final report figures are reproducibly generated, but the team still needs to select and embed
+  at least three of them in the report and reconcile every displayed value with the final releases;
+- one contributor-recorded Copilot use still needs the contributor to confirm the exact model and
+  any available settings before the AI appendix is final; and
+- final unused-file, dependency/import, attribution, link, and clean-checkout reviews must be
+  repeated after the report and presentation materials are assembled.
+
+The review found no committed credential or private key. It also removed saved notebook output
+that contained a personal absolute path and confirmed that the current tracked Python and notebook
+files contain the repository's required AI-assistance wording and a model label. This is a release
+checkpoint, not a substitute for repeating the checks after the last content change.
