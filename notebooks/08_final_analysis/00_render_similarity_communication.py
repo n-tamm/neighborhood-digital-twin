@@ -525,7 +525,7 @@ for axis, horizon in zip(axes, horizons, strict=True):
         color=MUTED,
     )
 figure.suptitle(
-    "Analogues beat zero change, but not the stronger forecast comparators",
+    "Analogues beat zero change, but the strongest forecast comparator performs better",
     fontsize=17,
     fontweight="bold",
     y=0.98,
@@ -625,8 +625,9 @@ axis.text(
 )
 add_note(
     figure,
-    "The application retains all 85,528 tract-horizon availability rows and must show the stored "
-    "reason when a complete result is unavailable. It must not silently switch methods.",
+    "The application retains all 85,528 tracts at each horizon (171,056 tract-horizon rows) and "
+    "must show the stored reason when a complete result is unavailable. It must not silently "
+    "switch methods.",
 )
 figure.subplots_adjust(bottom=0.25)
 save_matplotlib(4, figure)

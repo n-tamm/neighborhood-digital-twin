@@ -25,8 +25,9 @@ used by the build.
    is a materially different model. Weighted matching also has lower validation error than PCA at
    both supported horizons, which supports its use as the application default.
 3. **`03_analogue_outcome_utility.png`** shows that historical analogues improve on a zero-change
-   comparison but do not beat the state-trend or regularized-linear forecast. This is why the app
-   presents analogues as supporting evidence rather than its primary forecast.
+   comparison but do not beat the best forecast comparator at either horizon. At one year both
+   forecast comparators perform better; at three years only the state-trend comparator does. This
+   is why the app presents analogues as supporting evidence rather than its primary forecast.
 4. **`04_current_analogue_coverage.png`** shows that 46,719 of 85,528 canonical current tracts
    (54.6%) support the complete selected method at each horizon. Unsupported results keep an
    explicit reason and must not be silently replaced with another representation.
