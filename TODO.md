@@ -1,6 +1,6 @@
 # Current Project State and Next Work
 
-This is the implementation handoff as of November 19, 2026. It records what is actually running,
+This is the implementation handoff as of November 21, 2026. It records what is actually running,
 what the current evidence supports, and what should happen next. Detailed execution order remains
 in [the pipeline runbook](docs/PIPELINE_RUN_ORDER.md).
 
@@ -133,7 +133,15 @@ capstone.
 
 ## Known repository follow-up
 
-Two partner-created forecasting files still need the repository's exact AI-assistance disclosure.
-The contributor's actual model label must be confirmed rather than guessed. The local forecast
-demonstration notebook also contains language from the retired calendar-decade rule and should be
-refreshed or clearly marked historical before final submission.
+The tracked Python files and notebooks now contain the required AI-assistance wording and a model
+label, and saved output containing a personal absolute path was removed from the local forecast
+demonstration notebook. The feature-ablation notebook records additional Copilot assistance, but
+the contributing author still needs to confirm its exact underlying model and any available
+settings. Those details must not be guessed.
+
+The workspace also contains two user-scoped deployments of most bundle jobs. A run-history audit
+found one successful forecast-baseline run from the second deployment and no ETL, similarity,
+serving, presentation, or metadata runs from it. The corrected canonical forecast sequence ran
+later and superseded that result. Use the canonical maintainer profile, verify `bundle summary`,
+and invoke jobs by bundle key during the final similarity refresh. A future shared CI/CD bundle
+must bind the existing canonical resources before obsolete duplicate jobs are removed.

@@ -15,17 +15,34 @@ Databricks Free Edition currently has quotas, restricted outbound access, server
 ## Current deployment implementation
 
 The bundle now manages the private Databricks App `neighborhood-intelligence` from `app/`. Its
-service principal has `CAN_USE` on the existing SQL warehouse and `SELECT` on nine named profile,
-history, geometry, manifest, and historical-analogue tables. It has no raw, modeling-panel, or
+service principal has `CAN_USE` on the existing SQL warehouse and `SELECT` on twelve named profile,
+history, geography, historical-analogue, and forecast tables. It has no raw, modeling-panel, or
 write resource. `app/app.yaml` injects the warehouse resource and starts Streamlit; source control
 contains no host credential or token.
 
 Local sample mode and the Streamlit startup test are implemented. The private app has reached a
 successful running deployment, returned HTTP 200, and completed a full render against the current
-national analogue release. Browser-width review, explicit partner sharing, and forecast serving
-integration remain open.
+national analogue and forecast releases. The application exposes the approved one-year forecast
+and explicitly withholds the failed three-year release. Browser-width review, explicit partner
+sharing, and final application acceptance remain open.
 Operational commands and release checks are in
 [`docs/application/deployment_and_testing.md`](../application/deployment_and_testing.md).
+
+### Current bundle-state caution
+
+The `team` target is currently user-scoped because it does not define a shared bundle root. Two
+developers have therefore created separate sets of same-named jobs in the shared workspace. They
+write to the same catalog but retain different deployment state and uploaded source. The November
+21 audit found only one run from the second deployment: a successful forecast-baseline run that
+was superseded by the corrected canonical forecast release. No ETL, similarity, serving, or
+metadata job was run from that second deployment.
+
+For the current release, verify the authenticated identity and resource URLs with `databricks
+bundle summary`, then run jobs by bundle key from the canonical maintainer deployment. Do not run
+same-named jobs from the workspace UI. Moving to a shared CI/CD deployment remains desirable, but
+it requires binding the existing canonical resources before deploying the new shared state; merely
+adding a common root would create a third set of resources. The exact operating and migration
+sequence is maintained in [`docs/PIPELINE_RUN_ORDER.md`](../PIPELINE_RUN_ORDER.md).
 
 ## Environment strategy
 
