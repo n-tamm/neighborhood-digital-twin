@@ -114,12 +114,46 @@ From the repository root and the intended Git commit:
 
 ```powershell
 databricks bundle validate --profile neighborhood-twin -t team
+databricks bundle summary --profile neighborhood-twin -t team
 databricks bundle deploy --profile neighborhood-twin -t team
 ```
 
 Deployment updates job definitions and code but does not run the pipeline. In a shared workspace,
 one teammate should own a deployment window so two branches do not replace the same bundle jobs.
-Record the Git commit and run owner for a full source refresh.
+Confirm that `bundle summary` resolves the expected workspace identity, target, and job URLs before
+deployment. Record the Git commit and run owner for a full source refresh.
+
+Always start a project job with `databricks bundle run <job-key>` from the verified deployment.
+Do not start a job by clicking one of several identically named workspace jobs. The job key is
+stable, while a display name does not identify which developer's bundle state supplied the code.
+
+## Bundle ownership and duplicate-job audit
+
+The `team` target does not currently set an explicit shared `workspace.root_path`. Databricks
+therefore keeps bundle state under the authenticated user's workspace folder. If two teammates
+both deploy this target, the workspace receives two separately managed sets of jobs even though
+both sets write to the same Unity Catalog schemas. The duplicate jobs do not run automatically,
+but selecting the wrong copy in the workspace UI can execute older code against shared tables.
+
+The November 21, 2026 workspace audit found 62 project jobs, including 29 duplicate display names.
+The second deployment had run one successful job-500 forecast-baseline workflow on November 13.
+It had not run any ETL, similarity, serving, presentation, or metadata workflow. The canonical
+deployment subsequently ran the corrected forecast sequence on November 19, so the current
+forecast and serving products supersede that earlier baseline run. No evidence was found that the
+active analogue release was built by the wrong deployment.
+
+Until the bundle is migrated deliberately, the maintainer deployment returned by the documented
+`neighborhood-twin` profile is the canonical operational deployment. Teammates may still develop
+and test on branches, but shared-table runs must use the agreed deployment owner and window. Do
+not add a shared root path and deploy immediately: that would create another resource set unless
+the existing canonical jobs are first bound into the new bundle state. A future migration should:
+
+1. freeze deployments and record the canonical job IDs from `bundle summary`;
+2. configure a shared deployment identity and root;
+3. bind each existing canonical resource with `databricks bundle deployment bind`;
+4. deploy and verify that the job IDs did not change;
+5. run a read-only smoke check before allowing shared-table writes; and
+6. remove the obsolete user-scoped deployment only after the bound deployment is validated.
 
 ## Current normal workflow
 
@@ -230,11 +264,11 @@ predictions with job 605 decisions, publishes rows only for approved horizons, a
 unavailable reason for every other current tract and horizon. It activates the release only after
 both table contracts reconcile. Run job 900 after 701 so the new serving tables receive their
 registered descriptions and column comments.
-The November 12 run reproduced all 58 query-horizon references exactly and directly queried all
-46,719 eligible current tracts in about 193 seconds at one year and 133 seconds at three years.
-It used about 9.5% to 9.8% of an exhaustive distance pass, so the exact tree is the approved engine
-for the batch serving-table build. Job 604 remains evaluation evidence rather than an application
-refresh; job 700 applies its approved policy nationally.
+The November 21 refresh reproduced all 58 query-horizon references exactly and directly queried
+all 46,719 eligible current tracts in about 189 seconds at one year and 158 seconds at three years.
+It used about 9.4% to 9.5% of an exhaustive distance pass, so the exact tree remains the approved
+engine for the batch serving-table build. Job 604 remains evaluation evidence rather than an
+application refresh; job 700 applies its approved policy nationally.
 
 Job 700 rebuilds the training-only feature preprocessing for each approved horizon, constructs the
 exact KD-tree, and retrieves ten distinct historical tracts for every eligible current tract. It
@@ -257,6 +291,10 @@ five-table run completed in 470 seconds. All one-year paths and all endpoints ar
 three-year match paths retain explicit intermediate gaps. Run job 900 after a successful contract
 change so the new table and column comments are applied.
 
+The current corrected-lineage release is `analogue-20261121T163609734965Z`. It retains the same
+five table counts and eligibility population while pointing to model-readiness build
+`20261119T161033445114Z` and exact-tree run `344fbe71819f4a779b36701a5fdaf7b8`.
+
 Job 800 reads the approved job-601 stability evidence, job-602 selection scorecard, job-604 scale
 measurements, and latest complete schema-1.1 job-700 release. It publishes five PNGs and one
 current manifest in `neighborhood_twin_evaluation`. The figures explain method flow, stability and
@@ -265,10 +303,10 @@ case. It does not fit preprocessing, change feature weights, retrieve matches, o
 tests. Run it after a relevant upstream analytical change or a reviewed visual-design change, then
 run job 900 so the manifest receives its table and column metadata.
 
-The current reviewed job-800 run is `336408681381236`. It completed in 60 seconds and published
-build `20261114T204019949707Z` with five manifest rows. Job 900 run `882753226732037` then
-confirmed the manifest table description and all 14 column comments. The current build and its
-source lineage are documented in `reports/SIMILARITY_FIGURES.md`.
+The current reviewed job-800 run is `887982270644008`. It completed in 61 seconds and published
+build `20261121T204510966976Z` with five manifest rows. Job 900 run `477954237899280` then
+reapplied metadata. The current build and its source lineage are documented in
+`reports/SIMILARITY_FIGURES.md`.
 
 ### Find the MLflow experiments
 

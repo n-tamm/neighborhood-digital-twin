@@ -25,5 +25,7 @@ partition without a complete manifest is an inactive partial attempt, not the ne
 ## Sample
 
 See [`serving_release_manifest.jsonl`](../../data/samples/serving_release_manifest.jsonl). It
-contains the complete five-row activation manifest for validated schema-1.1 release
-`analogue-20261113T132155097077Z`.
+contains a complete five-row activation manifest from the preceding schema-1.1 release. The
+current authoritative release is `analogue-20261121T163609734965Z`; its five manifest rows point
+to corrected model-readiness build `20261119T161033445114Z` and exact-tree run
+`344fbe71819f4a779b36701a5fdaf7b8`.

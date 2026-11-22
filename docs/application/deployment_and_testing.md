@@ -112,3 +112,18 @@ The bundle granted the app service principal read-only access to the two forecas
 app restarted successfully. Live review should now confirm that an eligible tract shows the point,
 90% interval, state baseline, and release lineage, while the three-year warning communicates the
 locked failure metrics clearly.
+
+## Final analytical refresh verification
+
+On November 21, 2026, the corrected similarity chain refreshed jobs 501-604, published analogue
+release `analogue-20261121T163609734965Z`, rebuilt both similarity figure sets, and reapplied
+metadata. Manifest and table counts reconcile for all five analogue components. Both horizons
+contain 46,719 available tracts with ten matches per tract; all 85,528 current tracts retain an
+availability row at each horizon.
+
+The app was restarted from the canonical bundle after publication. Deployment
+`01f1e5ee73f318f08ea19c7378f192eb` reached `SUCCEEDED`, with app status `RUNNING` and compute
+status `ACTIVE`. Its service principal has `CAN_USE` on one SQL warehouse and `SELECT` on exactly
+twelve named profile, geography, analogue, and forecast tables. It has no raw/model-table access
+and no write permission. Manual cross-browser, responsive-layout, and tract-by-tract content
+acceptance remain release gates for the team.

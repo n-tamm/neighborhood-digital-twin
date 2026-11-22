@@ -83,16 +83,16 @@ and explanation tables rather than construct this in-memory index on each user r
 
 ## Validated result
 
-Job 604 completed on November 12 under MLflow run `fae78721154347039d41864bad2e871a`.
+The corrected-lineage job 604 refresh completed on November 21 under MLflow run
+`344fbe71819f4a779b36701a5fdaf7b8`.
 
 - All 58 benchmark query-horizon rows reproduced the exhaustive community identities,
   tract-year states, ranks, and outcome summaries within a `1e-12` numerical tolerance.
-- The one-year index contains 520,324 candidate states, builds in 0.49 seconds, and occupies about
-  57.8 MB. The three-year index contains 329,186 states, builds in 0.26 seconds, and occupies about
-  37.9 MB.
-- Full-current retrieval covers 46,719 tracts per horizon. It took about 193 seconds at one year
-  and 133 seconds at three years, or roughly 242 and 352 queries per second.
-- The index performed about 9.5% to 9.8% of the distance computations required by one exhaustive
+- The one-year index contains 562,597 candidate states and the three-year index contains 452,689
+  states under corrected model-readiness build `20261119T161033445114Z`.
+- Full-current retrieval covers 46,719 tracts per horizon. It took about 189 seconds at one year
+  and 158 seconds at three years, or roughly 247 and 296 queries per second.
+- The index performed about 9.4% to 9.5% of the distance computations required by one exhaustive
   query-candidate pass. This is direct full-current evidence, not a sample projection.
 - Two one-year queries, or 0.0043%, expanded from 64 to 128 candidate states. No three-year query
   expanded. Every final result still contained ten distinct non-self tracts.

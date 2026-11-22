@@ -1,8 +1,14 @@
 # Databricks notebook source
 # ruff: noqa: E402, F821
 # AI Assistance:
-# OpenAI Copilot SDK in VS Code assisted with code generation and experiment setup.
-# Results are exploratory; model and feature-selection decisions remain author-owned.
+# OpenAI ChatGPT was used for code debugging, code generation, code/repo organization,
+# and code methodological brainstorming. All final modeling, implementation,
+# validation, commentary, and interpretation were performed and verified by the authors.
+# Model used: GPT-5
+#
+# Additional assistance recorded by the original contributor:
+# OpenAI Copilot in VS Code assisted with code generation and experiment setup. The exact
+# underlying model and parameter settings were not recorded and require contributor confirmation.
 
 # COMMAND ----------
 

@@ -87,21 +87,19 @@ records one coherent set of lineage IDs. Run job 900 afterward to apply metadata
 
 ## Validated live result
 
-Job 800 run `336408681381236` completed successfully in 60 seconds and published build
-`20261114T204019949707Z`. The manifest contains the expected five rows and one coherent set of
+Job 800 run `887982270644008` completed successfully in 61 seconds and published build
+`20261121T204510966976Z`. The manifest contains the expected five rows and one coherent set of
 source identifiers:
 
-- audit run `a7f7d2c018214708a955a4ac9b9ec0c4`;
-- selection run `f161ff3938b34032afe3634ef3de38df`;
-- exact-tree run `fae78721154347039d41864bad2e871a`; and
-- serving release `analogue-20261113T132155097077Z`.
+- audit run `d4957281b60a407a9dc0b1a84d7c9e57`;
+- selection run `9da77fab59bd41d8b8b602493131a890`;
+- exact-tree run `344fbe71819f4a779b36701a5fdaf7b8`; and
+- serving release `analogue-20261121T163609734965Z`.
 
-The files range from 150,932 to 352,266 bytes, so each passed the publication-size guard. The
-current render replaces crowded vertical bar labels with horizon-specific horizontal comparisons
-and places case-study rank labels inside larger map markers. The publication notebook also
-revalidated titles, identities, lineage, file sizes, and source-table consistency. Job 900 run
-`882753226732037` completed successfully and confirmed metadata across the governed tables,
-including all 14 manifest columns.
+The files range from 154,297 to 354,645 bytes, so each passed the publication-size guard. The final
+review also corrected the utility title and distinguished current tracts per horizon from total
+tract-horizon availability rows. All five PNGs were inspected after rendering. Job 900 run
+`477954237899280` completed successfully and reapplied metadata across the governed tables.
 
 The final set makes four project decisions visible: weighted matching is the default; bounded
 weight changes are stable but family ablations are not minor changes; analogue outcomes are useful

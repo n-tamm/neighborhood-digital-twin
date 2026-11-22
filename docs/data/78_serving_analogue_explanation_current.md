@@ -34,9 +34,9 @@ does not replace the full 43-column Databricks contract.
 
 ## Validated release
 
-Release `analogue-20261113T132155097077Z` contains 934,380 explanation rows, exactly one for every
-published match. Job 900 confirmed comments on all 43 columns. At each horizon, 68,370 match rows
-belong to 6,837 queries with at least one imputed feature; the explanation exposes this instead of
-hiding the training-fitted fill. Housing structure is the closest family most often, while recent
-market trajectory is the largest difference most often. These frequencies describe how the
-implemented representation behaves and are not statements about causes of later HPI change.
+Current release `analogue-20261121T163609734965Z` contains 934,380 explanation rows, exactly one
+for every published match. The release contract revalidated family names, gap ordering,
+nonnegative values, imputation counts, and one-to-one key reconciliation. Job 900 reapplied the
+table description and all column comments after publication. Any frequency summary of shared or
+different feature families must be calculated from this release rather than copied from an older
+sample.

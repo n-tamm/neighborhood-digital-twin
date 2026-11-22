@@ -157,7 +157,7 @@ The release points to model-readiness build `20261107T185721624743Z` and exact-t
 `fae78721154347039d41864bad2e871a`. Job 900 then confirmed comments on all 26 availability, 35
 match, 39 summary, and 13 manifest columns.
 
-## Current enriched release
+## Previous enriched release
 
 The November 13 schema-1.1 release `analogue-20261113T132155097077Z` retains the same approved
 population and lineage while activating five component tables:
@@ -175,6 +175,24 @@ outcome before writing its five-row manifest. All one-year paths are complete. A
 matches, 444,093 paths are complete and 23,097 retain one or more explicit missing intermediate
 observations; their direct endpoints are still observed and consistent. Job 900 confirmed comments
 on all 43 explanation and 26 trajectory columns.
+
+## Current corrected-lineage release
+
+The November 21 schema-1.1.0 release `analogue-20261121T163609734965Z` refreshed all five products
+from corrected model-readiness build `20261119T161033445114Z` and exact-tree run
+`344fbe71819f4a779b36701a5fdaf7b8`. Its counts reconcile exactly to the manifest:
+
+| Table | Rows |
+|---|---:|
+| `serving_analogue_match_current` | 934,380 |
+| `serving_analogue_summary_current` | 93,438 |
+| `serving_analogue_availability_current` | 171,056 |
+| `serving_analogue_explanation_current` | 934,380 |
+| `serving_analogue_trajectory_current` | 2,803,140 |
+
+Each horizon contains 85,528 tract availability rows. Exactly 46,719 tracts are available at each
+horizon, and each available tract has ten matches. The app was restarted after this release and
+selects it through the complete five-row validated manifest rather than a hard-coded ID.
 
 ## Refresh rule
 

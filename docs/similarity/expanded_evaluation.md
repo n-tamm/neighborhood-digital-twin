@@ -90,24 +90,26 @@ Job 602 stops before writing tables if:
 
 ## Current status
 
-The corrected job-602 run succeeded on November 8, 2026. It published 3,560 matches, 1,246
-predictions, four retrieval summaries, 322 scorecard rows, and 78 coverage rows. The sample
+The corrected-lineage job-602 refresh succeeded on November 21, 2026. It published 3,560 matches,
+1,246 predictions, four retrieval summaries, 315 scorecard rows, and 77 coverage rows. The sample
 contains 88 one-year and 90 three-year query tract-years. The MLflow run ID is
-`f161ff3938b34032afe3634ef3de38df`.
+`9da77fab59bd41d8b8b602493131a890`.
 
 All hard checks passed: no nonvalidation queries, future candidate outcomes, self-matches,
 incomplete top tens, duplicate physical candidates, or uncovered required categories were found.
 All five tables have governed table descriptions and comments on every column.
 
 Weighted retrieval produced the better overall analogue MAE at both horizons. Its median estimate
-reached 0.0788 at one year versus PCA inverse distance at 0.0823. At three years, weighted inverse
-distance reached 0.1022 versus PCA inverse distance at 0.1098. Subgroup results are mixed and rare
-categories have very small counts, so this is supporting evidence rather than proof that weighted
-distance is universally more accurate.
+reached 0.0815 at one year versus PCA median at 0.0834. At three years, weighted median reached
+0.0873 versus PCA median at 0.0958. The distance-weighted estimate was stronger for both
+representations: 0.0794 versus 0.0810 at one year and 0.0840 versus 0.0903 at three years. Subgroup
+results are mixed and rare categories have very small counts, so this is supporting evidence
+rather than proof that weighted distance is universally more accurate.
 
-The primary forecasts remain stronger. Regularized-linear MAE is 0.0682 at one year and 0.0801 at
-three years. This confirms the intended product design: forecasts provide the main numerical
-estimate, while analogues provide interpretable historical examples and an outcome range.
+The best forecast comparator remains stronger. State-trend MAE is 0.0689 at one year and 0.0623 at
+three years; regularized-linear MAE is 0.0729 and 0.0950 respectively. This confirms the intended
+product design: the approved forecast provides the main numerical estimate, while analogues
+provide interpretable historical examples and a descriptive outcome range.
 
 Weighted standardized distance is now the selected application representation. This decision is
 based on the combined evidence: local weight stability, feature-level interpretability, PCA's

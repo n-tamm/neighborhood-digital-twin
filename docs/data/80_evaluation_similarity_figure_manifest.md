@@ -20,10 +20,11 @@ The case GEOID and horizon are repeated on every row because the fifth figure is
 communication example. They do not imply that the other four figures were calculated from that
 one tract.
 
-The current reviewed build is `20261114T204019949707Z`. It contains five files ranging from
-150,932 to 352,266 bytes and points to analogue audit run
-`a7f7d2c018214708a955a4ac9b9ec0c4`, selection run
-`f161ff3938b34032afe3634ef3de38df`, exact-tree run
-`fae78721154347039d41864bad2e871a`, and serving release
-`analogue-20261113T132155097077Z`. Job 900 run `882753226732037` confirmed table and column
-metadata after publication.
+The current reviewed build is `20261121T204510966976Z`. It contains five files ranging from
+154,297 to 354,645 bytes and points to analogue audit run
+`d4957281b60a407a9dc0b1a84d7c9e57`, selection run
+`9da77fab59bd41d8b8b602493131a890`, exact-tree run
+`344fbe71819f4a779b36701a5fdaf7b8`, and serving release
+`analogue-20261121T163609734965Z`. Job 900 run `477954237899280` reapplied table and column
+metadata after publication. The tracked JSONL is a point-in-time example from the preceding
+figure build; the managed manifest is authoritative for the current build.

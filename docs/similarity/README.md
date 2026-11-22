@@ -232,7 +232,8 @@ period.
 ## Visual evidence status
 
 Job 800 now publishes a reviewed five-figure communication package from the governed audit,
-selection, exact-retrieval, and serving outputs. Build `20261114T204019949707Z` contains:
+selection, exact-retrieval, and serving outputs. The current build `20261121T204510966976Z`
+contains:
 
 1. the complete method workflow;
 2. stability and weighted-versus-PCA selection evidence;
@@ -248,11 +249,11 @@ corrected two layout issues before the accepted build was documented. The early
 `06_similarity_representation_diagnostics.png` remains useful development evidence, but it is no
 longer the main similarity story.
 
-The historical method, current-year lookup contract, exact indexed retrieval, national serving
-release, explanations, annual paths, visual package, and walkthrough are implemented and
-evaluated. The remaining similarity work is application integration: render the approved serving
-release, keep analogue evidence visually separate from the primary forecast, show explicit
-unavailable states and path gaps, and add application contract and display tests.
+This build uses the corrected model-readiness lineage. The historical method, current-year lookup
+contract, exact indexed retrieval, national serving release, explanations, annual paths, visual
+package, walkthrough, and application integration are implemented and evaluated. Remaining work
+is manual application acceptance and final-report integration, not another similarity-method
+selection cycle.
 
 ## Detailed documentation
 
