@@ -124,7 +124,8 @@ Five gates keep the project from expanding faster than it can be validated:
 
 1. **Geography feasibility:** national tracts, selected metros, or county fallback.
 2. **Neighborhood-state contract:** freeze the core dimensions and defer low-value sources.
-3. **Forecast model:** select a champion and stop algorithm shopping.
+3. **Forecast models:** retain one regularized-linear and one gradient-boosted-tree specification
+   at both horizons, then stop algorithm shopping; simple trends remain baselines.
 4. **Digital Twin core:** accept the scenario engine only after support and stability tests pass.
 5. **Content freeze:** after final evaluation, allow only defect fixes, clarity work, and required deliverables.
 

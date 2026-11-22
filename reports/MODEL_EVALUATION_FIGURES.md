@@ -1,67 +1,40 @@
 # Model Evaluation Figures
 
-The project has two complementary forecast figure sets. The original seven-figure build explains
-validation-era method comparison and similarity diagnostics. The newer three-figure build records
-the final forecast story after model choices were frozen: locked accuracy, interval coverage, and
-the direction of the three-year failure.
+The project has a seven-figure development build and a three-figure final forecast build. The
+development build compares all baselines and both supervised models on validation data. The final
+build compares regularized linear regression and gradient-boosted trees at one and three years
+using later-period error and model-specific uncertainty.
 
-## Final forecast build
+## Corrected final forecast build
 
-- **Build:** `forecast-final-20261119T173650231784Z`
-- **Finalization run:** `73a193b64d154d868d8e94c039858861`
-- **Databricks volume:**
-  `/Volumes/workspace/neighborhood_twin_evaluation/model_evaluation_figures/final_forecast/build_id=forecast-final-20261119T173650231784Z/`
-- **Manifest:**
-  `workspace.neighborhood_twin_evaluation.forecast_final_evaluation_figure_manifest`
-- **Optional local review copy (Git-ignored):**
-  `reports/generated/model-evaluation/forecast-final-20261119T173650231784Z/`
+Job 606 produces three figures after jobs 504 and 605 complete under the version-2 two-model
+contract:
 
-### 1. Validation and locked-test forecast error
+1. **Supervised-model validation and later-period MAE.** Two horizon panels compare linear and
+   boosted-tree validation and later-period error with zero-change and state-trend baselines.
+2. **Model-specific interval coverage.** Four bars show one- and three-year coverage for both
+   supervised models. Hatching marks a missed evaluation threshold without implying that the
+   forecast was deleted.
+3. **Mean observed and predicted later-period change.** Each horizon compares the observed mean
+   with both supervised-model means to make error direction understandable.
 
-**File:** `01_validation_vs_locked_mae.png`
-
-This is the main model-performance figure. It shows that the one-year tree remained useful, while
-the frozen three-year state-trend method went from the strongest validation result to a locked MAE
-of 0.294—substantially worse than zero change at 0.157. The figure should be used when explaining
-why a method can look good in development but still fail under a new market regime.
-
-### 2. Locked interval coverage
-
-**File:** `02_locked_interval_coverage.png`
-
-The one-year 90% interval covered 89.4% of locked outcomes. The three-year interval covered only
-48.2%, below the 80% release minimum. This figure connects uncertainty evaluation directly to the
-application decision.
-
-### 3. Mean observed and predicted locked-period change
-
-**File:** `03_locked_mean_observed_vs_predicted.png`
-
-This figure explains the three-year failure in plain terms. The model carried the strong 2022
-state trend forward and predicted mean cumulative log growth of 0.442, while the 2022-2025
-outcome averaged 0.149. It is a systematic overprediction, not a few isolated tract errors.
+The exact build ID, run ID, managed-volume path, and reviewed local copies must be recorded here
+after the corrected job 606 succeeds. The previous build
+`forecast-final-20261119T173650231784Z` is superseded because it treated the three-year state-trend
+baseline as the project model.
 
 ## Validation-era build
 
-Job 600 publishes seven versioned diagnostics from the current validation scorecard and similarity
-summary:
+Job 600 publishes seven diagnostics from the validation scorecard and similarity summary:
 
 - **Current build:** `20261121T204651124557Z`
 - **Databricks job run:** `213227950122594`
 - **Manifest:** `workspace.neighborhood_twin_evaluation.model_evaluation_figure_manifest`
-- **Validation:** seven unique figure sequences, one forecast run, one similarity run, and file
-  sizes from 106,671 to 162,530 bytes
 
-1. MAE by method and horizon.
-2. Skill relative to zero change.
-3. Bias and 90th-percentile error.
-4. Held-out-state geographic transfer.
-5. One-year error by housing composition.
-6. Similarity representation diagnostics.
-7. Forecast-origin stability.
-
-These figures answer development questions and must be labeled as validation evidence. They do
-not replace the final three figures above.
+The figures cover MAE by method and horizon, skill relative to zero change, bias and tail error,
+held-out-state transfer, housing-composition slices, similarity representation diagnostics, and
+forecast-origin stability. These are development results and should not be presented as current
+tract forecasts.
 
 ## Reproduce
 
@@ -71,5 +44,5 @@ databricks bundle run forecast_final_evaluation_figures --profile neighborhood-t
 databricks bundle run table_metadata_pipeline --profile neighborhood-twin -t team
 ```
 
-Both workflows publish their manifest only after every expected PNG passes a file-size and count
-check. The final-forecast workflow reads frozen results and never fits or changes a model.
+Both workflows publish their manifest only after every expected PNG passes file-size and count
+checks. They read governed evidence and do not fit or replace a model.

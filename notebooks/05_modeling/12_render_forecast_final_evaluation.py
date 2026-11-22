@@ -11,9 +11,9 @@
 # MAGIC %md
 # MAGIC # Render final forecast evaluation figures
 # MAGIC
-# MAGIC These figures communicate the frozen validation choice, once-opened locked test, interval
-# MAGIC calibration, and release decision. They do not refit or change a selected method. Failed
-# MAGIC horizons remain visible so the report can distinguish development from release evidence.
+# MAGIC These figures compare regularized linear regression and gradient-boosted trees at both
+# MAGIC horizons. They show validation, later-period evaluation, and interval behavior without
+# MAGIC selecting a simple trend baseline as the project model or hiding a weak model result.
 
 # COMMAND ----------
 
@@ -50,7 +50,11 @@ dbutils.widgets.text("selection_table", "forecast_model_selection", "Model selec
 dbutils.widgets.text(
     "locked_prediction_table", "forecast_locked_test_prediction", "Locked predictions"
 )
-dbutils.widgets.text("release_gate_table", "forecast_release_gate", "Release gate")
+dbutils.widgets.text(
+    "evaluation_threshold_table",
+    "forecast_evaluation_threshold",
+    "Evaluation thresholds",
+)
 dbutils.widgets.text("figure_volume", "model_evaluation_figures", "Evaluation figure volume")
 dbutils.widgets.text(
     "figure_manifest_table",
@@ -63,13 +67,13 @@ model_schema = dbutils.widgets.get("model_schema").strip()
 evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
 selection_table = dbutils.widgets.get("selection_table").strip()
 locked_prediction_table = dbutils.widgets.get("locked_prediction_table").strip()
-release_gate_table = dbutils.widgets.get("release_gate_table").strip()
+evaluation_threshold_table = dbutils.widgets.get("evaluation_threshold_table").strip()
 figure_volume = dbutils.widgets.get("figure_volume").strip()
 manifest_table = dbutils.widgets.get("figure_manifest_table").strip()
 
 selection = spark.table(qualified_name(catalog, model_schema, selection_table))
 locked = spark.table(qualified_name(catalog, model_schema, locked_prediction_table))
-gate = spark.table(qualified_name(catalog, evaluation_schema, release_gate_table))
+gate = spark.table(qualified_name(catalog, evaluation_schema, evaluation_threshold_table))
 run_ids = {row[0] for row in gate.select("forecast_final_run_id").distinct().collect()}
 if len(run_ids) != 1:
     raise RuntimeError("Final forecast figures require exactly one finalization run")
@@ -136,117 +140,118 @@ def save_figure(
     )
 
 
-selection_by_horizon = {
-    int(row["horizon_years"]): row.asDict()
+selection_by_key = {
+    (str(row["model_name"]), int(row["horizon_years"])): row.asDict()
     for row in selection.where(
         functions.col("forecast_final_run_id") == forecast_final_run_id
     ).collect()
 }
-gate_by_horizon = {
-    int(row["horizon_years"]): row.asDict()
+gate_by_key = {
+    (str(row["model_name"]), int(row["horizon_years"])): row.asDict()
     for row in gate.where(functions.col("forecast_final_run_id") == forecast_final_run_id).collect()
 }
 locked_means = {
-    int(row["horizon_years"]): row.asDict()
-    for row in locked.groupBy("horizon_years")
+    (str(row["model_name"]), int(row["horizon_years"])): row.asDict()
+    for row in locked.groupBy("model_name", "horizon_years")
     .agg(
         functions.avg("target_cumulative_log_change").alias("mean_observed"),
         functions.avg("prediction_cumulative_log_change").alias("mean_prediction"),
     )
     .collect()
 }
-x = np.arange(len(horizons))
-width = 0.19
+model_names = ("regularized_linear", "gradient_boosted_trees")
+model_labels = {
+    "regularized_linear": "Regularized linear",
+    "gradient_boosted_trees": "Gradient-boosted trees",
+}
+expected_keys = {(model_name, horizon) for model_name in model_names for horizon in horizons}
+if set(selection_by_key) != expected_keys or set(gate_by_key) != expected_keys:
+    raise RuntimeError("Final figures require both supervised models at both horizons")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Development evidence versus the locked test
+# MAGIC ## Development evidence versus later-period evaluation
 
 # COMMAND ----------
 
-series = (
-    (
-        "Champion validation",
-        [selection_by_horizon[h]["validation_mae_log_change"] for h in horizons],
-        BLUE,
-    ),
-    (
-        "Champion locked test",
-        [gate_by_horizon[h]["champion_mae_log_change"] for h in horizons],
-        NAVY,
-    ),
-    (
-        "Zero-change locked test",
-        [gate_by_horizon[h]["zero_change_mae_log_change"] for h in horizons],
-        AMBER,
-    ),
-    (
-        "State-trend locked test",
-        [gate_by_horizon[h]["state_trend_mae_log_change"] for h in horizons],
-        TEAL,
-    ),
-)
-figure, axis = plt.subplots(figsize=(11.5, 6.4))
-for index, (label, values, color) in enumerate(series):
-    bars = axis.bar(x + (index - 1.5) * width, values, width, label=label, color=color)
-    axis.bar_label(bars, fmt="%.3f", padding=3, fontsize=8.5, color=NAVY)
-axis.set_xticks(x, [f"{h}-year horizon" for h in horizons])
-axis.set_ylabel("Mean absolute error in cumulative log HPI change")
+figure, axes = plt.subplots(1, len(horizons), figsize=(14.2, 6.6), sharey=False)
+for axis, horizon in zip(axes, horizons, strict=True):
+    values = [
+        selection_by_key[("regularized_linear", horizon)]["validation_mae_log_change"],
+        gate_by_key[("regularized_linear", horizon)]["model_mae_log_change"],
+        selection_by_key[("gradient_boosted_trees", horizon)]["validation_mae_log_change"],
+        gate_by_key[("gradient_boosted_trees", horizon)]["model_mae_log_change"],
+        gate_by_key[("regularized_linear", horizon)]["zero_change_mae_log_change"],
+        gate_by_key[("regularized_linear", horizon)]["state_trend_mae_log_change"],
+    ]
+    labels = [
+        "Linear\nvalidation",
+        "Linear\nlater period",
+        "GBT\nvalidation",
+        "GBT\nlater period",
+        "Zero change\nlater period",
+        "State trend\nlater period",
+    ]
+    colors = [BLUE, NAVY, TEAL, "#176C62", AMBER, MUTED]
+    bars = axis.bar(np.arange(len(values)), values, color=colors, width=0.72)
+    axis.bar_label(bars, fmt="%.3f", padding=3, fontsize=8.4, color=NAVY)
+    axis.set_xticks(np.arange(len(labels)), labels, fontsize=8.5)
+    axis.set_title(f"{horizon}-year horizon", loc="left", fontsize=12, color=NAVY)
+    axis.set_ylabel("MAE in cumulative log HPI change")
+    axis.grid(axis="y", color=GRID, linewidth=0.8)
+    axis.set_axisbelow(True)
 figure.suptitle(
-    "The three-year model did not survive the later locked test",
-    x=0.125,
+    "Both supervised models remain visible across validation and later evaluation",
+    x=0.07,
     y=0.98,
     ha="left",
     fontsize=17,
     color=NAVY,
 )
-axis.set_title(
-    "Lower is better. Locked results were opened only after model choices were frozen.",
-    loc="left",
-    pad=9,
-    fontsize=11,
+figure.text(
+    0.07,
+    0.91,
+    "Lower is better. Zero change and state trend are comparison baselines, not replacements.",
     color=MUTED,
+    fontsize=11,
 )
-axis.grid(axis="y", color=GRID, linewidth=0.8)
-axis.set_axisbelow(True)
-axis.legend(frameon=False, ncol=2, loc="upper left")
-figure.subplots_adjust(bottom=0.18, top=0.84)
+figure.subplots_adjust(bottom=0.22, top=0.83, wspace=0.28)
 save_figure(
     1,
     "validation_vs_locked_mae",
-    "Validation and locked-test forecast error",
-    "Tests whether each frozen horizon generalized beyond development and simple baselines.",
-    "Source: governed validation selection and once-opened locked test. The three-year "
-    "champion was withheld because it was worse than zero-change.",
+    "Supervised-model validation and later-period error",
+    "Compares both project models with development evidence and simple later-period baselines.",
+    "Source: governed validation and later-period evaluation. Baselines provide context and do "
+    "not replace regularized linear regression or gradient-boosted trees.",
     figure,
 )
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Interval coverage as a release requirement
+# MAGIC ## Model-specific interval coverage
 
 # COMMAND ----------
 
-coverage = [gate_by_horizon[h]["empirical_interval_coverage"] * 100 for h in horizons]
-eligible = [bool(gate_by_horizon[h]["release_eligible"]) for h in horizons]
-figure, axis = plt.subplots(figsize=(9.8, 6.2))
-bars = axis.bar(x, coverage, width=0.55, color=[TEAL if value else RED for value in eligible])
+coverage_keys = [(model_name, horizon) for horizon in horizons for model_name in model_names]
+coverage = [gate_by_key[key]["empirical_interval_coverage"] * 100 for key in coverage_keys]
+eligible = [bool(gate_by_key[key]["meets_evaluation_thresholds"]) for key in coverage_keys]
+labels = [f"{horizon}-year\n{model_labels[model_name]}" for model_name, horizon in coverage_keys]
+colors = [BLUE if model_name == "regularized_linear" else TEAL for model_name, _ in coverage_keys]
+figure, axis = plt.subplots(figsize=(11.5, 6.4))
+bars = axis.bar(np.arange(len(coverage)), coverage, width=0.58, color=colors)
+for bar, passed in zip(bars, eligible, strict=True):
+    if not passed:
+        bar.set_hatch("//")
 axis.bar_label(bars, labels=[f"{value:.1f}%" for value in coverage], padding=4, color=NAVY)
 axis.axhline(90, color=NAVY, linewidth=1.5, linestyle="--", label="Nominal coverage (90%)")
-axis.axhline(80, color=AMBER, linewidth=1.5, linestyle=":", label="Release minimum (80%)")
-axis.set_xticks(
-    x,
-    [
-        f"{h}-year\n{'Published' if eligible[index] else 'Withheld'}"
-        for index, h in enumerate(horizons)
-    ],
-)
+axis.axhline(80, color=AMBER, linewidth=1.5, linestyle=":", label="Evaluation threshold (80%)")
+axis.set_xticks(np.arange(len(labels)), labels)
 axis.set_ylim(0, 100)
 axis.set_ylabel("Locked outcomes inside the interval")
 figure.suptitle(
-    "Only the one-year uncertainty interval remained calibrated",
+    "Uncertainty is evaluated separately for each model and horizon",
     x=0.125,
     y=0.98,
     ha="left",
@@ -254,7 +259,7 @@ figure.suptitle(
     color=NAVY,
 )
 axis.set_title(
-    "The application requires useful point accuracy and reliable uncertainty coverage.",
+    "Hatched bars miss at least one evaluation threshold; their forecasts remain visible.",
     loc="left",
     pad=9,
     fontsize=11,
@@ -268,55 +273,58 @@ save_figure(
     2,
     "locked_interval_coverage",
     "Locked-test forecast interval coverage",
-    "Explains why the one-year horizon is published and the three-year horizon is withheld.",
-    "Source: split-conformal intervals calibrated on reserved origins and evaluated once on "
-    "the locked temporal test.",
+    "Compares interval calibration for both supervised models at both horizons.",
+    "Source: model-specific split-conformal intervals calibrated on reserved origins and "
+    "evaluated on later outcomes.",
     figure,
 )
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Direction of the locked-period miss
+# MAGIC ## Direction of later-period forecast error
 
 # COMMAND ----------
 
-observed = [locked_means[h]["mean_observed"] for h in horizons]
-predicted = [locked_means[h]["mean_prediction"] for h in horizons]
-figure, axis = plt.subplots(figsize=(10.5, 6.2))
-observed_bars = axis.bar(x - 0.16, observed, 0.32, color=TEAL, label="Observed")
-predicted_bars = axis.bar(x + 0.16, predicted, 0.32, color=BLUE, label="Predicted")
-axis.bar_label(observed_bars, fmt="%.3f", padding=3, fontsize=9, color=NAVY)
-axis.bar_label(predicted_bars, fmt="%.3f", padding=3, fontsize=9, color=NAVY)
-axis.set_xticks(x, [f"{h}-year horizon" for h in horizons])
-axis.set_ylabel("Mean cumulative log HPI change")
+figure, axes = plt.subplots(1, len(horizons), figsize=(12.5, 6.2), sharey=True)
+for axis, horizon in zip(axes, horizons, strict=True):
+    observed = locked_means[("regularized_linear", horizon)]["mean_observed"]
+    values = [
+        observed,
+        locked_means[("regularized_linear", horizon)]["mean_prediction"],
+        locked_means[("gradient_boosted_trees", horizon)]["mean_prediction"],
+    ]
+    labels = ["Observed", "Regularized\nlinear", "Gradient-boosted\ntrees"]
+    bars = axis.bar(np.arange(3), values, color=[AMBER, BLUE, TEAL], width=0.62)
+    axis.bar_label(bars, fmt="%.3f", padding=3, fontsize=9, color=NAVY)
+    axis.set_xticks(np.arange(3), labels)
+    axis.set_title(f"{horizon}-year horizon", loc="left", color=NAVY)
+    axis.axhline(0, color=GRID, linewidth=1)
+    axis.grid(axis="y", color=GRID, linewidth=0.8)
+    axis.set_axisbelow(True)
+axes[0].set_ylabel("Mean cumulative log HPI change")
 figure.suptitle(
-    "Persisting the 2022 state trend greatly overpredicted 2022–2025",
-    x=0.125,
+    "Mean predictions reveal the direction of each model's later-period error",
+    x=0.08,
     y=0.98,
     ha="left",
     fontsize=17,
     color=NAVY,
 )
-axis.set_title(
-    "Bars summarize eligible locked-test tracts; they are not current forecasts.",
-    loc="left",
-    pad=9,
+figure.text(
+    0.08,
+    0.90,
+    "Bars summarize later-period evaluation tracts; they are not current forecasts.",
     fontsize=11,
     color=MUTED,
 )
-axis.axhline(0, color=GRID, linewidth=1)
-axis.grid(axis="y", color=GRID, linewidth=0.8)
-axis.set_axisbelow(True)
-axis.legend(frameon=False, loc="upper left")
-figure.subplots_adjust(bottom=0.18, top=0.84)
+figure.subplots_adjust(bottom=0.18, top=0.82, wspace=0.18)
 save_figure(
     3,
     "locked_mean_observed_vs_predicted",
-    "Mean observed and predicted locked-period HPI change",
-    "Shows the direction and practical size of the three-year regime failure.",
-    "Source: final locked-test predictions. The three-year state-trend baseline carried an "
-    "unusually strong origin-year trend forward for three years.",
+    "Mean observed and predicted later-period HPI change",
+    "Shows the direction and practical size of each supervised model's forecast error.",
+    "Source: later-period predictions from the two frozen supervised model specifications.",
     figure,
 )
 

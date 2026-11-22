@@ -6,11 +6,11 @@ in [the pipeline runbook](docs/PIPELINE_RUN_ORDER.md).
 
 ## Current answer
 
-The public-data pipeline, current historical-analogue system, first production forecast release,
-and interactive Databricks application are implemented. The application now combines current
-community context, observed FHFA history, approved historical analogues, and a quality-gated
-one-year forecast with a calibrated interval. The three-year forecast candidate remains in the
-evaluation record but is deliberately unavailable in the app because it failed the locked test.
+The public-data pipeline, current historical-analogue system, and interactive Databricks
+application are implemented. The forecast contract is being corrected so the application shows
+the project's regularized-linear and gradient-boosted-tree models at both one and three years.
+State and county trends remain baselines. Evaluation warnings will remain visible without hiding
+either model.
 
 The remaining work is no longer basic pipeline construction. It is coordinated refresh work,
 application review, report integration, and targeted model research that must preserve the
@@ -31,48 +31,42 @@ already opened locked-test result.
 - One-year training uses 2011-2020 origins, validation uses 2021-2022, calibration uses 2023, and
   the locked test uses 2024. Three-year training uses 2011-2016, validation uses 2017-2018,
   calibration uses 2019, 2020-2021 are purged, and the locked test uses 2022.
-- Jobs 301, 302, 500, 504, 605, 701, 400, 401, 600, 606, and 900 have been run successfully from
-  the corrected contract. Metadata, validation summaries, and report-ready figures are current.
+- Jobs 301, 302, 500, 400, 401, 600, and the similarity workflows have current upstream outputs.
+  Forecast jobs 504, 605, 606, 701, and 900 must be rerun after the two-model correction; their
+  existing Databricks outputs still reflect the superseded one-method-per-horizon contract.
 
 ## Forecast checkpoint
 
-### Frozen development choices
+### Corrected two-model contract
 
-- The one-year champion is a Spark gradient-boosted tree with depth 2 and 50 iterations. Its
-  corrected validation MAE is 0.0733 in cumulative log HPI change.
-- The three-year development choice is the state-current-trend baseline. Its corrected validation
-  MAE is 0.0666. This choice was frozen before calibration and locked-test outcomes were read.
-- Prediction intervals use a 90% split-conformal absolute-residual radius estimated from one
-  reserved calibration origin per horizon.
+- The project models are L2-regularized linear regression and Spark gradient-boosted trees.
+- Both models are retained at one and three years. The one-year tree uses depth 2 and 50
+  iterations; the three-year tree uses depth 4 and 30 iterations. Linear uses L2 parameter 0.05.
+- Validation MAE is 0.0733 for the tree and 0.0766 for linear at one year, and 0.0807 for the tree
+  and 0.1033 for linear at three years.
+- State trend achieved lower three-year validation MAE than either supervised model, but it is a
+  baseline result rather than the project model.
+- Job 504 now calibrates a separate 90% split-conformal interval for every model-horizon pair.
+- Job 605 records threshold warnings separately for each pair. A warning does not withhold the
+  forecast or promote a baseline.
+- Job 701 publishes both supervised results at both horizons for each model-ready tract.
 
-### Locked results and release decision
+### Immediate forecast sequence
 
-| Horizon | Locked observations | Champion MAE | Zero-change MAE | Interval coverage | Decision |
-|---|---:|---:|---:|---:|---|
-| 1 year | 42,082 | 0.0599 | 0.0627 | 89.4% | Published |
-| 3 years | 45,887 | 0.2943 | 0.1566 | 48.2% | Withheld |
+1. Validate and deploy the corrected bundle.
+2. Run jobs 504, 605, 606, 701, and 900 in order; source ingestion and gold preparation do not
+   need to be rerun.
+3. Confirm four model-horizon combinations in specification, interval, scorecard, threshold, and
+   current-prediction outputs.
+4. Confirm two serving rows per available tract and horizon and one availability row per tract and
+   horizon.
+5. Refresh the table samples, exact metrics, figure manifest, app assets, and this checkpoint from
+   the successful runs.
+6. Deploy and visually inspect representative one- and three-year forecasts in the live app.
 
-The one-year champion clears the minimum release rules: at least 1,000 observations, MAE no worse
-than zero change, and empirical interval coverage within ten percentage points of the nominal 90%
-level. It is not uniformly best—the state-trend baseline has slightly lower one-year locked MAE—
-so the app displays that baseline beside the model rather than claiming universal superiority.
-
-The three-year method fails both accuracy and interval-coverage requirements. Persisting the
-unusually high 2022 statewide annual trend for three years produced mean predicted cumulative log
-growth of 0.442 versus 0.149 observed. This is a genuine temporal-regime failure, not a geography
-mapping error. It must remain in the final results and must not be retuned away using the locked
-outcome.
-
-### Current serving release
-
-- Job 701 publishes 46,719 approved one-year forecasts from a 2025 origin with valid point,
-  baseline, and interval fields.
-- Every one of the 85,528 current profile tracts has an availability row for both one- and
-  three-year horizons.
-- The entire three-year horizon is marked `horizon_failed_locked_release_gate`; tract-level
-  one-year gaps retain model-readiness reasons rather than silently falling back.
-- Three final forecast figures are versioned in Databricks and exported locally under the ignored
-  `reports/generated/model-evaluation/forecast-final-20261119T173650231784Z/` review directory.
+The prior state-trend finalization remains historical evidence of the design error. Because its
+later outcomes were already viewed, the corrected run must not be described as a new untouched
+model-selection test or used to retune the fixed model settings.
 
 ## Similarity checkpoint
 
@@ -102,34 +96,34 @@ remains historical context and a secondary estimate.
   `https://neighborhood-intelligence-3866391918408215.aws.databricksapps.com`.
 - The live repository independently selects complete analogue and forecast releases so it cannot
   mix partial table versions.
-- The Forecast tab shows the one-year point estimate, 90% interval, state-trend baseline, target
-  scope, driver summary, and release lineage.
-- The three-year horizon is shown as withheld with the locked MAE, zero-change comparison, and
-  failed coverage requirement.
+- The corrected Forecast tab is designed to show linear and boosted-tree point estimates and 90%
+  intervals at one and three years, with the state trend kept separate as a baseline.
+- Evaluation warnings report MAE, zero-change comparison, and interval coverage without hiding a
+  model result.
 - Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
   visible points at national extent and canonical tract outlines at local extent.
 - App Review 1 changes are implemented on the application branch: all browser counts use readable
-  thousands separators; state, county, search, and tract choices separate analogue, approved
-  one-year forecast, and unavailable three-year forecast status; and live mode opens with a
+  thousands separators; state, county, search, and tract choices separate analogue and forecast
+  status by horizon; and live mode opens with a
   recommended Census address-to-2020-tract lookup with an explicit external-request notice.
   County browsing adds a clickable tract-center map over familiar basemap labels, while its text
   choices retain county, state, population, both forecast horizons, and analogue status.
-- A Data Science Results tab now walks through geography readiness, final forecast evaluation, and
-  similarity method selection using eight reviewed, workflow-generated figures with governed
-  build lineage.
+- A Data Science Results tab now walks through geography readiness, the two supervised forecast
+  models and their baselines, and similarity method selection. Corrected later-period forecast
+  figures must be added after job 606 completes.
 - Sample mode remains intentionally small and does not contain a production forecast. Live app
   review must therefore be performed in Databricks.
 
 ## Immediate next sequence
 
-1. **Review the live forecast experience.** Check a mix of eligible and ineligible tracts across
-   regions, confirm the interval and baseline language is understandable, and confirm that the
-   withheld three-year state is obvious rather than looking like missing data.
+1. **Publish and review the corrected forecast experience.** Run the version-2 forecast sequence,
+   then check eligible and ineligible tracts across regions. Confirm that both models and horizons,
+   their intervals, separate baseline, and evaluation warnings are understandable.
 2. **Review the refreshed analogue experience.** Check available and unavailable tracts, both
    horizons, match explanations, geographic diversity, observed path gaps, and release lineage.
-3. **Create the integrated model story.** Combine the corrected validation, locked-test,
-   uncertainty, release-gate, and analogue results in the report and standup materials. Preserve
-   the distinction between development evidence and final locked evidence.
+3. **Create the integrated model story.** Combine validation, later-period error, uncertainty,
+   evaluation warnings, and analogue results in the report and standup materials. Preserve the
+   distinction between development evidence and later evaluation.
 4. **Perform application acceptance testing.** Verify content delivery, empty states, maps,
    Connecticut behavior, address matching, comma-formatted coverage, forecast status at every
    browser level, Data Science figure readability, release IDs, responsiveness, and practical
@@ -138,13 +132,12 @@ remains historical context and a secondary estimate.
    final manifests, complete the remaining course deliverables, rerun the clean-checkout gates,
    and tag the reviewed commit. Do not rerun frozen models merely to improve reported results.
 
-## Research after the reported three-year result
+## Research after the current three-year models
 
-Any new three-year work is a separate research iteration. Plausible directions include damped
-trend baselines, direct modeling of change relative to a state or national market path, and
-regime-aware calibration using more independent origins. Those methods may be useful for a future
-version, but they cannot replace or relabel the already opened three-year locked result in this
-capstone.
+Any new three-year method is a separate research iteration. Plausible directions include direct
+modeling of change relative to a state or national path and regime-aware calibration using more
+independent origins. Those methods may be useful later, but the current linear and boosted-tree
+settings must not be tuned against the already inspected 2022–2025 outcomes.
 
 ## Known repository follow-up
 

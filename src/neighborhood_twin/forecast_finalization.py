@@ -5,7 +5,7 @@ and code methodological brainstorming. All final modeling, implementation,
 validation, commentary, and interpretation were performed and verified by the authors.
 Model used: GPT-5
 
-Frozen forecast selection, calibration, locked-test, and current-scoring utilities.
+Frozen supervised-model calibration, evaluation, and current-scoring utilities.
 """
 
 from __future__ import annotations
@@ -25,23 +25,22 @@ from neighborhood_twin.forecasting import (
     validate_gradient_boosted_tree_parameters,
 )
 
-FORECAST_FINAL_SCHEMA_VERSION = "1.0.0"
+FORECAST_FINAL_SCHEMA_VERSION = "2.0.0"
 FORECAST_SELECTION_TABLE = "forecast_model_selection"
 FORECAST_CALIBRATION_PREDICTION_TABLE = "forecast_calibration_prediction"
 FORECAST_INTERVAL_TABLE = "forecast_interval_calibration"
 FORECAST_LOCKED_TEST_PREDICTION_TABLE = "forecast_locked_test_prediction"
 FORECAST_LOCKED_TEST_SCORECARD_TABLE = "forecast_locked_test_scorecard"
 FORECAST_CURRENT_PREDICTION_TABLE = "forecast_current_prediction"
-SUPPORTED_CHAMPIONS = (
-    "state_current_trend",
+SUPPORTED_FORECAST_MODELS = (
     "regularized_linear",
     "gradient_boosted_trees",
 )
 
 
 @dataclass(frozen=True)
-class ChampionSpecification:
-    """Frozen model family and parameters for one forecast horizon."""
+class ForecastModelSpecification:
+    """Frozen supervised-model family and parameters for one forecast horizon."""
 
     horizon_years: int
     model_name: str
@@ -54,8 +53,8 @@ class ChampionSpecification:
 
         if self.horizon_years <= 0:
             raise ValueError("horizon_years must be positive")
-        if self.model_name not in SUPPORTED_CHAMPIONS:
-            raise ValueError(f"Unsupported champion model: {self.model_name}")
+        if self.model_name not in SUPPORTED_FORECAST_MODELS:
+            raise ValueError(f"Unsupported forecast model: {self.model_name}")
         if self.reg_param < 0:
             raise ValueError("reg_param must be nonnegative")
         validate_gradient_boosted_tree_parameters(
@@ -80,18 +79,32 @@ class ForecastFinalizationRun:
     current_predictions: Any
 
 
-def validate_champion_specifications(
-    specifications: tuple[ChampionSpecification, ...],
+def validate_model_specifications(
+    specifications: tuple[ForecastModelSpecification, ...],
 ) -> None:
-    """Require one valid champion specification for every distinct horizon."""
+    """Require both supervised models once for every configured horizon."""
 
     if not specifications:
-        raise ValueError("At least one champion specification is required")
+        raise ValueError("At least one forecast model specification is required")
     for specification in specifications:
         specification.validate()
-    horizons = [item.horizon_years for item in specifications]
-    if len(horizons) != len(set(horizons)):
-        raise ValueError("Champion specifications must not repeat a horizon")
+    keys = [(item.horizon_years, item.model_name) for item in specifications]
+    if len(keys) != len(set(keys)):
+        raise ValueError("Forecast model specifications must not repeat a model and horizon")
+    expected_models = set(SUPPORTED_FORECAST_MODELS)
+    models_by_horizon: dict[int, set[str]] = {}
+    for item in specifications:
+        models_by_horizon.setdefault(item.horizon_years, set()).add(item.model_name)
+    incomplete = {
+        horizon: sorted(expected_models - models)
+        for horizon, models in models_by_horizon.items()
+        if models != expected_models
+    }
+    if incomplete:
+        raise ValueError(
+            "Every horizon must contain the regularized-linear and gradient-boosted-tree "
+            f"models; missing={incomplete}"
+        )
 
 
 def interval_quantile_probability(sample_count: int, coverage: float) -> float:
@@ -105,7 +118,7 @@ def interval_quantile_probability(sample_count: int, coverage: float) -> float:
     return rank / sample_count
 
 
-def _fit_model(training: Any, specification: ChampionSpecification) -> Any:
+def _fit_model(training: Any, specification: ForecastModelSpecification) -> Any:
     """Fit one frozen Spark model pipeline using training data only."""
 
     from pyspark.ml import Pipeline  # type: ignore[import-not-found]
@@ -178,7 +191,7 @@ def _fit_model(training: Any, specification: ChampionSpecification) -> Any:
 
 def _score_role(
     panel: Any,
-    specifications: tuple[ChampionSpecification, ...],
+    specifications: tuple[ForecastModelSpecification, ...],
     *,
     temporal_role: str,
     require_observed_target: bool,
@@ -209,30 +222,21 @@ def _score_role(
             raise ValueError(
                 f"Empty scoring frame for horizon {specification.horizon_years}"
             )
-        if specification.model_name == "state_current_trend":
-            output = scoring.withColumn(
-                "prediction_cumulative_log_change",
-                functions.log1p(
-                    functions.col("state_origin_mean_annual_change_pct") / 100.0
-                )
-                * functions.col("horizon_years"),
-            ).withColumn("model_training_cutoff_year", functions.lit(None).cast("int"))
-        else:
-            training = horizon_frame.where(
-                functions.col("target_is_observed")
-                & (functions.col("geographic_role") == "geographic_development")
-                & (functions.col("target_end_year") < prediction_origin)
+        training = horizon_frame.where(
+            functions.col("target_is_observed")
+            & (functions.col("geographic_role") == "geographic_development")
+            & (functions.col("target_end_year") < prediction_origin)
+        )
+        if not training.limit(1).count():
+            raise ValueError(
+                f"Empty training frame for horizon {specification.horizon_years}"
             )
-            if not training.limit(1).count():
-                raise ValueError(
-                    f"Empty training frame for horizon {specification.horizon_years}"
-                )
-            output = (
-                _fit_model(training, specification)
-                .transform(scoring)
-                .select(*panel.columns, "prediction_cumulative_log_change")
-                .withColumn("model_training_cutoff_year", functions.lit(prediction_origin - 1))
-            )
+        output = (
+            _fit_model(training, specification)
+            .transform(scoring)
+            .select(*panel.columns, "prediction_cumulative_log_change")
+            .withColumn("model_training_cutoff_year", functions.lit(prediction_origin - 1))
+        )
         output = output.withColumn("model_name", functions.lit(specification.model_name))
         outputs.append(output)
     combined = outputs[0]
@@ -243,7 +247,7 @@ def _score_role(
 
 def _score_current(
     panel: Any,
-    specifications: tuple[ChampionSpecification, ...],
+    specifications: tuple[ForecastModelSpecification, ...],
 ) -> Any:
     """Refit frozen models on all prior known labels and score the latest origin."""
 
@@ -266,31 +270,22 @@ def _score_current(
             raise ValueError(
                 f"Empty production scoring frame for horizon {specification.horizon_years}"
             )
-        if specification.model_name == "state_current_trend":
-            output = scoring.withColumn(
-                "prediction_cumulative_log_change",
-                functions.log1p(
-                    functions.col("state_origin_mean_annual_change_pct") / 100.0
-                )
-                * functions.col("horizon_years"),
-            ).withColumn("model_training_cutoff_year", functions.lit(None).cast("int"))
-        else:
-            training = horizon_frame.where(
-                functions.col("target_is_observed")
-                & (functions.col("geographic_role") == "geographic_development")
-                & (functions.col("target_end_year") < current_origin)
+        training = horizon_frame.where(
+            functions.col("target_is_observed")
+            & (functions.col("geographic_role") == "geographic_development")
+            & (functions.col("target_end_year") < current_origin)
+        )
+        if not training.limit(1).count():
+            raise ValueError(
+                f"Empty production training frame for horizon "
+                f"{specification.horizon_years}"
             )
-            if not training.limit(1).count():
-                raise ValueError(
-                    f"Empty production training frame for horizon "
-                    f"{specification.horizon_years}"
-                )
-            output = (
-                _fit_model(training, specification)
-                .transform(scoring)
-                .select(*panel.columns, "prediction_cumulative_log_change")
-                .withColumn("model_training_cutoff_year", functions.lit(current_origin - 1))
-            )
+        output = (
+            _fit_model(training, specification)
+            .transform(scoring)
+            .select(*panel.columns, "prediction_cumulative_log_change")
+            .withColumn("model_training_cutoff_year", functions.lit(current_origin - 1))
+        )
         output = output.withColumn("model_name", functions.lit(specification.model_name))
         outputs.append(output)
     combined = outputs[0]
@@ -367,7 +362,7 @@ def build_interval_calibration(
     *,
     coverage: float,
 ) -> Any:
-    """Estimate one finite-sample absolute-residual interval radius per horizon."""
+    """Estimate one finite-sample residual interval for each model and horizon."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
@@ -375,8 +370,8 @@ def build_interval_calibration(
         functions.col("geographic_role") == "geographic_development"
     )
     counts = {
-        int(row["horizon_years"]): int(row["sample_count"])
-        for row in development.groupBy("horizon_years")
+        (str(row["model_name"]), int(row["horizon_years"])): int(row["sample_count"])
+        for row in development.groupBy("model_name", "horizon_years")
         .agg(functions.count("*").alias("sample_count"))
         .collect()
     }
@@ -385,23 +380,27 @@ def build_interval_calibration(
     spark = calibration_predictions.sparkSession
     probability_rows = [
         (
+            model_name,
             horizon,
             sample_count,
             float(coverage),
             interval_quantile_probability(sample_count, coverage),
         )
-        for horizon, sample_count in sorted(counts.items())
+        for (model_name, horizon), sample_count in sorted(counts.items())
     ]
     probabilities = spark.createDataFrame(
         probability_rows,
-        "horizon_years int, calibration_observation_count long, "
+        "model_name string, horizon_years int, calibration_observation_count long, "
         "nominal_coverage double, quantile_probability double",
     )
     summaries = []
     for row in probability_rows:
-        horizon, _, _, probability = row
+        model_name, horizon, _, _, probability = row
         summary = (
-            development.where(functions.col("horizon_years") == horizon)
+            development.where(
+                (functions.col("model_name") == model_name)
+                & (functions.col("horizon_years") == horizon)
+            )
             .agg(
                 functions.percentile_approx(
                     "absolute_error_cumulative_log_change",
@@ -412,6 +411,7 @@ def build_interval_calibration(
                     "calibration_mean_error_cumulative_log_change"
                 ),
             )
+            .withColumn("model_name", functions.lit(model_name))
             .withColumn("horizon_years", functions.lit(horizon))
         )
         summaries.append(summary)
@@ -423,7 +423,9 @@ def build_interval_calibration(
         "forecast_final_run_id",
         "forecast_final_built_at_utc",
     ).distinct()
-    return probabilities.join(combined, "horizon_years", "inner").crossJoin(lineage)
+    return probabilities.join(
+        combined, ["model_name", "horizon_years"], "inner"
+    ).crossJoin(lineage)
 
 
 def apply_prediction_intervals(predictions: Any, intervals: Any) -> Any:
@@ -433,12 +435,13 @@ def apply_prediction_intervals(predictions: Any, intervals: Any) -> Any:
 
     joined = predictions.join(
         intervals.select(
+            "model_name",
             "horizon_years",
             "nominal_coverage",
             "calibration_observation_count",
             "interval_radius_cumulative_log_change",
         ),
-        "horizon_years",
+        ["model_name", "horizon_years"],
         "inner",
     )
     lower = (
@@ -529,13 +532,13 @@ def build_locked_test_scorecard(predictions: Any) -> Any:
 
 def build_selection_frame(
     spark: Any,
-    specifications: tuple[ChampionSpecification, ...],
+    specifications: tuple[ForecastModelSpecification, ...],
     validation_scorecard: Any,
     *,
     run_id: str,
     built_at_utc: str,
 ) -> Any:
-    """Record frozen choices with their published overall validation evidence."""
+    """Record both frozen supervised models with their validation evidence."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
@@ -551,12 +554,12 @@ def build_selection_frame(
     ]
     configured = spark.createDataFrame(
         rows,
-        "horizon_years int, selected_model_name string, reg_param double, "
+        "horizon_years int, model_name string, reg_param double, "
         "gbt_max_depth int, gbt_max_iter int",
     )
     evidence = validation_scorecard.where(functions.col("slice_name") == "overall").select(
         "horizon_years",
-        functions.col("model_name").alias("selected_model_name"),
+        "model_name",
         functions.col("forecast_run_id").alias("source_validation_run_id"),
         functions.col("mae_log_change").alias("validation_mae_log_change"),
         functions.col("rmse_log_change").alias("validation_rmse_log_change"),
@@ -568,16 +571,16 @@ def build_selection_frame(
     )
     selection = configured.join(
         evidence,
-        ["horizon_years", "selected_model_name"],
+        ["horizon_years", "model_name"],
         "inner",
     )
     if selection.count() != len(specifications):
-        raise ValueError("A configured champion is missing published validation evidence")
+        raise ValueError("A configured forecast model is missing validation evidence")
     return (
         selection.withColumn(
-            "selection_rule",
+            "specification_rule",
             functions.lit(
-                "prefer_simpler_if_within_one_percent_mae_and_no_material_rmse_bias_or_tail_loss"
+                "publish_regularized_linear_and_gradient_boosted_trees_at_each_horizon"
             ),
         )
         .withColumn("forecast_final_schema_version", functions.lit(FORECAST_FINAL_SCHEMA_VERSION))
@@ -612,10 +615,10 @@ def validate_finalization_outputs(run: ForecastFinalizationRun) -> None:
             )
         ).limit(1).count():
             raise RuntimeError(f"{role} output violates the training cutoff")
-        if frame.groupBy("geoid_2020", "horizon_years").count().where(
+        if frame.groupBy("geoid_2020", "horizon_years", "model_name").count().where(
             functions.col("count") != 1
         ).limit(1).count():
-            raise RuntimeError(f"{role} output is not unique by tract and horizon")
+            raise RuntimeError(f"{role} output is not unique by tract, horizon, and model")
     for frame in (run.locked_test_predictions, run.current_predictions):
         if frame.where(
             (functions.col("prediction_lower_cumulative_log_change")
@@ -629,16 +632,16 @@ def validate_finalization_outputs(run: ForecastFinalizationRun) -> None:
 def build_forecast_finalization_run(
     panel: Any,
     validation_scorecard: Any,
-    specifications: tuple[ChampionSpecification, ...],
+    specifications: tuple[ForecastModelSpecification, ...],
     *,
     coverage: float = 0.90,
     run_id: str | None = None,
     built_at_utc: str | None = None,
 ) -> ForecastFinalizationRun:
-    """Calibrate frozen models, evaluate locked tests once, and score current tracts."""
+    """Calibrate and score both frozen supervised models at each horizon."""
 
     validate_feature_registry(panel.columns)
-    validate_champion_specifications(specifications)
+    validate_model_specifications(specifications)
     run_id = run_id or datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     built_at_utc = built_at_utc or datetime.now(UTC).isoformat()
     selection = build_selection_frame(

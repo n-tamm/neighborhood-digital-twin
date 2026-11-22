@@ -1,85 +1,76 @@
-# Final Model Selection and Interval Contract
+# Two-Model Finalization and Interval Contract
 
-This decision was frozen from job 500 validation evidence on November 19, 2026, before job 504
-read calibration outcomes or opened either locked temporal test. The source MLflow run is
-`f51ad8ff85c44fe5bbd665b20520f6e4`.
+The forecasting project has two supervised approaches: L2-regularized linear regression and
+gradient-boosted trees. Both models are fit independently at the one- and three-year horizons.
+Zero change, persistence, recent growth, county trend, and state trend are baselines used to
+interpret performance. A baseline is never substituted for either project model.
 
-## Frozen choices
+## Frozen model specifications
 
-| Horizon | Selected method | Frozen settings |
+| Horizon | Model | Settings |
 |---|---|---|
-| 1 year | Gradient-boosted trees | depth 2, 50 iterations, step size 0.05, subsampling 0.8, seed 699 |
-| 3 years | State current trend | Directly carries the origin-year statewide mean annual FHFA HPI change across the horizon |
+| 1 year | Regularized linear | L2 parameter 0.05, standardized inputs, 100 maximum iterations |
+| 1 year | Gradient-boosted trees | Depth 2, 50 iterations, step size 0.05, subsampling 0.8, seed 699 |
+| 3 years | Regularized linear | L2 parameter 0.05, standardized inputs, 100 maximum iterations |
+| 3 years | Gradient-boosted trees | Depth 4, 30 iterations, step size 0.05, subsampling 0.8, seed 699 |
 
-The project does not require both horizons to use the same model family. Each horizon answers a
-different forecasting problem and has different historical support.
+The settings were established from the training and validation workflow. Later-period outcomes
+must not be used to tune these parameters.
 
-## One-year decision
+## Why both models remain in the project
 
-The one-year tree had the lowest overall MAE (0.07326), RMSE (0.09289), and 90th-percentile
-absolute error (0.14887). Regularized linear had MAE 0.07660 and RMSE 0.09543. State trend had MAE
-0.07567 and RMSE 0.09844. The tree therefore improves on linear by about 4.4% in MAE and also
-reduces the larger misses.
+The linear model provides a readable additive comparison and is less flexible. The boosted-tree
+model can learn nonlinear relationships and interactions among the same point-in-time features.
+Showing both lets the report and application answer a useful question: does added flexibility
+meaningfully improve the forecast, and does that answer change between one and three years?
 
-The result is not uniform across time. State trend is best in the 2021 validation origin, while
-the tree is best in 2022. The tree's origin-level MAE varies from 0.08142 to 0.06321; state trend
-varies more sharply from 0.05658 to 0.09916. The tree is selected because it has the better
-combined error, tail error, and temporal balance—not because it wins every year. Its positive
-annualized signed error of 3.92 percentage points indicates underprediction on average and remains
-an important limitation for interval evaluation.
+Validation MAE favored the tree among the two project models at both horizons: 0.0733 versus
+0.0766 at one year, and 0.0807 versus 0.1033 at three years. The state-trend baseline achieved
+0.0666 at three years. That is important evidence that the three-year task is difficult and that
+tract features did not beat a broad market rule in that development period. It does not convert
+the state trend into the project's model.
 
-## Three-year decision
+## Model-specific intervals
 
-State trend clearly outperforms the fitted models overall. Its MAE is 0.06659 and RMSE is 0.08961,
-compared with 0.08073 and 0.10319 for the tree and 0.10327 and 0.12900 for regularized linear. State
-trend is best by a wide margin in 2017 and is essentially tied with the tree in 2018. It also has
-the smallest annualized signed error at -0.24 percentage points.
+Job 504 estimates a 90% split-conformal absolute-residual interval separately for each model and
+horizon:
 
-Selecting the baseline is a substantive result. The available tract and ACS features do not add
-enough stable three-year information to beat the statewide market signal. The application should
-show that result honestly instead of presenting a more complex model merely because one was fit.
-
-## Interval method
-
-Job 504 uses a 90% split-conformal absolute-residual interval separately for each horizon:
-
-1. Fit the frozen method using development-state labels whose endpoints occur before the reserved
+1. Fit the frozen model using development-state labels whose endpoints occur before the reserved
    calibration origin.
-2. Score the calibration origin without changing the model choice or parameters.
-3. Calculate the finite-sample-corrected 90th percentile of absolute calibration residuals in the
-   development states.
-4. Add and subtract that radius from later point predictions.
-5. Measure empirical coverage and average interval width on the locked temporal test overall and
-   across geography, cohort, housing mix, ACS uncertainty, and Census region.
+2. Score the calibration origin without changing the model or its parameters.
+3. Calculate the finite-sample-corrected 90th percentile of absolute calibration residuals for
+   that model and horizon.
+4. Add and subtract the radius from later-period and current predictions.
+5. Measure empirical coverage and interval width overall and across the declared evaluation
+   slices.
 
-The interval makes no normal-error assumption and uses held-out residuals rather than fitted
-training errors. Its main limitation is temporal: each horizon has only one independent
-calibration origin, even though that origin contains many tracts. The app therefore calls it a
-calibrated uncertainty interval, not a guarantee or a complete distribution of future outcomes.
+The interval uses held-out residuals rather than training error and does not assume normally
+distributed residuals. Its main limitation is temporal: each horizon has many tracts but only one
+independent calibration origin. It is therefore a calibrated uncertainty range, not a guarantee
+or a complete probability distribution.
 
-## Locked-test rule
+## Later-period evaluation and warnings
 
-The one-year 2024 origin and three-year 2022 origin were untouched by model selection and interval
-design. Job 504 opened them once under this frozen contract. Their results are final evidence and
-will not trigger parameter changes or a second preferred model. Any later research iteration must
-receive a new contract version and must not replace the original locked-test result.
+MAE, RMSE, signed error, 90th-percentile absolute error, interval coverage, and interval width are
+calculated for each of the four model-horizon combinations. Zero-change and state-trend errors are
+retained beside them as benchmarks. The threshold record flags whether a result has at least
+1,000 observations, MAE no worse than zero change, and coverage within ten percentage points of
+the 90% target.
 
-## Final locked result and release consequence
+Missing a threshold creates an application warning; it does not delete the forecast or promote a
+baseline. The app publishes both supervised model outputs for every model-ready tract at both
+horizons so users can compare the models and understand weak evidence directly.
 
-Job 504 opened the frozen tests under finalization run
-`73a193b64d154d868d8e94c039858861`. Job 605 then applied the same release requirements to both
-horizons without choosing a replacement model.
+## Correction recorded on November 22, 2026
 
-| Horizon | Locked MAE | Zero-change MAE | Empirical coverage | Release |
-|---|---:|---:|---:|---|
-| 1 year | 0.0599 | 0.0627 | 89.4% | Published |
-| 3 years | 0.2943 | 0.1566 | 48.2% | Withheld |
+An earlier finalization configuration selected one method per horizon and incorrectly configured
+`state_current_trend` as the three-year champion. That treated a strong validation baseline as if
+it were one of the project's forecasting models and caused the three-year supervised outputs to
+be absent from serving. Version 2 corrects the contract by carrying both supervised models through
+calibration, evaluation, current scoring, and application serving. The prior state-trend result
+remains useful baseline evidence but is not described as a linear or nonlinear model result.
 
-The one-year tree passes because it improves on zero change and its coverage is consistent with
-the 90% target. State trend is slightly better on one-year locked MAE at 0.0592, so the application
-shows that baseline beside the frozen tree.
-
-The three-year state-trend method overpredicted the 2022-2025 period and failed both the accuracy
-and uncertainty requirements. It remains the reported locked result but is not an application
-forecast. The project will not use that outcome to retroactively promote another development
-candidate.
+Because the 2022–2025 and 2024–2025 outcomes have already been inspected, the corrected comparison
+must not be called a new untouched model-selection test. The specifications were fixed before the
+correction and are not tuned from those outcomes. A genuinely new untouched three-year test will
+require a later observed endpoint.

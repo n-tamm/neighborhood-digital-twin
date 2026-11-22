@@ -23,7 +23,8 @@ figure should be generated before it is used in the final report.
 
 Calibration and locked-test cells show reserved data. Their presence in the assignment contract
 does not mean those outcomes were used for model choice. The finalization workflow opened the
-locked rows only after the one- and three-year champions and interval method were frozen.
+later-period rows only after both supervised model specifications and the interval method were
+frozen.
 
 ## Limits
 

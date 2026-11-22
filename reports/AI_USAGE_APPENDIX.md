@@ -77,11 +77,18 @@ features. The initial rule therefore discarded valid outcomes solely because the
 The team revised the contract so cross-2020 feature histories require the reviewed stable-tract
 cohort, while fully observed FHFA outcomes remain eligible. The correction was evaluated through
 unit tests, leakage and cohort checks, Ruff, mypy, bundle validation, rebuilt gold/model tables,
-and live Databricks runs. Model choices were then frozen before the reserved calibration and
-locked-test periods were opened. The final one-year model passed its release gate, while the
-three-year method failed both baseline accuracy and interval coverage and was withheld from the
-application. This evaluation changed the implementation and preserved an unfavorable result
-rather than accepting or tuning around the initial AI-assisted design.
+and live Databricks runs.
+
+A second review found a separate AI-assisted design error: finalization had promoted the strongest
+three-year validation baseline, state trend, into the model slot and withheld the project's actual
+linear and nonlinear three-year forecasts. That contradicted the stated goal of comparing
+regularized linear regression with gradient-boosted trees. The correction retained both
+supervised models at both horizons, moved state and county trends back to baseline-only roles,
+calibrated and evaluated each model separately, and changed the application to show weak results
+with warnings rather than suppressing them. Tests, table grains, serving reconciliation, figures,
+and written interpretations were revised together. This failure is recorded because a technically
+consistent pipeline can still implement the wrong research question when model roles are not
+checked against the project goal.
 
 ## Final responsibility
 

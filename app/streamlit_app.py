@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import streamlit as st
@@ -17,6 +17,7 @@ from neighborhood_app.charts import (
     county_tract_browser_map_figure,
     feature_gap_figure,
     forecast_interval_figure,
+    forecast_validation_comparison_figure,
     housing_mix_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
@@ -100,7 +101,7 @@ def selected_summary(data: NeighborhoodData, horizon_years: int) -> dict[str, An
     """Return the single published analogue summary for a selected horizon."""
 
     rows = data.summaries.loc[data.summaries["horizon_years"] == horizon_years]
-    return rows.iloc[0].to_dict() if not rows.empty else {}
+    return cast(dict[str, Any], rows.iloc[0].to_dict()) if not rows.empty else {}
 
 
 def render_overview(data: NeighborhoodData) -> None:
@@ -182,7 +183,7 @@ def render_overview(data: NeighborhoodData) -> None:
 
 
 def render_forecast_status(data: NeighborhoodData) -> None:
-    """Render approved forecasts or an explicit unavailable state without substitution."""
+    """Render both supervised forecasts or an explicit data-availability boundary."""
 
     profile = data.profile
     st.subheader("Forecast model")
@@ -199,14 +200,14 @@ def render_forecast_status(data: NeighborhoodData) -> None:
                 if not data.forecast_availability.empty
                 else ["No availability record was published"]
             )
-            boundary_title = "An approved forecast is unavailable for this tract."
+            boundary_title = "Forecasts are unavailable for this tract."
             boundary_text = "Reason: " + ", ".join(reasons) + "."
         st.markdown(
             f"""
             <div class="model-boundary">
               <strong>{boundary_title}</strong><br>
-              {boundary_text} This application will not substitute a validation result,
-              historical analogue outcome, or fabricated number for an approved forecast.
+              {boundary_text} This application will not substitute a baseline or historical
+              analogue outcome for the two supervised forecasting models.
             </div>
             """,
             unsafe_allow_html=True,
@@ -229,49 +230,59 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     st.markdown(
         f"""
         <div class="model-boundary">
-          <strong>Approved tract forecast as of {forecast_as_of_year}.</strong><br>
-          The point estimate and interval forecast FHFA single-family tract HPI. They are not an
-          individual-home valuation, a forecast for multifamily prices, or an investment rating.
+          <strong>Regularized-linear and gradient-boosted-tree forecasts as of
+          {forecast_as_of_year}.</strong><br>
+          Both models forecast FHFA single-family tract HPI at one and three years. Their point
+          estimates and intervals are model results, not individual-home valuations, multifamily
+          forecasts, or investment ratings.
         </div>
         """,
         unsafe_allow_html=True,
     )
-    cards = st.columns(len(data.forecasts))
-    for card, (_, row) in zip(
-        cards,
-        data.forecasts.sort_values("horizon_years").iterrows(),
-        strict=True,
-    ):
+    model_labels = {
+        "regularized_linear": "Regularized linear",
+        "gradient_boosted_trees": "Gradient-boosted trees",
+    }
+    horizons = sorted(data.forecasts["horizon_years"].astype(int).unique())
+    cards = st.columns(len(horizons))
+    for card, horizon_years in zip(cards, horizons, strict=True):
         with card:
-            metric_card(
-                f"{int(row['horizon_years'])}-year annualized forecast",
-                format_percent(row["prediction_annualized_change_pct"]),
-                (
-                    f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
-                    f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
-                    f"through {int(row['target_end_year'])}"
-                ),
-            )
+            st.markdown(f"#### {horizon_years}-year horizon")
+            horizon_rows = data.forecasts.loc[
+                data.forecasts["horizon_years"] == horizon_years
+            ].sort_values("model_name")
+            for _, row in horizon_rows.iterrows():
+                metric_card(
+                    model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                    format_percent(row["prediction_annualized_change_pct"]),
+                    (
+                        f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
+                        f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
+                        f"through {int(row['target_end_year'])}"
+                    ),
+                )
     st.plotly_chart(
         forecast_interval_figure(data.forecasts),
         width="stretch",
-        key="approved_forecast_intervals",
+        key="supervised_forecast_intervals",
         config={"displayModeBar": False},
     )
     st.caption(
         "The diamond is the state-trend baseline. The interval is calibrated from a reserved "
         "historical year and then evaluated on a later locked test; it is not a guarantee."
     )
-    withheld = data.forecast_availability.loc[
-        data.forecast_availability["availability_reason"] == "horizon_failed_locked_release_gate"
-    ]
-    for _, row in withheld.sort_values("horizon_years").iterrows():
+    warnings = data.forecasts.loc[
+        ~data.forecasts["meets_evaluation_thresholds"].fillna(False)
+    ].drop_duplicates(["model_name", "horizon_years"])
+    for _, row in warnings.sort_values(["horizon_years", "model_name"]).iterrows():
+        model_label = model_labels.get(str(row["model_name"]), str(row["model_name"]))
         st.warning(
-            f"The {int(row['horizon_years'])}-year forecast was withheld after the locked test. "
-            f"Its MAE was {float(row['champion_mae_log_change']):.3f}, compared with "
-            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its "
-            f"interval covered {float(row['empirical_interval_coverage']):.1%} of outcomes "
-            f"versus the {float(row['minimum_required_interval_coverage']):.0%} release minimum."
+            f"Evaluation warning: the {model_label} {int(row['horizon_years'])}-year result "
+            f"did not meet every predeclared benchmark. Its later-period MAE was "
+            f"{float(row['model_mae_log_change']):.3f}, compared with "
+            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its interval "
+            f"covered {float(row['empirical_interval_coverage']):.1%} of outcomes. The result is "
+            "shown for transparency; the baseline does not replace it."
         )
     first = data.forecasts.sort_values("horizon_years").iloc[0]
     st.markdown("#### What drives the model")
@@ -282,8 +293,8 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     )
     st.caption(
         f"Forecast release {data.forecast_release.get('serving_release_id', 'unavailable')} · "
-        f"model {first['model_name']} for the primary horizon · "
-        f"nominal coverage {float(first['nominal_coverage']):.0%}"
+        "models regularized_linear and gradient_boosted_trees · "
+        f"nominal interval coverage {float(first['nominal_coverage']):.0%}"
     )
 
 
@@ -474,7 +485,7 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     with explanation_col:
         st.markdown("#### Why it matched")
         st.plotly_chart(
-            feature_gap_figure(selected_match),
+            feature_gap_figure(cast(Mapping[str, Any], selected_match)),
             width="stretch",
             key=f"feature_gaps_{horizon_years}_{selected_rank}",
             config={"displayModeBar": False},
@@ -528,9 +539,9 @@ def render_methods(data: NeighborhoodData) -> None:
             - **Observed market history:** annual FHFA single-family tract HPI where available.
             - **Historical analogues:** ten earlier, distinct communities selected with weighted
               standardized distance and time-safe outcomes.
-            - **Forecast:** an approved one-year point estimate and calibrated interval where the
-              tract is eligible. The three-year candidate failed its locked release gate and is
-              shown as unavailable rather than being replaced with a weaker result.
+            - **Forecasts:** regularized-linear and gradient-boosted-tree point estimates and
+              model-specific calibrated intervals at one and three years where the tract is
+              model-ready. Evaluation warnings remain visible when a model misses a benchmark.
             """
         )
         st.markdown("#### Important boundaries")
@@ -615,35 +626,63 @@ def render_data_science_results() -> None:
         )
 
     with forecasting_tab:
-        st.markdown("### Predicting future single-family HPI change")
+        st.markdown("### Comparing the two supervised forecasting models")
         st.markdown(
             "The forecast target is cumulative change in the FHFA single-family tract HPI. "
-            "Models were compared on earlier validation periods, frozen, calibrated on a "
-            "separate year, and then evaluated once on later locked outcomes. The one-year "
-            "gradient-boosted tree passed the release rules. Its locked MAE was 0.0599 versus "
-            "0.0627 for zero change, and its nominal 90% interval covered 89.4% of outcomes."
+            "The project fits two models at each horizon: L2-regularized linear regression gives "
+            "an interpretable additive benchmark, while gradient-boosted trees can learn nonlinear "
+            "relationships and interactions. Zero change, persistence, recent growth, county "
+            "trend, and state trend remain simple comparison baselines; none replaces either "
+            "supervised model in the application."
         )
-        _science_figure(
-            "02_forecast_validation_vs_locked_mae.png",
-            "Lower MAE is better. The locked period tests whether a choice that looked useful "
-            "during development still works on genuinely later housing-market conditions.",
+        validation_scorecard = pd.read_csv(
+            DATA_SCIENCE_ASSET_ROOT / "forecast_validation_mae.csv"
         )
-        _science_figure(
-            "03_forecast_interval_coverage.png",
-            "Coverage is the share of locked outcomes inside the prediction interval. The "
-            "one-year interval stayed close to its 90% target; the three-year interval did not.",
+        st.plotly_chart(
+            forecast_validation_comparison_figure(validation_scorecard),
+            width="stretch",
+            key="forecast_validation_model_comparison",
+            config={"displayModeBar": False},
+        )
+        st.caption(
+            "Validation MAE compares every method on the same cumulative-log-change target. "
+            "Lower is better. The two colored supervised models are the project forecasts; trend "
+            "and persistence methods are reference points."
         )
         st.markdown(
-            "The three-year state-trend method failed rather than merely performing a little "
-            "worse. Its locked MAE was 0.2943 versus 0.1566 for zero change, and its interval "
-            "covered only 48.2% of outcomes. It carried unusually strong earlier state growth "
-            "forward into a cooler period, producing systematic overprediction. The app withholds "
-            "that horizon and shows the failure explicitly."
+            "On validation data, gradient-boosted trees had the lower MAE of the two project "
+            "models at both horizons: 0.0733 versus 0.0766 at one year, and 0.0807 versus 0.1033 "
+            "at three years. The state-trend baseline was strongest at three years in this "
+            "development period, which is useful context about the difficulty of the task—not a "
+            "reason to redefine the baseline as the model."
         )
-        _science_figure(
-            "04_forecast_observed_vs_predicted.png",
-            "The mean comparison makes the three-year error direction visible: the problem was "
-            "broad overprediction, not a handful of isolated tracts.",
+        comparison_table = validation_scorecard.loc[
+            validation_scorecard["model_name"].isin(
+                ["regularized_linear", "gradient_boosted_trees"]
+            )
+        ].copy()
+        comparison_table["Model"] = comparison_table["model_name"].map(
+            {
+                "regularized_linear": "Regularized linear",
+                "gradient_boosted_trees": "Gradient-boosted trees",
+            }
+        )
+        comparison_table["Horizon"] = comparison_table["horizon_years"].map(
+            lambda value: f"{int(value)} year"
+        )
+        comparison_table["Validation MAE"] = comparison_table["mae_log_change"].map(
+            lambda value: f"{value:.4f}"
+        )
+        st.dataframe(
+            comparison_table[["Horizon", "Model", "Validation MAE"]],
+            hide_index=True,
+            width="stretch",
+        )
+        st.info(
+            "Model evaluation does not end with the validation ranking. Each supervised model is "
+            "calibrated and evaluated separately on later outcomes using MAE, RMSE, signed error, "
+            "tail error, interval coverage, and performance slices. Weak results stay visible "
+            "with warnings instead of being replaced by a state or county trend."
         )
 
     with similarity_tab:
@@ -723,10 +762,10 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
     with state_coverage[0]:
         metric_card("Analogues available", analogue_tracts, f"of {total_tracts} tracts")
     with state_coverage[1]:
-        metric_card("Approved 1-year forecasts", forecast_tracts, f"of {total_tracts} tracts")
+        metric_card("1-year forecasts", forecast_tracts, f"of {total_tracts} tracts")
     with state_coverage[2]:
         metric_card(
-            "Approved 3-year forecasts",
+            "3-year forecasts",
             forecast_3_year_tracts,
             f"of {total_tracts} tracts",
         )
@@ -772,7 +811,7 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
         st.session_state.pop("selected_area_name", None)
         st.session_state.pop("selected_area_geoid", None)
         st.rerun()
-    tract_records = tracts.to_dict(orient="records")
+    tract_records = cast(list[dict[str, Any]], tracts.to_dict(orient="records"))
     tract_labels = {tract_browser_label(row): str(row["geoid_2020"]) for row in tract_records}
     st.caption(
         "Prefer the map or address finder when you do not know a tract number. The list retains "
@@ -901,9 +940,9 @@ def main() -> None:
             "This control changes the historical analogue evidence. It does not select a forecast."
         )
         st.info(
-            "Forecast availability: the current release publishes approved one-year forecasts "
-            "only. No neighborhood has an approved three-year forecast because that model failed "
-            "its locked release test. Three-year selections still show historical analogues."
+            "Forecast availability is separate from the historical-analogue horizon control. "
+            "Model-ready tracts provide both regularized-linear and gradient-boosted-tree results "
+            "at one and three years; evaluation warnings do not hide a model output."
         )
         st.markdown("---")
         st.caption(

@@ -75,7 +75,8 @@ Databricks is the shared pipeline, storage, modeling, and primary application en
 
 1. **Feasibility:** choose the geographic scope and supported horizons.
 2. **State contract:** freeze core dimensions and source families.
-3. **Forecast model:** select the champion approach and stop broad model search.
+3. **Forecast models:** freeze the regularized-linear and gradient-boosted-tree specifications at
+   both horizons and stop broad model search.
 4. **Scenario engine:** accept only scenarios that pass support and stability checks.
 5. **Content freeze:** run the locked test and prepare the final release.
 

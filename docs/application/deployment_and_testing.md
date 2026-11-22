@@ -63,8 +63,8 @@ Before calling an app revision complete, check:
 4. the active analogue release ID is the same across availability, summary, match, explanation,
    and path, and the forecast tables share their own complete release ID;
 5. all ten live matches appear even though the local fixture contains only one;
-6. no analogue outcome is described as the selected tract's forecast, and the failed three-year
-   forecast appears as withheld rather than missing;
+6. no analogue outcome or trend baseline is described as the selected tract's supervised
+   forecast, and weak model results remain visible with their evaluation warnings;
 7. desktop and narrow layouts retain readable titles, legends, tables, and caveats; and
 8. the service principal has no write permission and no access to raw or modeling tables.
 
@@ -102,17 +102,16 @@ the local boundary map remains available when a selected analogue horizon has no
 a structural check of framing and empty-state behavior, not a substitute for viewing each map in
 a browser.
 
-## Forecast release verification
+## Superseded version-1 forecast release verification
 
-On November 19, 2026, job 701 activated a forecast release with 46,719 one-year rows and 171,056
+On November 19, 2026, job 701 activated a version-1 release with 46,719 one-year rows and 171,056
 availability rows across both supported horizons. Direct reconciliation found no invalid interval
 ordering. All 85,528 three-year rows are unavailable with
 `horizon_failed_locked_release_gate`; one-year gaps retain tract-level readiness reasons.
 
 The bundle granted the app service principal read-only access to the two forecast tables and the
-app restarted successfully. Live review should now confirm that an eligible tract shows the point,
-90% interval, state baseline, and release lineage, while the three-year warning communicates the
-locked failure metrics clearly.
+app restarted successfully. This release is now superseded by the version-2 two-model contract and
+must not be treated as the final forecast design.
 
 ## Final analytical refresh verification
 
@@ -137,12 +136,12 @@ returned to `RUNNING` with `ACTIVE` compute. The bundle deploy changed only sour
 not create, change, or delete a Databricks job or table resource.
 
 The live repository contract returned all 51 state or district rows and exposed both analogue
-and approved one-year forecast coverage. Michigan, for example, returned 2,972 current tracts,
+and version-1 one-year forecast coverage. Michigan, for example, returned 2,972 current tracts,
 including 2,286 analogue-ready and 2,286 forecast-ready tracts. Oakland County returned 350 tract
 choices with population and both model-status fields. A full neighborhood load for tract
 `01001020300` independently selected analogue release
 `analogue-20261121T163609734965Z` and forecast release
-`forecast-20261119T172707640214Z`, with 20 analogue rows and one approved forecast row. This
+`forecast-20261119T172707640214Z`, with 20 analogue rows and one version-1 forecast row. This
 confirmed that the new browser fields did not mix releases or require access beyond the twelve
 named read-only tables.
 
@@ -172,9 +171,9 @@ The tract-discovery follow-up deployed on November 22 as
 unchanged. The current build log contains no package conflict or application startup exception;
 the beta source scanner remains unavailable with the same `scanner run failed` message.
 
-A direct read-only contract check returned 51 state or district summaries and confirmed zero
-approved three-year forecasts nationwide. The Oakland County check returned 350 current tract
-choices, 299 approved one-year forecasts, zero approved three-year forecasts, and display bounds
+A direct read-only contract check returned 51 state or district summaries and confirmed the
+version-1 release had no three-year forecasts. The Oakland County check returned 350 current tract
+choices, 299 version-1 one-year forecasts, no three-year forecasts, and display bounds
 for all 350 tracts. State, county, tract, and search queries all returned the new horizon-specific
 fields. This validates the data behind the new coverage cards, labels, and county tract-location
 map; manual browser review still needs to confirm the interaction and visual spacing.

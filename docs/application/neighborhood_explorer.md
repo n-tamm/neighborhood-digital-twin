@@ -30,9 +30,9 @@ uses its own data contracts, language, component design, and model boundaries.
 4. **Orient and navigate on the map.** The selected tract is shown with both a visible point and
    its simplified outline within nearby tract boundaries. A local tract click changes the active
    neighborhood. The state map colors only the share of tracts that support the complete analogue
-   method, while its hover and selected-state cards also report approved one- and three-year
-   forecast coverage. The current three-year count is zero nationwide because that horizon failed
-   its locked release gate. It does not score housing markets or neighborhood quality.
+   method, while its hover and selected-state cards also report one- and three-year forecast
+   coverage. A forecast is counted when both supervised model rows exist. It does not score
+   housing markets or neighborhood quality.
 5. **Open a focused tab.** Overview, Forecast, Historical analogues, Data Science Results, and
    Methods & limitations keep different evidence types from being blended together.
 
@@ -47,11 +47,11 @@ housing stock.
 
 ### Forecast
 
-The forecast screen shows an approved one-year point estimate, calibrated interval, state-trend
-baseline, and plain-language driver summary when the selected tract is eligible. The three-year
-candidate failed its locked release gate, so the app shows the failed MAE and interval coverage
-instead of publishing a point estimate. No validation prediction or analogue outcome is displayed
-as the tract's expected future.
+The forecast screen shows regularized-linear and gradient-boosted-tree point estimates at one and
+three years, a calibrated interval for each result, a separate state-trend baseline, and a
+plain-language driver summary when the selected tract is model-ready. A result that misses an
+evaluation threshold stays visible with its MAE and interval-coverage warning. No baseline,
+validation prediction, or analogue outcome is substituted for either supervised forecast.
 
 ### Historical analogues
 

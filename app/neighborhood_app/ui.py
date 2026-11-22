@@ -130,7 +130,7 @@ def place_label(row: Mapping[str, Any]) -> str:
     forecast_3_year = (
         "3-year forecast available"
         if bool(row.get("forecast_3_year_available"))
-        else "no approved 3-year forecast"
+        else "no 3-year forecast"
     )
     analogues = "analogues available" if bool(row.get("analogue_available")) else "no analogues"
     return (

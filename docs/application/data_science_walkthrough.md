@@ -7,7 +7,7 @@ analysis without direct Databricks access. It is a project-level explanation rat
 tract-specific dashboard. The page keeps three ideas separate:
 
 1. which records are valid for longitudinal analysis;
-2. how the forecast was selected and release-gated; and
+2. how the two supervised forecast models compare with simple baselines; and
 3. how historical communities are retrieved and evaluated.
 
 The page does not train models, query evaluation tables, or recalculate metrics at runtime. It
@@ -31,25 +31,15 @@ Source lineage:
 
 ### Forecasting
 
-The forecasting section explains the cumulative FHFA single-family HPI target, chronological
-model development, calibration, locked testing, and the release gate. Three figures carry the
-main result:
+The forecasting section explains the cumulative FHFA single-family HPI target and compares the
+project's regularized-linear and gradient-boosted-tree models at one and three years. A grouped
+validation chart includes five simple baselines so readers can see whether model flexibility adds
+value. State trend remains visible as a baseline; it is not treated as the three-year model.
 
-- `02_forecast_validation_vs_locked_mae.png` compares development and locked error;
-- `03_forecast_interval_coverage.png` evaluates whether the nominal 90% interval covers later
-  outcomes at an acceptable rate; and
-- `04_forecast_observed_vs_predicted.png` shows the direction of the three-year failure.
-
-The commentary reports the actual locked results. The one-year tree achieved MAE 0.0599 versus
-0.0627 for zero change and 89.4% interval coverage, so it was published. The frozen three-year
-state-trend method achieved MAE 0.2943 versus 0.1566 for zero change and only 48.2% interval
-coverage, so it was withheld. The page presents that failure as a result rather than hiding it.
-
-Source lineage:
-
-- accepted figure build: `forecast-final-20261119T173650231784Z`;
-- generating workflow: `701 Serving | Final Forecast Evaluation Figures`;
-- finalization run: `73a193b64d154d868d8e94c039858861`.
+The current bundled validation values come from governed job-500 scorecards. After the corrected
+two-model jobs 504, 605, and 606 run, the page will also receive reviewed side-by-side figures for
+later-period MAE, model-specific interval coverage, and error direction. The app does not
+recalculate those metrics at runtime.
 
 ### Historical analogues
 
@@ -80,7 +70,8 @@ Source lineage:
 
 ## Asset and refresh rule
 
-The deployed copies live in `app/assets/data_science/`. They are not manually redrawn or edited.
+The deployed copies and reviewed validation extract live in `app/assets/data_science/`. Figures
+are not manually redrawn or edited.
 When an accepted upstream figure build changes:
 
 1. rerun and validate the appropriate Databricks figure workflow;

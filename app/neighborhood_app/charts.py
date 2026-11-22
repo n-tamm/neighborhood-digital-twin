@@ -187,21 +187,28 @@ def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
 
 
 def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
-    """Compare approved annualized forecasts, calibrated intervals, and state-trend baselines."""
+    """Compare both supervised forecasts, model-specific intervals, and a state baseline."""
 
     figure = go.Figure()
     if forecasts.empty:
         return _layout(figure, height=300)
-    ordered = forecasts.sort_values("horizon_years").copy()
-    ordered["horizon_label"] = ordered["horizon_years"].map(
-        lambda value: f"{int(value)}-year horizon"
+    ordered = forecasts.sort_values(["horizon_years", "model_name"]).copy()
+    model_labels = {
+        "regularized_linear": "Regularized linear",
+        "gradient_boosted_trees": "Gradient-boosted trees",
+    }
+    ordered["model_label"] = ordered["model_name"].map(model_labels).fillna(
+        ordered["model_name"]
+    )
+    ordered["result_label"] = ordered.apply(
+        lambda row: f"{int(row['horizon_years'])}-year · {row['model_label']}", axis=1
     )
     point = ordered["prediction_annualized_change_pct"].astype(float)
     lower = ordered["prediction_lower_annualized_change_pct"].astype(float)
     upper = ordered["prediction_upper_annualized_change_pct"].astype(float)
     figure.add_scatter(
         x=point,
-        y=ordered["horizon_label"],
+        y=ordered["result_label"],
         mode="markers",
         marker={"size": 13, "color": TEAL, "line": {"color": TEXT, "width": 1}},
         error_x={
@@ -224,13 +231,13 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
         hovertemplate=(
             "Annualized forecast %{x:.1f}%<br>"
             "%{customdata[0]:.1f}% to %{customdata[1]:.1f}% interval<br>"
-            "Through %{customdata[2]} · %{customdata[3]}<extra>Approved forecast</extra>"
+            "Through %{customdata[2]} · %{customdata[3]}<extra>Model forecast</extra>"
         ),
         name="Forecast and calibrated interval",
     )
     figure.add_scatter(
         x=ordered["baseline_prediction_annualized_change_pct"],
-        y=ordered["horizon_label"],
+        y=ordered["result_label"],
         mode="markers",
         marker={"size": 11, "color": GOLD, "symbol": "diamond"},
         hovertemplate="State-trend baseline %{x:.1f}%<extra>Baseline</extra>",
@@ -249,6 +256,63 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
         legend={"orientation": "h", "y": -0.28, "x": 0},
     )
     return _layout(figure, height=340, margin_top=12)
+
+
+def forecast_validation_comparison_figure(scorecard: pd.DataFrame) -> go.Figure:
+    """Show validation MAE for the two supervised models against simple baselines."""
+
+    figure = go.Figure()
+    if scorecard.empty:
+        return _layout(figure, height=360)
+    labels = {
+        "gradient_boosted_trees": "Gradient-boosted trees",
+        "regularized_linear": "Regularized linear",
+        "state_current_trend": "State trend baseline",
+        "county_current_trend": "County trend baseline",
+        "recent_three_year_mean": "Recent 3-year mean",
+        "latest_change_persistence": "Latest-change persistence",
+        "zero_change": "Zero change",
+    }
+    colors = {
+        "gradient_boosted_trees": TEAL,
+        "regularized_linear": NAVY,
+        "state_current_trend": GOLD,
+        "county_current_trend": ORANGE,
+        "recent_three_year_mean": MUTED,
+        "latest_change_persistence": "#8193A0",
+        "zero_change": "#62717C",
+    }
+    ordered = scorecard.copy()
+    ordered["model_label"] = ordered["model_name"].map(labels).fillna(ordered["model_name"])
+    for horizon_years in sorted(ordered["horizon_years"].astype(int).unique()):
+        horizon = ordered.loc[ordered["horizon_years"] == horizon_years].sort_values(
+            "mae_log_change", ascending=False
+        )
+        figure.add_bar(
+            x=horizon["mae_log_change"],
+            y=horizon["model_label"],
+            name=f"{horizon_years}-year",
+            orientation="h",
+            marker_color=[colors.get(name, MUTED) for name in horizon["model_name"]],
+            opacity=1.0 if horizon_years == 1 else 0.62,
+            customdata=horizon[["horizon_years", "model_name"]],
+            hovertemplate=(
+                "%{y}<br>%{customdata[0]}-year validation MAE: %{x:.4f}"
+                "<extra></extra>"
+            ),
+        )
+    figure.update_layout(
+        barmode="group",
+        showlegend=True,
+        legend={"orientation": "h", "y": -0.22, "x": 0},
+    )
+    figure.update_xaxes(
+        title="Mean absolute error in cumulative log HPI change (lower is better)",
+        gridcolor=GRID,
+        zeroline=False,
+    )
+    figure.update_yaxes(title=None, showgrid=False)
+    return _layout(figure, height=500, margin_top=18)
 
 
 def neighborhood_context_map_figure(
@@ -541,9 +605,9 @@ def state_browser_map_figure(
             hovertemplate=(
                 "%{customdata[0]}<br>%{customdata[2]:,} of %{customdata[1]:,} tracts "
                 "support analogues (%{z:.1f}%)<br>"
-                "%{customdata[3]:,} support an approved 1-year forecast "
+                "%{customdata[3]:,} support both 1-year model forecasts "
                 "(%{customdata[4]:.1f}%)<br>"
-                "%{customdata[5]:,} support an approved 3-year forecast "
+                "%{customdata[5]:,} support both 3-year model forecasts "
                 "(%{customdata[6]:.1f}%)<extra>Select state</extra>"
             ),
             colorbar={

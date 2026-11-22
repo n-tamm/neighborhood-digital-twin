@@ -1,101 +1,90 @@
-# Forecast Evaluation and Current Results
+# Forecast Evaluation and Results
 
 ## What is being evaluated
 
 The target is cumulative log change in FHFA single-family tract HPI from a forecast origin to its
-future endpoint. One year is the primary horizon. Three years is a secondary horizon with fewer
+future endpoint. One year is the primary horizon. Three years is secondary and has fewer
 independent historical origins.
 
-The workflow deliberately separates four kinds of evidence:
+The project evaluates two supervised models at both horizons:
 
-- **Training folds** tune the one-year tree without reading validation outcomes.
-- **Validation origins** compare methods and support the frozen selection.
-- **Calibration origins** estimate an absolute-residual interval radius after selection.
-- **Locked origins** provide the final, once-opened test. Their results are never used to choose a
-  replacement method or improve the reported score.
+- L2-regularized linear regression; and
+- gradient-boosted trees.
+
+Five simple methods—zero change, latest-change persistence, recent three-year mean, county trend,
+and state trend—are baselines. They help show whether the supervised models add value; they are not
+application replacements for those models.
+
+## Evidence sequence
+
+- **Training folds** fit and tune without reading validation outcomes.
+- **Validation origins** compare both supervised models and all baselines during development.
+- **Calibration origins** estimate model- and horizon-specific interval radii.
+- **Later evaluation origins** test fixed specifications under later market conditions.
+- **Current scoring** refits the fixed specifications using labels available before the 2025
+  origin and generates current one- and three-year forecasts.
+
+The later evaluation periods were originally opened under an incorrect one-champion-per-horizon
+serving design. The corrected workflow scores both already specified supervised models without
+retuning. These outcomes must not be described as a new untouched selection set.
 
 ## How to read the metrics
 
 | Metric | Plain-language meaning |
 |---|---|
-| MAE | Average absolute miss in cumulative log HPI change; the primary point-error metric |
-| RMSE | Similar to MAE but places more weight on unusually large misses |
+| MAE | Average absolute miss in cumulative log HPI change; the primary error metric |
+| RMSE | Similar to MAE but gives unusually large misses more weight |
 | 90th-percentile absolute error | A tail-error threshold; 90% of absolute misses are smaller |
 | Mean signed error | Average actual minus predicted change; negative values mean overprediction |
 | R-squared | Squared-error improvement over predicting the evaluation-set mean |
-| Empirical interval coverage | Share of locked outcomes falling inside the published interval |
-| Mean interval width | How broad the uncertainty range is after converting it to annualized points |
+| Empirical interval coverage | Share of later outcomes inside the model's calibrated interval |
+| Mean interval width | Typical breadth of the annualized uncertainty range |
 
-No single metric is sufficient. A method can improve MAE but be biased, unstable across years, or
-poorly calibrated. Counts and subgroup slices are retained for the same reason.
+No single metric is enough. A model can have a reasonable MAE while remaining biased, unstable
+across origins, weak in held-out states, or poorly calibrated.
 
-## Corrected validation evidence
+## Validation results
 
-Job 500 run `f51ad8ff85c44fe5bbd665b20520f6e4` evaluated only rows whose labels were available before
-their validation origin. Cross-2020 features are allowed only for the governed stable-tract
-cohort; valid FHFA targets are not discarded merely because an endpoint falls in a new decade.
+Job 500 run `f51ad8ff85c44fe5bbd665b20520f6e4` used only labels available before each validation
+origin. The supervised-model comparison is:
 
-| Horizon | Frozen method | Validation MAE | Validation RMSE | Main reason for selection |
-|---|---|---:|---:|---|
-| 1 year | Gradient-boosted trees | 0.0733 | 0.0929 | Best combined MAE, tail error, and balance across 2021-2022 |
-| 3 years | State current trend | 0.0666 | 0.0896 | Clearly better overall than the fitted tree and linear model in 2017-2018 |
+| Horizon | Model | Validation MAE | Validation RMSE |
+|---|---|---:|---:|
+| 1 year | Gradient-boosted trees | 0.0733 | 0.0929 |
+| 1 year | Regularized linear | 0.0766 | 0.0954 |
+| 3 years | Gradient-boosted trees | 0.0807 | 0.1032 |
+| 3 years | Regularized linear | 0.1033 | 0.1290 |
 
-The one-year result was not uniform: state trend won 2021 and the tree won 2022. The three-year
-result showed that a transparent market baseline could outperform more complex tract models in
-development. Both points matter when interpreting the later locked test.
+The tree has the lower validation error among the two project models at both horizons. The
+state-trend baseline has a three-year MAE of 0.0666, lower than either supervised model in this
+development period. The correct interpretation is that broad market momentum was difficult to
+beat at three years—not that state trend became the project's nonlinear or linear model.
 
-## Interval calibration
+## Evaluation thresholds
 
-Job 504 used a 90% split-conformal absolute-residual interval. The one-year calibration origin had
-41,017 observations and produced a cumulative-log radius of 0.1222. The three-year calibration
-origin had 39,563 observations and produced a radius of 0.2675.
+Job 605 records three checks separately for every model-horizon pair:
 
-These are distribution-free residual intervals, but they are not timeless guarantees. Each
-horizon has many tracts but only one independent calibration origin, so a market-regime change can
-still break coverage.
+1. at least 1,000 later-period observations;
+2. model MAE no worse than zero-change MAE; and
+3. empirical coverage no more than ten percentage points below the nominal 90% interval.
 
-## Locked-test results
+A missed check produces an evaluation warning in the app. It does not suppress the result or
+promote a baseline. This keeps poor performance visible and lets users compare the two actual
+models honestly.
 
-| Horizon | Locked period | Observations | Champion MAE | Zero MAE | State-trend MAE | Coverage | Result |
-|---|---|---:|---:|---:|---:|---:|---|
-| 1 year | 2024-2025 | 42,082 | 0.0599 | 0.0627 | 0.0592 | 89.4% | Release gate passed |
-| 3 years | 2022-2025 | 45,887 | 0.2943 | 0.1566 | 0.2943 | 48.2% | Release gate failed |
+## Required slices
 
-The one-year tree beats zero change, and its 89.4% coverage is close to the stated 90% level. The
-state-trend baseline is slightly better on locked MAE, so the correct conclusion is not that the
-tree dominates every simple method. The pre-frozen tree is retained and the state baseline is
-shown beside it in the application.
+The scorecards retain results by Census region, held-out-state role, stable versus post-2020
+cohort, housing composition, ACS uncertainty, and origin year. Counts accompany every slice. The
+report should emphasize overall results first and use slices to identify where a model is less
+reliable or where apparent performance depends on geography or data quality.
 
-The three-year method failed in a practically important way. Mean predicted cumulative log change
-was 0.442, while mean observed change was 0.149. Persisting the unusually strong 2022 statewide
-trend for three years caused systematic overprediction. The interval also captured fewer than
-half of the outcomes.
+## What the evidence can support
 
-## Release gate
+The workflow can support a tract-level single-family HPI forecast, comparison of linear and
+nonlinear behavior, calibrated uncertainty ranges, and transparent baseline context. It does not
+support an individual-home valuation, a forecast of all housing types, a causal claim about why a
+neighborhood changed, or an investment recommendation.
 
-Job 605 applies the same fixed minimum requirements to every horizon:
-
-1. At least 1,000 locked observations.
-2. Champion MAE no worse than zero-change MAE.
-3. Empirical coverage no more than ten percentage points below the nominal interval coverage.
-
-The gate does not search for a new model after reading the test. It publishes the one-year horizon
-and records the three-year reasons as
-`worse_than_zero_change_mae;interval_coverage_below_threshold`.
-
-## Required interpretation slices
-
-The scorecards retain results by Census region, held-out state role, stable versus post-2020
-cohort, housing composition, ACS uncertainty, and origin year. The one-year locked result is
-fairly consistent across these slices. The three-year failure appears across regions and cohorts,
-which supports the regime-failure interpretation rather than a single geography bug.
-
-## What the evidence supports
-
-- A usable one-year forecast with an honestly evaluated uncertainty interval.
-- A visible state-trend comparator rather than a claim that complexity always wins.
-- Withholding the three-year forecast from the product.
-- Reporting regime sensitivity as a substantive result.
-
-It does not support an individual-home valuation, a causal neighborhood forecast, an investment
-recommendation, or retuning the three-year method against the locked outcome.
+The exact version-2 later-period metrics and serving counts must be added here after jobs 504, 605,
+606, and 701 complete successfully under the corrected two-model contract.

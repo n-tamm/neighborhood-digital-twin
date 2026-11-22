@@ -16,6 +16,7 @@ from neighborhood_app.charts import (
     analogue_map_figure,
     county_tract_browser_map_figure,
     forecast_interval_figure,
+    forecast_validation_comparison_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
     state_browser_map_figure,
@@ -54,26 +55,60 @@ def test_hpi_chart_does_not_plot_unavailable_observations() -> None:
 
 
 def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
-    """Approved forecasts should display uncertainty without blending in the baseline."""
+    """Both models should display uncertainty without blending into the baseline."""
 
     forecasts = pd.DataFrame(
         {
-            "horizon_years": [1, 3],
-            "target_end_year": [2026, 2028],
-            "model_name": ["regularized_linear", "gradient_boosted_trees"],
-            "prediction_annualized_change_pct": [2.0, 3.0],
-            "prediction_lower_annualized_change_pct": [-1.0, 0.5],
-            "prediction_upper_annualized_change_pct": [5.0, 5.5],
-            "baseline_prediction_annualized_change_pct": [1.5, 1.8],
+            "horizon_years": [1, 1, 3, 3],
+            "target_end_year": [2026, 2026, 2028, 2028],
+            "model_name": [
+                "regularized_linear",
+                "gradient_boosted_trees",
+                "regularized_linear",
+                "gradient_boosted_trees",
+            ],
+            "prediction_annualized_change_pct": [2.0, 2.4, 3.0, 3.3],
+            "prediction_lower_annualized_change_pct": [-1.0, -0.5, 0.5, 0.8],
+            "prediction_upper_annualized_change_pct": [5.0, 5.2, 5.5, 5.8],
+            "baseline_prediction_annualized_change_pct": [1.5, 1.5, 1.8, 1.8],
         }
     )
 
     figure = forecast_interval_figure(forecasts)
 
     assert len(figure.data) == 2
-    assert list(figure.data[0].x) == [2.0, 3.0]
-    assert list(figure.data[0].error_x.arrayminus) == [3.0, 2.5]
-    assert list(figure.data[1].x) == [1.5, 1.8]
+    assert len(figure.data[0].x) == 4
+    assert set(figure.data[0].y) == {
+        "1-year · Regularized linear",
+        "1-year · Gradient-boosted trees",
+        "3-year · Regularized linear",
+        "3-year · Gradient-boosted trees",
+    }
+    assert len(figure.data[0].error_x.arrayminus) == 4
+    assert list(figure.data[1].x).count(1.5) == 2
+
+
+def test_validation_chart_keeps_supervised_models_and_baselines_visible() -> None:
+    """The evaluation view should compare model results without relabeling a baseline."""
+
+    scorecard = pd.DataFrame(
+        {
+            "model_name": [
+                "regularized_linear",
+                "gradient_boosted_trees",
+                "state_current_trend",
+            ]
+            * 2,
+            "horizon_years": [1, 1, 1, 3, 3, 3],
+            "mae_log_change": [0.077, 0.073, 0.076, 0.103, 0.081, 0.067],
+        }
+    )
+
+    figure = forecast_validation_comparison_figure(scorecard)
+
+    assert len(figure.data) == 2
+    assert {trace.name for trace in figure.data} == {"1-year", "3-year"}
+    assert "State trend baseline" in set(figure.data[1].y)
 
 
 def test_formatters_preserve_interpretable_units() -> None:
@@ -296,7 +331,7 @@ def test_place_label_keeps_geography_and_identifier_visible() -> None:
 
     assert label == (
         "Autauga County, AL · Census Tract 203 · 4,433 residents · 1-year forecast available · "
-        "no approved 3-year forecast · analogues available · GEOID 01001020300"
+        "no 3-year forecast · analogues available · GEOID 01001020300"
     )
 
 

@@ -13,9 +13,9 @@ retrieval. The application is where those pieces come together in a form people 
 > evaluation, serving, and quality schemas. The data covers national FHFA tract HPI through 2025,
 > 2010-2024 ACS history for the 50 states and Washington, D.C., governed Census geography, and
 > point-in-time model features. The live Databricks app serves current profiles, observed history,
-> historical analogues, and 46,719 approved one-year forecasts with calibrated intervals. The
-> one-year model passed its locked release gate; the three-year method failed accuracy and interval
-> coverage and is explicitly withheld. Similarity uses weighted standardized matching with ten
+> historical analogues, and regularized-linear and gradient-boosted-tree forecast workflows at
+> one and three years with model-specific calibrated intervals. Simple trends remain evaluation
+> baselines rather than replacing either supervised model. Similarity uses weighted standardized matching with ten
 > distinct historical communities and exact KD-tree batch retrieval. Current work is application
 > review, dependent similarity refresh, report integration, and final deployment polish.
 
@@ -25,7 +25,8 @@ A user can select a supported 2020 Census tract and:
 
 - review its current housing mix, affordability, population, tenure, and coverage context;
 - inspect observed FHFA single-family HPI history;
-- see an approved one-year HPI forecast with a calibrated interval and state-trend baseline;
+- compare regularized-linear and gradient-boosted-tree HPI forecasts at one and three years, with
+  calibrated intervals, evaluation warnings, and a separate state-trend baseline;
 - see a clear reason when a tract or horizon is unavailable;
 - find earlier tract-years that looked similar and see what happened afterward;
 - inspect actual tract outlines for the selected neighborhood and matched communities;
@@ -72,10 +73,10 @@ flowchart TB
     G --> EDA["400-401 Analysis<br/>readiness summaries and EDA figures"]
 
     G --> FDEV["500 Forecast development<br/>baselines, linear, GBT, validation"]
-    FDEV --> FFINAL["504 Finalization<br/>calibration, locked test, current scoring"]
-    FFINAL --> FGATE["605 Release gate<br/>accuracy and interval coverage"]
+    FDEV --> FFINAL["504 Two-model finalization<br/>calibration, later evaluation, current scoring"]
+    FFINAL --> FGATE["605 Evaluation thresholds<br/>accuracy and interval coverage"]
     FGATE --> FFIG["606 Final forecast figures"]
-    FGATE --> FSERVE["701 Forecast serving<br/>approved predictions and availability"]
+    FGATE --> FSERVE["701 Forecast serving<br/>both models, both horizons, warnings"]
 
     G --> SIM["501-503 Similarity modeling<br/>historical analogue retrieval"]
     SIM --> SEVAL["601-604 Similarity evaluation<br/>stability, selection, exact KD-tree"]
@@ -93,7 +94,7 @@ flowchart TB
     SSERVE --> APP
     G --> APP
     S --> APP
-    APP --> USER["Map, profile, one-year forecast,<br/>historical analogues, limitations"]
+    APP --> USER["Map, profile, two-model forecasts,<br/>historical analogues, limitations"]
 
     B -.-> META["900 Metadata and comments"]
     S -.-> META
@@ -329,7 +330,7 @@ databricks bundle run analogue_serving_products --profile neighborhood-twin -t t
 # Render the 7 model-evaluation figures from the two completed model runs.
 databricks bundle run model_evaluation_figures --profile neighborhood-twin -t team
 
-# After the champion contract is frozen, finalize once, gate, visualize, and serve forecasts.
+# After both supervised specifications are frozen, calibrate, evaluate, visualize, and serve.
 databricks bundle run forecast_finalization --profile neighborhood-twin -t team
 databricks bundle run forecast_release_gate --profile neighborhood-twin -t team
 databricks bundle run forecast_final_evaluation_figures --profile neighborhood-twin -t team
@@ -346,10 +347,10 @@ The forecast and current-state similarity jobs are independent after their upstr
 The historical analogue job waits for model readiness and the forecast comparators. The evaluation
 figure job currently waits for forecast and current-state similarity. Job 800 reads the approved
 analogue audit, selection, exact-retrieval, and serving outputs; it does not retrain the method.
-Jobs 500-604 are development or similarity-evaluation workflows and do not open the forecast
-locked temporal outcomes. Job 504 is the deliberate exception: run it only after model choices
-and the interval method are frozen. Jobs 605, 606, and 701 read its unchanged outputs and do not
-retune the model.
+Jobs 500-604 are development or similarity-evaluation workflows. Job 504 scores the frozen linear
+and boosted-tree specifications at both horizons after their settings and the interval method are
+fixed. Jobs 605, 606, and 701 read those outputs; they do not retune a model, substitute a trend,
+or suppress a weak result.
 
 ### 5. Run only the stage affected by a change
 
@@ -361,7 +362,7 @@ pipeline:
 | Documentation or local unit-test change | No Databricks job |
 | EDA summary or figure code | `data_readiness_eda`, `visual_eda`, then `table_metadata_pipeline` |
 | Forecast development code | `forecast_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
-| Frozen forecast release packaging or figures | `forecast_release_gate`, `forecast_final_evaluation_figures`, `forecast_serving_products`, then `table_metadata_pipeline` |
+| Frozen forecast model, packaging, or figure contract | `forecast_finalization`, `forecast_release_gate`, `forecast_final_evaluation_figures`, `forecast_serving_products`, then `table_metadata_pipeline` |
 | Current-state similarity code | `similarity_baselines`, `model_evaluation_figures`, then `table_metadata_pipeline` |
 | Historical analogue code | `historical_analogue_baseline`, then `table_metadata_pipeline` |
 | Approved current-analogue serving release | `analogue_serving_products`, then `table_metadata_pipeline` |
@@ -385,13 +386,13 @@ scope, and stage-by-stage validation described in [the acquisition guide](docs/i
 |---|---|---|
 | Readiness summaries and 12 EDA figures | `notebooks/04_exploration/01_build_data_readiness.py`, `02_build_visual_eda.py`, and `03_render_eda_figures.py` | `workspace.neighborhood_twin_gold` tables and the `eda_figures` volume |
 | Forecast predictions and scorecards | `notebooks/05_modeling/01_run_forecast_baselines.py` | `workspace.neighborhood_twin_model.forecast_baseline_prediction`, `workspace.neighborhood_twin_evaluation.forecast_baseline_scorecard`, and the shared forecast MLflow experiment |
-| Final forecast calibration, locked test, and current scoring | `notebooks/05_modeling/10_finalize_forecast.py` | Selection, calibration, locked prediction, locked scorecard, and current prediction tables in the model/evaluation schemas plus the finalization MLflow experiment |
-| Forecast release decision | `notebooks/05_modeling/11_evaluate_forecast_release.py` | `workspace.neighborhood_twin_evaluation.forecast_release_gate` |
+| Final forecast calibration, later evaluation, and current scoring | `notebooks/05_modeling/10_finalize_forecast.py` | Two-model specifications, calibration, evaluation prediction, scorecard, and current prediction tables plus the finalization MLflow experiment |
+| Forecast evaluation thresholds | `notebooks/05_modeling/11_evaluate_forecast_release.py` | `workspace.neighborhood_twin_evaluation.forecast_evaluation_threshold` |
 | Final forecast figures | `notebooks/05_modeling/12_render_forecast_final_evaluation.py` | `forecast_final_evaluation_figure_manifest` and the final-forecast directory in the model-evaluation figure volume |
 | Similarity matches and diagnostics | `notebooks/05_modeling/02_run_similarity_baselines.py` | `workspace.neighborhood_twin_model.similarity_baseline_match`, `workspace.neighborhood_twin_evaluation.similarity_baseline_summary`, and the shared similarity MLflow experiment |
 | Historical matches, estimates, and evaluation | `notebooks/05_modeling/04_run_historical_analogue_baseline.py` | `historical_analogue_match` and `historical_analogue_prediction` in `workspace.neighborhood_twin_model`; `historical_analogue_summary` and `historical_analogue_scorecard` in `workspace.neighborhood_twin_evaluation`; and the shared historical-analogue MLflow experiment |
 | Current analogue application release | `notebooks/06_representations/01_build_analogue_serving_products.py` | Versioned matches, summaries, availability, and activation manifest in `workspace.neighborhood_twin_serving` |
-| Current forecast application release | `notebooks/06_representations/02_build_forecast_serving_products.py` | Versioned approved forecasts, complete availability, and activation records in `workspace.neighborhood_twin_serving` |
+| Current forecast application release | `notebooks/06_representations/02_build_forecast_serving_products.py` | Both supervised models at both horizons, complete availability, warnings, and activation records in `workspace.neighborhood_twin_serving` |
 | Seven model-evaluation figures | `notebooks/05_modeling/03_render_model_evaluation.py` | `workspace.neighborhood_twin_evaluation.model_evaluation_figures` and its manifest table |
 | Five similarity communication figures | `notebooks/08_final_analysis/00_render_similarity_communication.py` | `workspace.neighborhood_twin_evaluation.similarity_evaluation_figure_manifest` and the `similarity_evaluation_figures` volume |
 
@@ -442,12 +443,12 @@ source comment, but the dependency must be declared in the correct environment f
 - Notebooks may explore an idea, but reusable transformations and models move into tested modules.
 - Large source data, secrets, local MLflow runs, and generated artifacts are not committed.
 - Small fixtures, schemas, manifests, configuration, and permitted demonstration outputs are committed when they are needed for reproducibility.
-- Model selection stops after a justified champion is chosen; the goal is credible evaluation, not an algorithm contest.
+- Model development stops after the linear and boosted-tree specifications are justified and frozen; baselines remain comparators rather than product substitutes.
 
 The repository now provides validated bronze, silver, canonical, current gold, historical state,
 forecast-target, point-in-time feature, frozen split, and model-panel products. It also provides
-time-safe historical analogues, stability and retrieval evaluation, final forecast selection and
-uncertainty, explicit forecast release gates, and versioned application-serving contracts. The
+time-safe historical analogues, stability and retrieval evaluation, two-model forecast
+uncertainty, explicit evaluation warnings, and versioned application-serving contracts. The
 interactive Databricks application combines these products now. Remaining work is review and
 polish: refresh analogue outputs after upstream model-readiness changes, reconcile any partner
 forecast additions, complete report integration, and perform final application testing. Current

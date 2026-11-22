@@ -100,9 +100,10 @@ contains validated rows for both `serving_forecast_current` and
 without pretending it shares a build ID with the analogue release. Every forecast query uses the
 selected forecast release ID.
 
-The forecast release may contain fewer published horizons than its availability table. That is
-intentional: the current release publishes one-year predictions while every three-year
-availability row records `horizon_failed_locked_release_gate`.
+The version-2 forecast release contains both supervised models at both horizons for model-ready
+tracts. Availability remains one row per tract and horizon and is true only when both model rows
+exist. Evaluation warnings are fields on the model results rather than reasons to suppress a
+horizon.
 
 ## Current compromises
 

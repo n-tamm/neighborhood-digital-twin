@@ -236,31 +236,31 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "One row per model, horizon, slice name, and slice value.",
     ),
     "forecast_model_selection": TableMetadata(
-        "Frozen per-horizon champion choices with their published validation evidence and "
-        "estimator settings.",
-        "One row per active forecast horizon and finalization run.",
+        "Frozen regularized-linear and gradient-boosted-tree specifications with their "
+        "validation evidence and estimator settings.",
+        "One row per supervised model, active forecast horizon, and finalization run.",
     ),
     "forecast_calibration_prediction": TableMetadata(
         "Reserved-origin predictions used only to estimate the frozen forecast interval radius.",
-        "One row per calibration tract and active forecast horizon.",
+        "One row per calibration tract, supervised model, and active forecast horizon.",
     ),
     "forecast_interval_calibration": TableMetadata(
         "Finite-sample absolute-residual interval settings estimated from development-state "
         "calibration rows.",
-        "One row per active forecast horizon and finalization run.",
+        "One row per supervised model, active forecast horizon, and finalization run.",
     ),
     "forecast_locked_test_prediction": TableMetadata(
         "Final point and interval predictions for the once-opened locked temporal tests.",
-        "One row per locked-test tract and active forecast horizon.",
+        "One row per evaluated tract, supervised model, and active forecast horizon.",
     ),
     "forecast_locked_test_scorecard": TableMetadata(
         "Final locked-test point error, bias, interval coverage, and interval-width diagnostics.",
-        "One row per horizon, evaluation slice, and slice value.",
+        "One row per supervised model, horizon, evaluation slice, and slice value.",
     ),
-    "forecast_release_gate": TableMetadata(
-        "Frozen application-release decision comparing each champion with zero-change and its "
-        "locked interval-coverage requirement.",
-        "One row per active forecast horizon and finalization run.",
+    "forecast_evaluation_threshold": TableMetadata(
+        "Evaluation status comparing each supervised model with zero change and the declared "
+        "interval-coverage threshold; status does not replace or suppress a model.",
+        "One row per supervised model, active forecast horizon, and finalization run.",
     ),
     "forecast_final_evaluation_figure_manifest": TableMetadata(
         "Versioned inventory of final forecast validation, locked-test, interval, and release "
@@ -268,8 +268,9 @@ TABLE_METADATA: dict[str, TableMetadata] = {
         "One row per figure in the current final forecast evaluation build.",
     ),
     "forecast_current_prediction": TableMetadata(
-        "Current model-ready tract predictions from the frozen champion and interval contracts.",
-        "One row per current model-ready tract and active forecast horizon.",
+        "Current model-ready tract predictions from both frozen supervised model and interval "
+        "contracts.",
+        "One row per current model-ready tract, supervised model, and active forecast horizon.",
     ),
     "similarity_baseline_match": TableMetadata(
         "Reviewable current-state neighborhood matches from standardized raw and PCA "
@@ -413,8 +414,8 @@ TABLE_METADATA: dict[str, TableMetadata] = {
     ),
     "serving_forecast_current": TableMetadata(
         "Versioned current tract forecasts with calibrated intervals, baseline context, and "
-        "scope notes approved for application display.",
-        "One row per serving release, current tract, and active forecast horizon.",
+        "evaluation context for application display.",
+        "One row per serving release, current tract, supervised model, and forecast horizon.",
     ),
     "serving_forecast_availability_current": TableMetadata(
         "Explicit current forecast availability and unavailable reason for every profile tract.",
@@ -458,7 +459,7 @@ EVALUATION_TABLES = {
     "forecast_baseline_scorecard",
     "forecast_interval_calibration",
     "forecast_locked_test_scorecard",
-    "forecast_release_gate",
+    "forecast_evaluation_threshold",
     "forecast_final_evaluation_figure_manifest",
     "similarity_baseline_summary",
     "historical_analogue_summary",
@@ -557,7 +558,27 @@ COMMON_COLUMN_COMMENTS = {
     ),
     "target_is_observed": "True when both FHFA target endpoints are available and positive.",
     "target_censor_reason": "Explicit reason a horizon-specific target is unavailable.",
-    "selected_model_name": "Frozen champion model selected for the forecast horizon.",
+    "specification_rule": "Rule retaining both supervised models at each forecast horizon.",
+    "model_mae_log_change": (
+        "Mean absolute cumulative-log-change error for this supervised model and horizon."
+    ),
+    "models_meeting_evaluation_threshold_count": (
+        "Number of the two supervised models meeting all declared evaluation thresholds."
+    ),
+    "models_with_evaluation_warnings": (
+        "Supervised model names that miss at least one declared evaluation threshold."
+    ),
+    "meets_evaluation_thresholds": (
+        "True when this supervised model and horizon meet all declared evaluation thresholds."
+    ),
+    "evaluation_warning_reason": (
+        "Semicolon-separated thresholds missed, or meets_thresholds when none are missed."
+    ),
+    "forecast_evaluation_threshold_schema_version": (
+        "Version of the model-specific forecast evaluation threshold contract."
+    ),
+    "published_model_count": "Number of supervised current predictions published for the tract.",
+    "published_model_names": "Supervised model names published for the tract and horizon.",
     "prediction_lower_cumulative_log_change": (
         "Lower calibrated bound for cumulative FHFA HPI log change."
     ),
@@ -583,8 +604,10 @@ COMMON_COLUMN_COMMENTS = {
     "model_training_cutoff_year": (
         "Latest target endpoint permitted in training for this prediction; always before origin."
     ),
-    "forecast_available": "True when a validated current forecast row exists for the tract.",
-    "driver_summary": "Plain-language, noncausal explanation of the approved model evidence.",
+    "forecast_available": (
+        "True when both supervised current forecast rows exist for the tract and horizon."
+    ),
+    "driver_summary": "Plain-language, noncausal explanation of the model evidence.",
     "driver_explanation_method": "Declared method supporting the displayed model explanation.",
     "modeling_cohort": (
         "Stable longitudinal cohort or broader post-2020-only cohort available to the row."
