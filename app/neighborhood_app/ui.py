@@ -119,12 +119,25 @@ def selected_state_from_map_event(event: Any) -> str | None:
 
 
 def place_label(row: Mapping[str, Any]) -> str:
-    """Build one consistent tract label for search results and page headings."""
+    """Build a readable search label with population and model availability context."""
 
+    population = format_integer(row.get("population_total_estimate"))
+    forecast = "forecast available" if bool(row.get("forecast_available")) else "no forecast"
+    analogues = "analogues available" if bool(row.get("analogue_available")) else "no analogues"
     return (
         f"{row['county_name']}, {row['state_abbreviation']} · "
-        f"{row['tract_name']} · {row['geoid_2020']}"
+        f"{row['tract_name']} · {population} residents · {forecast} · {analogues} · "
+        f"GEOID {row['geoid_2020']}"
     )
+
+
+def tract_browser_label(row: Mapping[str, Any]) -> str:
+    """Build one county-browser option that a user can compare without knowing a GEOID."""
+
+    population = format_integer(row.get("population_total_estimate"))
+    forecast = "forecast ✓" if bool(row.get("forecast_available")) else "forecast —"
+    analogues = "analogues ✓" if bool(row.get("analogue_available")) else "analogues —"
+    return f"{row['tract_name']} · {population} residents · {forecast} · {analogues}"
 
 
 def metric_card(label: str, value: str, note: str = "") -> None:

@@ -21,12 +21,14 @@ from neighborhood_app.charts import (
 )
 from neighborhood_app.ui import (
     format_currency,
+    format_integer,
     format_percent,
     format_square_miles,
     place_label,
     selected_geoid_from_map_event,
     selected_rank_from_table_event,
     selected_state_from_map_event,
+    tract_browser_label,
 )
 from streamlit.testing.v1 import AppTest
 
@@ -77,6 +79,7 @@ def test_formatters_preserve_interpretable_units() -> None:
     """Current profile metrics should carry explicit currency and percentage units."""
 
     assert format_currency(63939) == "$63,939"
+    assert format_integer(85528) == "85,528"
     assert format_percent(0.66559, value_is_share=True) == "66.6%"
     assert format_percent(3.24) == "3.2%"
     assert format_square_miles(2_589_988.110336) == "1.0 sq mi"
@@ -232,10 +235,31 @@ def test_place_label_keeps_geography_and_identifier_visible() -> None:
             "state_abbreviation": "AL",
             "tract_name": "Census Tract 203",
             "geoid_2020": "01001020300",
+            "population_total_estimate": 4433,
+            "forecast_available": True,
+            "analogue_available": True,
         }
     )
 
-    assert label == "Autauga County, AL · Census Tract 203 · 01001020300"
+    assert label == (
+        "Autauga County, AL · Census Tract 203 · 4,433 residents · forecast available · "
+        "analogues available · GEOID 01001020300"
+    )
+
+
+def test_tract_browser_label_explains_place_without_requiring_geoid_knowledge() -> None:
+    """County tract choices should expose population and both model states in plain language."""
+
+    label = tract_browser_label(
+        {
+            "tract_name": "Census Tract 203",
+            "population_total_estimate": 4433,
+            "forecast_available": False,
+            "analogue_available": True,
+        }
+    )
+
+    assert label == "Census Tract 203 · 4,433 residents · forecast — · analogues ✓"
 
 
 def test_streamlit_app_starts_in_explicit_sample_mode(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -495,13 +495,18 @@ def state_browser_map_figure(
     states: pd.DataFrame,
     selected_state: str | None,
 ) -> go.Figure:
-    """Render a selectable U.S. state map with analogue-readiness context."""
+    """Render a selectable state map with analogue color and both model coverage counts."""
 
     figure = go.Figure()
     if states.empty:
         return _layout(figure, height=455, margin_top=8)
     plotted = states.copy()
+    if "forecast_ready_tract_count" not in plotted:
+        plotted["forecast_ready_tract_count"] = 0
+    if "forecast_ready_share" not in plotted:
+        plotted["forecast_ready_share"] = 0.0
     plotted["analogue_ready_pct"] = plotted["analogue_ready_share"].astype(float) * 100.0
+    plotted["forecast_ready_pct"] = plotted["forecast_ready_share"].astype(float) * 100.0
     figure.add_trace(
         go.Choropleth(
             locationmode="USA-states",
@@ -515,10 +520,20 @@ def state_browser_map_figure(
                 [1.0, TEAL],
             ],
             marker={"line": {"color": "#07111D", "width": 1.2}},
-            customdata=plotted[["state_name", "tract_count", "analogue_ready_tract_count"]],
+            customdata=plotted[
+                [
+                    "state_name",
+                    "tract_count",
+                    "analogue_ready_tract_count",
+                    "forecast_ready_tract_count",
+                    "forecast_ready_pct",
+                ]
+            ],
             hovertemplate=(
                 "%{customdata[0]}<br>%{customdata[2]:,} of %{customdata[1]:,} tracts "
-                "support analogues<br>%{z:.1f}% ready<extra>Select state</extra>"
+                "support analogues (%{z:.1f}%)<br>"
+                "%{customdata[3]:,} support an approved 1-year forecast "
+                "(%{customdata[4]:.1f}%)<extra>Select state</extra>"
             ),
             colorbar={
                 "title": {"text": "Analogue-ready<br>tract share", "font": {"color": TEXT}},

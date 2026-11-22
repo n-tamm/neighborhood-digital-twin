@@ -15,6 +15,16 @@ A source appearing here is not automatically approved for modeling or redistribu
 | [Census relationship files](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html) | Mapping earlier tract vintages to the canonical geography | Splits and merges require explicit weighting assumptions and validation |
 | [FRED API](https://fred.stlouisfed.org/docs/api/fred/) and ALFRED vintages | Mortgage rates, inflation, labor-market, and broader economic context | API key; revisions; geographic grain varies; point-in-time use may require ALFRED or pinned snapshots |
 
+## Application lookup utility
+
+The live application can optionally submit one street address to the public
+[U.S. Census Geocoder](https://www.census.gov/data/developers/data-sets/Geocoding-services.html)
+to identify its canonical 2020 tract and a recognizable place label. The request uses the
+`Public_AR_Current` benchmark and `Census2020_Current` vintage. An entered address is not acquired
+into the data pipeline, stored in Unity Catalog, or used as a model feature. The interface tells
+the user about the external request before submission. A missing or malformed tract result remains
+unavailable rather than being guessed from a ZIP code or city name.
+
 ## Current interpretation of the core housing data
 
 The FHFA tract HPI is the initial forecast target, but it represents annual appreciation in a filtered single-family market rather than every housing unit in a tract. The project must use the precise label `FHFA single-family HPI` in target definitions, evaluation tables, and application text. A tract with many multifamily units may still receive a forecast for its covered single-family segment, but the application must not imply that the forecast describes the tract's full housing market.

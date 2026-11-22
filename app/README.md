@@ -11,12 +11,23 @@ The interface uses a deep navy theme with high-contrast teal, blue, and gold sem
 application and its maps. The primary map combines a visible selected-tract point with its
 simplified boundary and nearby tract outlines; selecting a nearby tract opens it. A separate
 `Browse U.S.` map lets a user select a state, then narrow through county and tract controls without
-loading model outputs for every place in advance.
+loading model outputs for every place in advance. State and county summaries report both analogue
+and approved one-year forecast coverage with comma-formatted counts. Tract choices include
+population and both model statuses so an 11-digit GEOID is not the only distinguishing context.
+
+The live app also offers address-to-tract lookup through the public U.S. Census Geocoder. The
+submitted address is sent to Census only for that lookup and is not written to project tables. A
+successful match adds a recognizable incorporated place, census-designated place, or county
+subdivision label when Census returns one.
 
 The analogue experience layers numbered points over actual matched-tract polygons: points remain
 visible at the national extent, while boundaries become useful after zooming. Its selectable
 county table is the single detailed-match control, so persistent table selection cannot conflict
 with a second dropdown.
+
+The Data Science tab is a self-contained walkthrough of the implemented pipeline, forecast, and
+similarity evidence. It uses reviewed figures produced by the repository's Databricks workflows,
+with the release decision and limitations explained next to each figure.
 
 The interface is intentionally thin. It does not train models, rebuild features, download source
 data, or query `gold_modeling_panel`. Live mode uses a Databricks App service principal and reads
@@ -28,8 +39,10 @@ only the compact tables declared in `databricks.yml`.
 |---|---|
 | `streamlit_app.py` | Page structure, tract search, tabs, and user-facing states |
 | `neighborhood_app/data.py` | Configuration, release validation, parameterized SQL, and local fixture repository |
+| `neighborhood_app/geocoding.py` | Bounded Census address-to-2020-tract lookup |
 | `neighborhood_app/charts.py` | Map and chart construction with consistent visual semantics |
 | `neighborhood_app/ui.py` | Formatting, status badges, metric cards, and responsive styles |
+| `assets/data_science/` | Reviewed, workflow-generated figures shown in the Data Science tab |
 | `sample_data/autauga_demo.json` | Reduced real-data fixture for credential-free local development |
 | `.streamlit/config.toml` | Shared theme and Streamlit runtime preferences |
 | `app.yaml` | Databricks App command and resource-backed environment configuration |
@@ -51,7 +64,7 @@ fixture as reduced; it must not be used to make national coverage or performance
 Run the focused app checks with:
 
 ```powershell
-python -m pytest tests/unit/test_app_data.py tests/unit/test_app_presentation.py
+python -m pytest tests/unit/test_app_data.py tests/unit/test_app_geocoding.py tests/unit/test_app_presentation.py
 ```
 
 ## Live Databricks mode
@@ -89,6 +102,10 @@ until access is explicitly granted after live validation.
   boundary maps do not require repeated SQL startup on tab or horizon changes.
 - State, county, and tract navigation lists are compact, parameterized, and cached separately. The
   state browser is loaded only when the user switches away from the default neighborhood map.
+- Address lookup is optional, live-mode only, and calls the public Census Geocoder on submission.
+  It does not create a project record or make the entered address a modeling feature.
+- The Data Science tab is explanatory. Its bundled figures are immutable copies of governed
+  builds; the app does not recalculate evaluation metrics or select models at runtime.
 
 The implementation and interpretation details are in
 [the application documentation](../docs/application/README.md).

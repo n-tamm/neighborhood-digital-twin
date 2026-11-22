@@ -108,6 +108,13 @@ remains historical context and a secondary estimate.
   failed coverage requirement.
 - Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
   visible points at national extent and canonical tract outlines at local extent.
+- App Review 1 changes are implemented on the application branch: all browser counts use readable
+  thousands separators; state, county, search, and tract choices expose analogue and approved
+  one-year forecast availability; tract options add population context; and live mode offers an
+  optional Census address-to-2020-tract lookup with an explicit external-request notice.
+- A Data Science tab now walks through geography readiness, final forecast evaluation, and
+  similarity method selection using eight reviewed, workflow-generated figures with governed
+  build lineage.
 - Sample mode remains intentionally small and does not contain a production forecast. Live app
   review must therefore be performed in Databricks.
 
@@ -122,8 +129,9 @@ remains historical context and a secondary estimate.
    uncertainty, release-gate, and analogue results in the report and standup materials. Preserve
    the distinction between development evidence and final locked evidence.
 4. **Perform application acceptance testing.** Verify content delivery, empty states, maps,
-   Connecticut behavior, release IDs, responsiveness, and practical usefulness. Avoid substituting
-   click analytics for correctness and clarity.
+   Connecticut behavior, address matching, comma-formatted coverage, forecast status at every
+   browser level, Data Science figure readability, release IDs, responsiveness, and practical
+   usefulness. Avoid substituting click analytics for correctness and clarity.
 5. **Polish and freeze deployment.** Select the report figures, confirm report values against the
    final manifests, complete the remaining course deliverables, rerun the clean-checkout gates,
    and tag the reviewed commit. Do not rerun frozen models merely to improve reported results.

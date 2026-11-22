@@ -155,6 +155,10 @@ def test_sample_settings_and_repository_load_real_fixture() -> None:
     assert states["state_abbreviation"].tolist() == ["AL"]
     assert counties["county_geoid"].tolist() == ["01001"]
     assert tracts["geoid_2020"].tolist() == ["01001020300"]
+    assert states.iloc[0]["forecast_ready_tract_count"] == 0
+    assert counties.iloc[0]["forecast_ready_tract_count"] == 0
+    assert not bool(tracts.iloc[0]["forecast_available"])
+    assert places.iloc[0]["population_total_estimate"] > 0
     assert neighborhood.profile["county_name"] == "Autauga County"
     assert neighborhood.horizon_available(1)
     assert neighborhood.horizon_available(3)

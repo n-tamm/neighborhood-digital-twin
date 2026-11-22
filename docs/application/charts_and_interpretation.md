@@ -44,6 +44,11 @@ the browser. The map contains the 50 states and District of Columbia supported b
 geometry. Territories remain discoverable through text search rather than being placed
 incorrectly on this map.
 
+The hover text and selected-state cards report both analogue coverage and approved one-year
+forecast coverage. Counts use thousands separators. County options repeat both counts, and tract
+options show population plus the two model statuses. Analogue share remains the map color because
+putting two quantitative color encodings on one state would be harder to interpret.
+
 ## Footprint comparison
 
 When a historical match is selected, two local maps show the current and matched tract outlines

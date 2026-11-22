@@ -15,6 +15,14 @@ Schema and catalog environment values are restricted to safe SQL identifiers. Tr
 exactly 11 digits, county GEOIDs must contain five digits, state abbreviations must contain two
 letters, search text is length-limited, and user values are passed as query parameters.
 
+The optional live address lookup is separate from Databricks SQL. It sends one user-submitted
+address to the public
+[U.S. Census Geocoder](https://www.census.gov/data/developers/data-sets/Geocoding-services.html)
+with the `Public_AR_Current` benchmark and `Census2020_Current` geography vintage. The response
+must contain an 11-digit 2020 tract GEOID before the app uses it. The address is not persisted in
+Unity Catalog, logs created by this project, or model features. The app explains the external
+request before submission and fails visibly when Census cannot match an address.
+
 ## Live read boundary
 
 | Table | App use |
@@ -57,9 +65,11 @@ opening one connection per table. Streamlit then caches the assembled neighborho
 so switching tabs, horizons, or inspected matches does not rerun warehouse queries.
 
 The geographic browser issues small aggregate or identity queries in sequence: state coverage,
-counties for one state, and tracts for one county. Each result is cached for one hour. These
-queries run only after the user switches from the default neighborhood map to `Browse U.S.`, so
-the additional navigation does not slow the normal tract page load.
+counties for one state, and tracts for one county. The queries join the independently activated
+one-year forecast-availability release so analogue and forecast readiness remain distinct. Tract
+choices also join compact profile counts for readable population context. Each result is cached
+for one hour. These queries run only after the user switches from the default neighborhood map to
+`Browse U.S.`, so the additional navigation does not slow the normal tract page load.
 
 The state map requires one canonical named state identity. Its aggregation excludes availability
 rows with missing state labels and limits the mapped view to the 50 states and District of
