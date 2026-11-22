@@ -9,22 +9,26 @@ Model used: GPT-5
 import pytest
 
 from neighborhood_twin.forecast_finalization import (
-    ChampionSpecification,
+    ForecastModelSpecification,
     interval_quantile_probability,
-    validate_champion_specifications,
+    validate_model_specifications,
 )
 
 
-def test_champion_specifications_require_distinct_supported_horizons() -> None:
+def test_model_specifications_require_both_models_per_horizon() -> None:
     specifications = (
-        ChampionSpecification(1, "gradient_boosted_trees", gbt_max_depth=2),
-        ChampionSpecification(3, "state_current_trend"),
+        ForecastModelSpecification(1, "regularized_linear"),
+        ForecastModelSpecification(1, "gradient_boosted_trees", gbt_max_depth=2),
+        ForecastModelSpecification(3, "regularized_linear"),
+        ForecastModelSpecification(3, "gradient_boosted_trees", gbt_max_depth=4),
     )
-    validate_champion_specifications(specifications)
-    with pytest.raises(ValueError, match="repeat a horizon"):
-        validate_champion_specifications((specifications[0], specifications[0]))
-    with pytest.raises(ValueError, match="Unsupported champion"):
-        validate_champion_specifications((ChampionSpecification(1, "random_forest"),))
+    validate_model_specifications(specifications)
+    with pytest.raises(ValueError, match="repeat a model and horizon"):
+        validate_model_specifications((specifications[0], specifications[0]))
+    with pytest.raises(ValueError, match="Unsupported forecast model"):
+        validate_model_specifications((ForecastModelSpecification(1, "random_forest"),))
+    with pytest.raises(ValueError, match="Every horizon"):
+        validate_model_specifications((specifications[0],))
 
 
 def test_interval_quantile_uses_finite_sample_correction() -> None:

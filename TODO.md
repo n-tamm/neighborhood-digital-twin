@@ -1,16 +1,15 @@
 # Current Project State and Next Work
 
-This is the implementation handoff as of November 21, 2026. It records what is actually running,
+This is the implementation handoff as of November 22, 2026. It records what is actually running,
 what the current evidence supports, and what should happen next. Detailed execution order remains
 in [the pipeline runbook](docs/PIPELINE_RUN_ORDER.md).
 
 ## Current answer
 
-The public-data pipeline, current historical-analogue system, first production forecast release,
-and interactive Databricks application are implemented. The application now combines current
-community context, observed FHFA history, approved historical analogues, and a quality-gated
-one-year forecast with a calibrated interval. The three-year forecast candidate remains in the
-evaluation record but is deliberately unavailable in the app because it failed the locked test.
+The public-data pipeline, historical-analogue system, corrected two-model forecast release, and
+interactive Databricks application are implemented. The app shows regularized-linear and gradient-
+boosted-tree results at both one and three years. State and county trends remain baselines, and an
+evaluation warning stays visible without hiding the one-year linear result.
 
 The remaining work is no longer basic pipeline construction. It is coordinated refresh work,
 application review, report integration, and targeted model research that must preserve the
@@ -31,48 +30,41 @@ already opened locked-test result.
 - One-year training uses 2011-2020 origins, validation uses 2021-2022, calibration uses 2023, and
   the locked test uses 2024. Three-year training uses 2011-2016, validation uses 2017-2018,
   calibration uses 2019, 2020-2021 are purged, and the locked test uses 2022.
-- Jobs 301, 302, 500, 504, 605, 701, 400, 401, 600, 606, and 900 have been run successfully from
-  the corrected contract. Metadata, validation summaries, and report-ready figures are current.
+- Jobs 301, 302, 500, 400, 401, 600, and the similarity workflows have current upstream outputs.
+  Forecast jobs 504, 605, 606, 701, and 900 completed on November 22 under the corrected two-model
+  contract. The superseded version-1 serving tables are no longer active.
 
 ## Forecast checkpoint
 
-### Frozen development choices
+### Corrected two-model contract
 
-- The one-year champion is a Spark gradient-boosted tree with depth 2 and 50 iterations. Its
-  corrected validation MAE is 0.0733 in cumulative log HPI change.
-- The three-year development choice is the state-current-trend baseline. Its corrected validation
-  MAE is 0.0666. This choice was frozen before calibration and locked-test outcomes were read.
-- Prediction intervals use a 90% split-conformal absolute-residual radius estimated from one
-  reserved calibration origin per horizon.
+- The project models are L2-regularized linear regression and Spark gradient-boosted trees.
+- Both models are retained at one and three years. The one-year tree uses depth 2 and 50
+  iterations; the three-year tree uses depth 4 and 30 iterations. Linear uses L2 parameter 0.05.
+- Validation MAE is 0.0733 for the tree and 0.0766 for linear at one year, and 0.0807 for the tree
+  and 0.1033 for linear at three years.
+- State trend achieved lower three-year validation MAE than either supervised model, but it is a
+  baseline result rather than the project model.
+- Job 504 now calibrates a separate 90% split-conformal interval for every model-horizon pair.
+- Job 605 records threshold warnings separately for each pair. A warning does not withhold the
+  forecast or promote a baseline.
+- Job 701 publishes both supervised results at both horizons for each model-ready tract.
 
-### Locked results and release decision
+### Completed forecast sequence
 
-| Horizon | Locked observations | Champion MAE | Zero-change MAE | Interval coverage | Decision |
-|---|---:|---:|---:|---:|---|
-| 1 year | 42,082 | 0.0599 | 0.0627 | 89.4% | Published |
-| 3 years | 45,887 | 0.2943 | 0.1566 | 48.2% | Withheld |
+- Jobs 504, 605, and 606 succeeded under finalization run
+  `29c68a5af1e74daab6e06ff7aa2aa9e9`; all four supervised model-horizon combinations are present.
+- Job 701 activated version-2 release `forecast-20261122T164538152848Z` with 186,876 forecast rows,
+  46,719 eligible tracts, four model-horizon combinations, and 171,056 availability rows.
+- Job 900 reapplied descriptions and column comments. Corrected samples, figure assets, and result
+  documentation were refreshed from the governed outputs.
+- The app was redeployed as `01f1e6af5d19196980e82abe8deb8c4b`, reached `SUCCEEDED`, and returned
+  to `RUNNING`. Manual browser acceptance of forecast cards, warnings, figure readability, and
+  responsive layout remains open.
 
-The one-year champion clears the minimum release rules: at least 1,000 observations, MAE no worse
-than zero change, and empirical interval coverage within ten percentage points of the nominal 90%
-level. It is not uniformly best—the state-trend baseline has slightly lower one-year locked MAE—
-so the app displays that baseline beside the model rather than claiming universal superiority.
-
-The three-year method fails both accuracy and interval-coverage requirements. Persisting the
-unusually high 2022 statewide annual trend for three years produced mean predicted cumulative log
-growth of 0.442 versus 0.149 observed. This is a genuine temporal-regime failure, not a geography
-mapping error. It must remain in the final results and must not be retuned away using the locked
-outcome.
-
-### Current serving release
-
-- Job 701 publishes 46,719 approved one-year forecasts from a 2025 origin with valid point,
-  baseline, and interval fields.
-- Every one of the 85,528 current profile tracts has an availability row for both one- and
-  three-year horizons.
-- The entire three-year horizon is marked `horizon_failed_locked_release_gate`; tract-level
-  one-year gaps retain model-readiness reasons rather than silently falling back.
-- Three final forecast figures are versioned in Databricks and exported locally under the ignored
-  `reports/generated/model-evaluation/forecast-final-20261119T173650231784Z/` review directory.
+The prior state-trend finalization remains historical evidence of the design error. Because its
+later outcomes were already viewed, the corrected run must not be described as a new untouched
+model-selection test or used to retune the fixed model settings.
 
 ## Similarity checkpoint
 
@@ -102,39 +94,49 @@ remains historical context and a secondary estimate.
   `https://neighborhood-intelligence-3866391918408215.aws.databricksapps.com`.
 - The live repository independently selects complete analogue and forecast releases so it cannot
   mix partial table versions.
-- The Forecast tab shows the one-year point estimate, 90% interval, state-trend baseline, target
-  scope, driver summary, and release lineage.
-- The three-year horizon is shown as withheld with the locked MAE, zero-change comparison, and
-  failed coverage requirement.
+- The corrected Forecast tab is designed to show linear and boosted-tree point estimates and 90%
+  intervals at one and three years, with the state trend kept separate as a baseline.
+- Evaluation warnings report MAE, zero-change comparison, and interval coverage without hiding a
+  model result.
 - Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
   visible points at national extent and canonical tract outlines at local extent.
+- App Review 1 changes are implemented on the application branch: all browser counts use readable
+  thousands separators; state, county, search, and tract choices separate analogue and forecast
+  status by horizon; and live mode opens with a
+  recommended Census address-to-2020-tract lookup with an explicit external-request notice.
+  County browsing adds a clickable tract-center map over familiar basemap labels, while its text
+  choices retain county, state, population, both forecast horizons, and analogue status.
+- A Data Science Results tab now walks through geography readiness, the two supervised forecast
+  models and their baselines, later-period error and uncertainty, and similarity method selection.
+  Its corrected forecast assets come from job-606 build
+  `forecast-final-20261122T163847149439Z`.
 - Sample mode remains intentionally small and does not contain a production forecast. Live app
   review must therefore be performed in Databricks.
 
 ## Immediate next sequence
 
-1. **Review the live forecast experience.** Check a mix of eligible and ineligible tracts across
-   regions, confirm the interval and baseline language is understandable, and confirm that the
-   withheld three-year state is obvious rather than looking like missing data.
+1. **Review the corrected forecast experience.** Check eligible and ineligible tracts across
+   regions. Confirm that both models and horizons, their intervals, separate baseline, and the
+   one-year linear warning are understandable.
 2. **Review the refreshed analogue experience.** Check available and unavailable tracts, both
    horizons, match explanations, geographic diversity, observed path gaps, and release lineage.
-3. **Create the integrated model story.** Combine the corrected validation, locked-test,
-   uncertainty, release-gate, and analogue results in the report and standup materials. Preserve
-   the distinction between development evidence and final locked evidence.
+3. **Create the integrated model story.** Combine validation, later-period error, uncertainty,
+   evaluation warnings, and analogue results in the report and standup materials. Preserve the
+   distinction between development evidence and later evaluation.
 4. **Perform application acceptance testing.** Verify content delivery, empty states, maps,
-   Connecticut behavior, release IDs, responsiveness, and practical usefulness. Avoid substituting
-   click analytics for correctness and clarity.
+   Connecticut behavior, address matching, comma-formatted coverage, forecast status at every
+   browser level, Data Science figure readability, release IDs, responsiveness, and practical
+   usefulness. Avoid substituting click analytics for correctness and clarity.
 5. **Polish and freeze deployment.** Select the report figures, confirm report values against the
    final manifests, complete the remaining course deliverables, rerun the clean-checkout gates,
    and tag the reviewed commit. Do not rerun frozen models merely to improve reported results.
 
-## Research after the reported three-year result
+## Research after the current three-year models
 
-Any new three-year work is a separate research iteration. Plausible directions include damped
-trend baselines, direct modeling of change relative to a state or national market path, and
-regime-aware calibration using more independent origins. Those methods may be useful for a future
-version, but they cannot replace or relabel the already opened three-year locked result in this
-capstone.
+Any new three-year method is a separate research iteration. Plausible directions include direct
+modeling of change relative to a state or national path and regime-aware calibration using more
+independent origins. Those methods may be useful later, but the current linear and boosted-tree
+settings must not be tuned against the already inspected 2022–2025 outcomes.
 
 ## Known repository follow-up
 
@@ -150,3 +152,19 @@ serving, presentation, or metadata runs from it. The corrected canonical forecas
 later and superseded that result. Use the canonical maintainer profile, verify `bundle summary`,
 and invoke jobs by bundle key during the final similarity refresh. A future shared CI/CD bundle
 must bind the existing canonical resources before obsolete duplicate jobs are removed.
+
+The November 22 App Review 1 deployment used the canonical `team` bundle and changed only source
+files; it did not run or modify any pipeline job. Streamlit is now pinned to `1.55.0`, which removes
+the FastAPI/Starlette conflict seen with the unconstrained latest release. The latest application
+deployment, `01f1e67db64d1b1abeabb637ed7bfeef`, is running successfully.
+Databricks still reports
+`Security scan failed: scanner run failed` without returning a vulnerability result. Databricks
+documents this beta scan as non-blocking and an incomplete run as unavailable. Review the app's
+Security tab, retry, or escalate the scan before final release; do not describe it as passed.
+
+The course-specification review still has four submission-level gates outside the implemented
+code: complete the final report and its team-contribution statement, select and integrate at least
+three generated figures with reconciled values, produce the three-to-five-minute video or poster,
+and publish the capstone-gallery post. The partner also needs to confirm the exact Copilot model
+and any exposed settings for the feature-ablation notebook. Repeat the secret, path, dependency,
+attribution, link, AI-disclosure, and clean-checkout audits after those final materials are added.

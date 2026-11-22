@@ -37,12 +37,21 @@ basemap tiles. No mapping code was copied from another application.
 
 The `Browse U.S.` view uses Plotly's built-in state polygons. State color represents the share of
 current tracts that support the complete historical-analogue method, not appreciation,
-desirability, or community quality. Clicking a state updates a county selector; selecting a county
-loads its tract identities; and the explicit open button changes the active neighborhood. This
-staged flow keeps navigation queries compact and avoids downloading national tract geometry into
-the browser. The map contains the 50 states and District of Columbia supported by Plotly's state
+desirability, or community quality. Clicking a state updates a county selector. Selecting a county
+loads a lightweight tract-center map over labeled Carto tiles, and clicking a point opens that
+neighborhood. The selector below the map provides the same choices in text. This staged flow keeps
+navigation queries compact: county browsing retrieves four display bounding-box values per tract,
+not national or county-wide polygon geometry. The map contains the 50 states and District of
+Columbia supported by Plotly's state
 geometry. Territories remain discoverable through text search rather than being placed
 incorrectly on this map.
+
+The hover text and selected-state cards report analogue and one- and three-year forecast
+coverage. Counts use thousands separators. County options repeat all three counts, and tract
+options show county, state, population, both forecast horizons, and analogue status. A forecast
+horizon is available only when both supervised model rows exist. Analogue share remains the map
+color because
+putting two quantitative color encodings on one state would be harder to interpret.
 
 ## Footprint comparison
 
@@ -83,15 +92,14 @@ must not be labeled as the selected tract's predicted path.
 
 ## Forecast and calibrated interval
 
-The forecast chart shows annualized FHFA HPI change on a horizontal axis. A blue point is the
-approved one-year prediction, its line is the 90% split-conformal interval, and a diamond is the
-state-current-trend baseline. Keeping the baseline visible matters because it is slightly better
-than the tree on one-year locked MAE even though the tree was frozen from the full validation
-evidence.
+The forecast chart shows annualized FHFA HPI change on a horizontal axis. It gives separate rows
+to regularized linear regression and gradient-boosted trees at the one- and three-year horizons.
+Each point has its own 90% split-conformal interval. A gold diamond is the state-current-trend
+baseline, kept visibly separate from both supervised models.
 
-The app does not draw a three-year point. That horizon failed its locked accuracy and interval
-coverage requirements. A warning gives the failed MAE and coverage comparison so the absence is
-understandable rather than looking like missing UI data.
+When a model-horizon pair misses an evaluation threshold, the chart still shows its result and a
+nearby warning gives the MAE, zero-change comparison, and interval coverage. Weak evidence is
+therefore visible instead of appearing as missing application data.
 
 The interval describes model-error calibration from historical periods. It is not a probability
 that an individual home's value will fall in the range and cannot account for every future shock.

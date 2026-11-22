@@ -62,22 +62,21 @@ The feature registry covers recent HPI history, county/state context, community 
 and tenure, housing structure, affordability, ACS timing, and ACS margins of error. Simplified
 map geometry is never an input.
 
-## Frozen selection
+## Frozen supervised-model specifications
 
 The corrected job-500 validation run is `f51ad8ff85c44fe5bbd665b20520f6e4`.
 
-- **One year:** GBT, depth 2 and 50 iterations. Validation MAE 0.0733 and RMSE 0.0929.
-- **Three years:** state current trend. Validation MAE 0.0666 and RMSE 0.0896.
+- **Regularized linear:** retained at one and three years with L2 parameter 0.05.
+- **Gradient-boosted trees:** retained at one year with depth 2 and 50 iterations and at three
+  years with depth 4 and 30 iterations.
 
-Selections were written down before job 504 read either calibration or locked outcomes. The
-project permits a different model family by horizon because the amount and behavior of historical
-evidence differ.
+Both model families are part of the project at both horizons. State and county trends remain
+baselines even when they achieve lower validation error.
 
 ## Finalization and uncertainty
 
-Job 504 refits each frozen method separately for calibration, locked testing, and current scoring.
-For fitted models, every training label must end before the scored origin. The direct state-trend
-baseline has no fitted training cutoff but uses only origin-year information.
+Job 504 refits each frozen model separately for calibration, later-period evaluation, and current
+scoring. Every training label must end before the scored origin.
 
 The interval method is a 90% split-conformal absolute-residual interval:
 
@@ -86,34 +85,20 @@ The interval method is a 90% split-conformal absolute-residual interval:
 3. Add and subtract that radius from later cumulative-log predictions.
 4. Evaluate locked coverage and interval width without changing the method.
 
-The one-year radius is 0.1222 from 41,017 calibration rows. The three-year radius is 0.2675 from
-39,563 rows. These intervals do not assume normally distributed errors, but each horizon still
-has only one independent calibration year.
-
-## Locked result
-
-Finalization run `73a193b64d154d868d8e94c039858861` produced:
-
-| Horizon | Champion MAE | Zero-change MAE | Empirical coverage | Main finding |
-|---|---:|---:|---:|---|
-| 1 year | 0.0599 | 0.0627 | 89.4% | Useful and approximately calibrated |
-| 3 years | 0.2943 | 0.1566 | 48.2% | Large overprediction and failed uncertainty |
-
-The three-year miss was systematic: mean prediction was 0.442 cumulative log change, compared
-with 0.149 observed. The unusually strong 2022 state trend did not persist through 2025.
+Intervals do not assume normally distributed errors, but each model-horizon pair still has only
+one independent calibration year.
 
 ## Release gate and serving
 
-Job 605 creates one release decision per horizon. A horizon must have at least 1,000 locked rows,
-beat or tie zero change on MAE, and achieve coverage no more than ten percentage points below its
-nominal target. The job does not search for another model.
+Job 605 creates one evaluation record per model and horizon. A record checks for at least 1,000
+later-period rows, MAE no worse than zero change, and coverage no more than ten percentage points
+below nominal. Missing a check produces a warning and never promotes a baseline.
 
-The one-year horizon passes. The three-year horizon fails accuracy and coverage and is withheld.
-Job 701 therefore publishes:
+Job 701 publishes:
 
-- 46,719 one-year current forecasts from a 2025 origin;
-- point, lower, upper, and state-baseline fields;
-- locked-test and release-gate context for explanation;
+- regularized-linear and gradient-boosted-tree forecasts at one and three years;
+- point, lower, upper, and separate state-baseline fields;
+- later-period evaluation context and warnings;
 - one availability row per current tract and horizon; and
 - a complete manifest written only after both serving tables reconcile.
 
@@ -125,9 +110,9 @@ Validation scorecards include MAE, RMSE, signed bias, tail error, R-squared, zer
 origin-year stability, geographic transfer, stable/broad cohort, housing composition, Census
 region, state, and ACS uncertainty.
 
-Locked scorecards retain the same important slices plus interval coverage and annualized interval
-width. Job 606 renders three final figures covering validation versus locked MAE, locked interval
-coverage, and mean observed versus predicted change.
+Later-period scorecards retain the same important slices plus interval coverage and annualized
+interval width. Job 606 renders three final figures comparing both models' validation and later
+MAE, interval coverage, and mean observed versus predicted change.
 
 ## Spatial scope
 

@@ -83,6 +83,6 @@ frozen validation, calibration, and locked-test rows for their intended roles.
 - No tract adjacency or distance feature is present because current geometry is display-only.
 - Cross-2020 feature histories are permitted only for the governed stable-tract cohort. Fully
   observed FHFA outcomes are not censored merely because they cross 2019-2020.
-- Job 500 methods produce point predictions only. Job 504 calibrates the final selected method's
-  interval from a separate reserved origin.
+- Job 500 methods produce point predictions only. Job 504 calibrates separate intervals for the
+  regularized-linear and gradient-boosted-tree models at both active horizons.
 - Coefficients should not be described as causal effects.

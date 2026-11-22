@@ -41,7 +41,7 @@ from pyspark.sql import functions
 
 from neighborhood_twin.data.databricks import qualified_name
 from neighborhood_twin.forecast_finalization import FORECAST_CURRENT_PREDICTION_TABLE
-from neighborhood_twin.forecast_release import FORECAST_RELEASE_GATE_TABLE
+from neighborhood_twin.forecast_release import FORECAST_EVALUATION_THRESHOLD_TABLE
 from neighborhood_twin.forecast_serving import (
     FORECAST_SERVING_AVAILABILITY_TABLE,
     FORECAST_SERVING_CURRENT_TABLE,
@@ -64,7 +64,11 @@ dbutils.widgets.text(
     FORECAST_CURRENT_PREDICTION_TABLE,
     "Frozen current predictions",
 )
-dbutils.widgets.text("release_gate_table", FORECAST_RELEASE_GATE_TABLE, "Locked-test release gate")
+dbutils.widgets.text(
+    "evaluation_threshold_table",
+    FORECAST_EVALUATION_THRESHOLD_TABLE,
+    "Forecast evaluation thresholds",
+)
 dbutils.widgets.text("forecast_table", FORECAST_SERVING_CURRENT_TABLE, "Serving forecast output")
 dbutils.widgets.text(
     "availability_table",
@@ -80,19 +84,19 @@ evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
 serving_schema = dbutils.widgets.get("serving_schema").strip()
 current_profile_table = dbutils.widgets.get("current_profile_table").strip()
 current_prediction_table = dbutils.widgets.get("current_prediction_table").strip()
-release_gate_table = dbutils.widgets.get("release_gate_table").strip()
+evaluation_threshold_table = dbutils.widgets.get("evaluation_threshold_table").strip()
 forecast_table = dbutils.widgets.get("forecast_table").strip()
 availability_table = dbutils.widgets.get("availability_table").strip()
 manifest_table = dbutils.widgets.get("manifest_table").strip()
 if (
     current_prediction_table,
-    release_gate_table,
+    evaluation_threshold_table,
     forecast_table,
     availability_table,
     manifest_table,
 ) != (
     FORECAST_CURRENT_PREDICTION_TABLE,
-    FORECAST_RELEASE_GATE_TABLE,
+    FORECAST_EVALUATION_THRESHOLD_TABLE,
     FORECAST_SERVING_CURRENT_TABLE,
     FORECAST_SERVING_AVAILABILITY_TABLE,
     SERVING_RELEASE_MANIFEST_TABLE,
@@ -101,7 +105,9 @@ if (
 
 current_profile = spark.table(qualified_name(catalog, gold_schema, current_profile_table))
 current_predictions = spark.table(qualified_name(catalog, model_schema, current_prediction_table))
-release_gate = spark.table(qualified_name(catalog, evaluation_schema, release_gate_table))
+evaluation_thresholds = spark.table(
+    qualified_name(catalog, evaluation_schema, evaluation_threshold_table)
+)
 as_of_years = {
     int(row[0]) for row in current_predictions.select("forecast_origin_year").distinct().collect()
 }
@@ -114,12 +120,15 @@ readiness_ids = {
 final_run_ids = {
     row[0] for row in current_predictions.select("forecast_final_run_id").distinct().collect()
 }
-gate_run_ids = {row[0] for row in release_gate.select("forecast_final_run_id").distinct().collect()}
+threshold_run_ids = {
+    row[0]
+    for row in evaluation_thresholds.select("forecast_final_run_id").distinct().collect()
+}
 if (
     len(as_of_years) != 1
     or len(readiness_ids) != 1
     or len(final_run_ids) != 1
-    or gate_run_ids != final_run_ids
+    or threshold_run_ids != final_run_ids
 ):
     raise RuntimeError("Current predictions must contain one as-of year and one source lineage")
 release = new_forecast_serving_release(
@@ -132,12 +141,14 @@ release = new_forecast_serving_release(
 # COMMAND ----------
 
 forecasts = build_serving_forecasts(
-    current_predictions, current_profile, release_gate, release
+    current_predictions, current_profile, evaluation_thresholds, release
 ).cache()
 availability = build_forecast_availability(
-    current_profile, forecasts, release_gate, release
+    current_profile, forecasts, evaluation_thresholds, release
 ).cache()
-row_counts = validate_forecast_serving_outputs(forecasts, availability, release_gate, release)
+row_counts = validate_forecast_serving_outputs(
+    forecasts, availability, evaluation_thresholds, release
+)
 manifest = build_forecast_release_manifest(spark, release, row_counts)
 
 # COMMAND ----------

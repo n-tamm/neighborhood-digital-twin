@@ -1,0 +1,15 @@
+model_name,horizon_years,mae_log_change
+gradient_boosted_trees,1,0.073261
+state_current_trend,1,0.075665
+county_current_trend,1,0.076039
+regularized_linear,1,0.076596
+recent_three_year_mean,1,0.084382
+latest_change_persistence,1,0.089725
+zero_change,1,0.118736
+state_current_trend,3,0.066589
+county_current_trend,3,0.078791
+gradient_boosted_trees,3,0.080726
+recent_three_year_mean,3,0.098447
+regularized_linear,3,0.103273
+latest_change_persistence,3,0.153406
+zero_change,3,0.174488

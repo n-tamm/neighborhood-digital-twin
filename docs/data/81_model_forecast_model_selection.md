@@ -5,9 +5,11 @@
 - **Layer:** Model outputs
 - **Databricks table:** `workspace.neighborhood_twin_model.forecast_model_selection`
 - **Sample:** [forecast_model_selection.jsonl](../../data/samples/forecast_model_selection.jsonl)
-- **Grain and key:** one forecast horizon and finalization run.
-- **Purpose:** freezes the selected model family, estimator settings, and validation evidence before the locked temporal test is opened.
+- **Grain and key:** one supervised model, forecast horizon, and finalization run.
+- **Purpose:** freezes both supervised model specifications, settings, and validation evidence.
 
-The two-row November 19, 2026 build selects a depth-2, 50-tree gradient-boosted model for the one-year horizon and the state current-trend baseline for the three-year horizon. These choices came from development validation; the locked results were not used to choose or tune them. Keeping the selection as a table makes that sequence auditable and prevents the application from silently substituting a model after seeing final-test performance.
+Version 2 contains regularized-linear and gradient-boosted-tree specifications at both one and three years. State and county trends remain baseline evidence and do not appear as selected project models. Keeping the specifications as a table makes the model roles and settings auditable.
 
-The validation MAE values are cumulative log HPI change errors, not percentage-point errors. This table records a choice and its development evidence; final performance and publication eligibility belong in the locked scorecard and release gate.
+Validation MAE values are cumulative log HPI change errors, not percentage-point errors. Later-period performance belongs in the evaluation scorecard and threshold table.
+
+The current table contains four rows under finalization run `29c68a5af1e74daab6e06ff7aa2aa9e9`: both models at both supported horizons.

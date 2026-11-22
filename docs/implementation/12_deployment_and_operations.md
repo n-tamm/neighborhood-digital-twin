@@ -22,9 +22,10 @@ contains no host credential or token.
 
 Local sample mode and the Streamlit startup test are implemented. The private app has reached a
 successful running deployment, returned HTTP 200, and completed a full render against the current
-national analogue and forecast releases. The application exposes the approved one-year forecast
-and explicitly withholds the failed three-year release. Browser-width review, explicit partner
-sharing, and final application acceptance remain open.
+national analogue and forecast releases. The corrected forecast release will expose both
+supervised models at one and three years with evaluation warnings; a state trend remains only a
+baseline. Browser-width review, explicit partner sharing, and final application acceptance remain
+open.
 Operational commands and release checks are in
 [`docs/application/deployment_and_testing.md`](../application/deployment_and_testing.md).
 

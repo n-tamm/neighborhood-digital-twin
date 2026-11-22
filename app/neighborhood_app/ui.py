@@ -119,11 +119,41 @@ def selected_state_from_map_event(event: Any) -> str | None:
 
 
 def place_label(row: Mapping[str, Any]) -> str:
-    """Build one consistent tract label for search results and page headings."""
+    """Build a readable search label with population and model availability context."""
 
+    population = format_integer(row.get("population_total_estimate"))
+    forecast = (
+        "1-year forecast available"
+        if bool(row.get("forecast_available"))
+        else "no 1-year forecast"
+    )
+    forecast_3_year = (
+        "3-year forecast available"
+        if bool(row.get("forecast_3_year_available"))
+        else "no 3-year forecast"
+    )
+    analogues = "analogues available" if bool(row.get("analogue_available")) else "no analogues"
     return (
         f"{row['county_name']}, {row['state_abbreviation']} · "
-        f"{row['tract_name']} · {row['geoid_2020']}"
+        f"{row['tract_name']} · {population} residents · {forecast} · {forecast_3_year} · "
+        f"{analogues} · GEOID {row['geoid_2020']}"
+    )
+
+
+def tract_browser_label(row: Mapping[str, Any]) -> str:
+    """Build one county-browser option that a user can compare without knowing a GEOID."""
+
+    population = format_integer(row.get("population_total_estimate"))
+    forecast = "1-year forecast ✓" if bool(row.get("forecast_available")) else "1-year forecast —"
+    forecast_3_year = (
+        "3-year forecast ✓"
+        if bool(row.get("forecast_3_year_available"))
+        else "3-year forecast —"
+    )
+    analogues = "analogues ✓" if bool(row.get("analogue_available")) else "analogues —"
+    return (
+        f"{row['county_name']}, {row['state_abbreviation']} · {row['tract_name']} · "
+        f"{population} residents · {forecast} · {forecast_3_year} · {analogues}"
     )
 
 

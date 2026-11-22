@@ -9,13 +9,13 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC # Evaluate the locked forecast release gate
+# MAGIC # Evaluate both supervised forecast models
 # MAGIC
-# MAGIC This workflow does not select or refit a model. It converts the already frozen locked-test
-# MAGIC evidence from job 504 into a production decision for each horizon. A horizon must have at
-# MAGIC least 1,000 locked observations, beat zero-change on MAE, and attain interval coverage no
-# MAGIC more than ten percentage points below its nominal level. Failed horizons remain recorded
-# MAGIC but are withheld from application serving.
+# MAGIC This workflow does not select, replace, or refit a model. It evaluates regularized linear
+# MAGIC regression and gradient-boosted trees separately at each horizon. The threshold fields
+# MAGIC record whether each result has at least 1,000 observations, beats zero change on MAE, and
+# MAGIC attains interval coverage no more than ten percentage points below nominal. Results that
+# MAGIC miss a threshold remain available with a warning; a baseline never replaces either model.
 
 # COMMAND ----------
 
@@ -44,10 +44,10 @@ from neighborhood_twin.forecast_finalization import (
     FORECAST_LOCKED_TEST_SCORECARD_TABLE,
 )
 from neighborhood_twin.forecast_release import (
-    FORECAST_RELEASE_GATE_TABLE,
-    ForecastReleaseGatePolicy,
-    build_forecast_release_gate,
-    validate_forecast_release_gate,
+    FORECAST_EVALUATION_THRESHOLD_TABLE,
+    ForecastEvaluationPolicy,
+    build_forecast_evaluation_thresholds,
+    validate_forecast_evaluation_thresholds,
 )
 
 dbutils.widgets.text("catalog", "workspace", "Existing Unity Catalog catalog")
@@ -63,7 +63,11 @@ dbutils.widgets.text(
     FORECAST_LOCKED_TEST_SCORECARD_TABLE,
     "Locked-test scorecard",
 )
-dbutils.widgets.text("release_gate_table", FORECAST_RELEASE_GATE_TABLE, "Release gate")
+dbutils.widgets.text(
+    "evaluation_threshold_table",
+    FORECAST_EVALUATION_THRESHOLD_TABLE,
+    "Evaluation threshold output",
+)
 dbutils.widgets.text("minimum_observation_count", "1000", "Minimum locked rows")
 dbutils.widgets.text(
     "interval_coverage_tolerance",
@@ -76,45 +80,45 @@ model_schema = dbutils.widgets.get("model_schema").strip()
 evaluation_schema = dbutils.widgets.get("evaluation_schema").strip()
 locked_prediction_table = dbutils.widgets.get("locked_prediction_table").strip()
 locked_scorecard_table = dbutils.widgets.get("locked_scorecard_table").strip()
-release_gate_table = dbutils.widgets.get("release_gate_table").strip()
+evaluation_threshold_table = dbutils.widgets.get("evaluation_threshold_table").strip()
 if (
     locked_prediction_table,
     locked_scorecard_table,
-    release_gate_table,
+    evaluation_threshold_table,
 ) != (
     FORECAST_LOCKED_TEST_PREDICTION_TABLE,
     FORECAST_LOCKED_TEST_SCORECARD_TABLE,
-    FORECAST_RELEASE_GATE_TABLE,
+    FORECAST_EVALUATION_THRESHOLD_TABLE,
 ):
-    raise ValueError("Forecast release-gate table names are fixed by the output contract")
+    raise ValueError("Forecast evaluation table names are fixed by the output contract")
 
 locked_predictions = spark.table(qualified_name(catalog, model_schema, locked_prediction_table))
 locked_scorecard = spark.table(qualified_name(catalog, evaluation_schema, locked_scorecard_table))
 expected_horizons = tuple(
     sorted(int(row[0]) for row in locked_predictions.select("horizon_years").distinct().collect())
 )
-policy = ForecastReleaseGatePolicy(
+policy = ForecastEvaluationPolicy(
     minimum_observation_count=int(dbutils.widgets.get("minimum_observation_count")),
     interval_coverage_tolerance=float(dbutils.widgets.get("interval_coverage_tolerance")),
 )
 
 # COMMAND ----------
 
-release_gate = build_forecast_release_gate(
+evaluation_thresholds = build_forecast_evaluation_thresholds(
     locked_predictions,
     locked_scorecard,
     policy=policy,
 )
-validate_forecast_release_gate(release_gate, expected_horizons)
+validate_forecast_evaluation_thresholds(evaluation_thresholds, expected_horizons)
 (
-    release_gate.write.format("delta")
+    evaluation_thresholds.write.format("delta")
     .mode("overwrite")
     .option("overwriteSchema", "true")
-    .saveAsTable(qualified_name(catalog, evaluation_schema, release_gate_table))
+    .saveAsTable(qualified_name(catalog, evaluation_schema, evaluation_threshold_table))
 )
 
-display(release_gate.orderBy("horizon_years"))
+display(evaluation_thresholds.orderBy("horizon_years", "model_name"))
 print(
-    f"Published {release_gate.count()} frozen forecast release decisions to "
-    f"{catalog}.{evaluation_schema}.{release_gate_table}."
+    f"Published {evaluation_thresholds.count()} forecast model evaluation records to "
+    f"{catalog}.{evaluation_schema}.{evaluation_threshold_table}."
 )

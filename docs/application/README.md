@@ -15,6 +15,8 @@ Read the files in this order:
    the claims it can and cannot support.
 4. [Deployment and testing](deployment_and_testing.md) gives the local and Databricks run sequence,
    current access model, tests, and failure checks.
+5. [Data Science Results](data_science_walkthrough.md) records the bundled figure lineage,
+   page narrative, and refresh rule.
 
 The source entry point is [`app/streamlit_app.py`](../../app/streamlit_app.py). Broader planned
 capabilities remain in

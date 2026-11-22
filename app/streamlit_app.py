@@ -7,14 +7,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 
 import pandas as pd
 import streamlit as st
 from neighborhood_app.charts import (
     analogue_map_figure,
+    county_tract_browser_map_figure,
     feature_gap_figure,
     forecast_interval_figure,
+    forecast_validation_comparison_figure,
     housing_mix_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
@@ -23,6 +26,7 @@ from neighborhood_app.charts import (
     trajectory_figure,
 )
 from neighborhood_app.data import AppSettings, NeighborhoodData, create_repository
+from neighborhood_app.geocoding import lookup_census_tract
 from neighborhood_app.ui import (
     apply_styles,
     format_currency,
@@ -36,7 +40,11 @@ from neighborhood_app.ui import (
     selected_rank_from_table_event,
     selected_state_from_map_event,
     status_badge,
+    tract_browser_label,
 )
+
+APP_ROOT = Path(__file__).resolve().parent
+DATA_SCIENCE_ASSET_ROOT = APP_ROOT / "assets" / "data_science"
 
 st.set_page_config(
     page_title="Neighborhood Housing Intelligence",
@@ -93,7 +101,7 @@ def selected_summary(data: NeighborhoodData, horizon_years: int) -> dict[str, An
     """Return the single published analogue summary for a selected horizon."""
 
     rows = data.summaries.loc[data.summaries["horizon_years"] == horizon_years]
-    return rows.iloc[0].to_dict() if not rows.empty else {}
+    return cast(dict[str, Any], rows.iloc[0].to_dict()) if not rows.empty else {}
 
 
 def render_overview(data: NeighborhoodData) -> None:
@@ -175,7 +183,7 @@ def render_overview(data: NeighborhoodData) -> None:
 
 
 def render_forecast_status(data: NeighborhoodData) -> None:
-    """Render approved forecasts or an explicit unavailable state without substitution."""
+    """Render both supervised forecasts or an explicit data-availability boundary."""
 
     profile = data.profile
     st.subheader("Forecast model")
@@ -192,14 +200,14 @@ def render_forecast_status(data: NeighborhoodData) -> None:
                 if not data.forecast_availability.empty
                 else ["No availability record was published"]
             )
-            boundary_title = "An approved forecast is unavailable for this tract."
+            boundary_title = "Forecasts are unavailable for this tract."
             boundary_text = "Reason: " + ", ".join(reasons) + "."
         st.markdown(
             f"""
             <div class="model-boundary">
               <strong>{boundary_title}</strong><br>
-              {boundary_text} This application will not substitute a validation result,
-              historical analogue outcome, or fabricated number for an approved forecast.
+              {boundary_text} This application will not substitute a baseline or historical
+              analogue outcome for the two supervised forecasting models.
             </div>
             """,
             unsafe_allow_html=True,
@@ -222,49 +230,59 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     st.markdown(
         f"""
         <div class="model-boundary">
-          <strong>Approved tract forecast as of {forecast_as_of_year}.</strong><br>
-          The point estimate and interval forecast FHFA single-family tract HPI. They are not an
-          individual-home valuation, a forecast for multifamily prices, or an investment rating.
+          <strong>Regularized-linear and gradient-boosted-tree forecasts as of
+          {forecast_as_of_year}.</strong><br>
+          Both models forecast FHFA single-family tract HPI at one and three years. Their point
+          estimates and intervals are model results, not individual-home valuations, multifamily
+          forecasts, or investment ratings.
         </div>
         """,
         unsafe_allow_html=True,
     )
-    cards = st.columns(len(data.forecasts))
-    for card, (_, row) in zip(
-        cards,
-        data.forecasts.sort_values("horizon_years").iterrows(),
-        strict=True,
-    ):
+    model_labels = {
+        "regularized_linear": "Regularized linear",
+        "gradient_boosted_trees": "Gradient-boosted trees",
+    }
+    horizons = sorted(data.forecasts["horizon_years"].astype(int).unique())
+    cards = st.columns(len(horizons))
+    for card, horizon_years in zip(cards, horizons, strict=True):
         with card:
-            metric_card(
-                f"{int(row['horizon_years'])}-year annualized forecast",
-                format_percent(row["prediction_annualized_change_pct"]),
-                (
-                    f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
-                    f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
-                    f"through {int(row['target_end_year'])}"
-                ),
-            )
+            st.markdown(f"#### {horizon_years}-year horizon")
+            horizon_rows = data.forecasts.loc[
+                data.forecasts["horizon_years"] == horizon_years
+            ].sort_values("model_name")
+            for _, row in horizon_rows.iterrows():
+                metric_card(
+                    model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                    format_percent(row["prediction_annualized_change_pct"]),
+                    (
+                        f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
+                        f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
+                        f"through {int(row['target_end_year'])}"
+                    ),
+                )
     st.plotly_chart(
         forecast_interval_figure(data.forecasts),
         width="stretch",
-        key="approved_forecast_intervals",
+        key="supervised_forecast_intervals",
         config={"displayModeBar": False},
     )
     st.caption(
         "The diamond is the state-trend baseline. The interval is calibrated from a reserved "
         "historical year and then evaluated on a later locked test; it is not a guarantee."
     )
-    withheld = data.forecast_availability.loc[
-        data.forecast_availability["availability_reason"] == "horizon_failed_locked_release_gate"
-    ]
-    for _, row in withheld.sort_values("horizon_years").iterrows():
+    warnings = data.forecasts.loc[
+        ~data.forecasts["meets_evaluation_thresholds"].fillna(False)
+    ].drop_duplicates(["model_name", "horizon_years"])
+    for _, row in warnings.sort_values(["horizon_years", "model_name"]).iterrows():
+        model_label = model_labels.get(str(row["model_name"]), str(row["model_name"]))
         st.warning(
-            f"The {int(row['horizon_years'])}-year forecast was withheld after the locked test. "
-            f"Its MAE was {float(row['champion_mae_log_change']):.3f}, compared with "
-            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its "
-            f"interval covered {float(row['empirical_interval_coverage']):.1%} of outcomes "
-            f"versus the {float(row['minimum_required_interval_coverage']):.0%} release minimum."
+            f"Evaluation warning: the {model_label} {int(row['horizon_years'])}-year result "
+            f"did not meet every predeclared benchmark. Its later-period MAE was "
+            f"{float(row['model_mae_log_change']):.3f}, compared with "
+            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its interval "
+            f"covered {float(row['empirical_interval_coverage']):.1%} of outcomes. The result is "
+            "shown for transparency; the baseline does not replace it."
         )
     first = data.forecasts.sort_values("horizon_years").iloc[0]
     st.markdown("#### What drives the model")
@@ -275,8 +293,8 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     )
     st.caption(
         f"Forecast release {data.forecast_release.get('serving_release_id', 'unavailable')} · "
-        f"model {first['model_name']} for the primary horizon · "
-        f"nominal coverage {float(first['nominal_coverage']):.0%}"
+        "models regularized_linear and gradient_boosted_trees · "
+        f"nominal interval coverage {float(first['nominal_coverage']):.0%}"
     )
 
 
@@ -467,7 +485,7 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     with explanation_col:
         st.markdown("#### Why it matched")
         st.plotly_chart(
-            feature_gap_figure(selected_match),
+            feature_gap_figure(cast(Mapping[str, Any], selected_match)),
             width="stretch",
             key=f"feature_gaps_{horizon_years}_{selected_rank}",
             config={"displayModeBar": False},
@@ -521,9 +539,9 @@ def render_methods(data: NeighborhoodData) -> None:
             - **Observed market history:** annual FHFA single-family tract HPI where available.
             - **Historical analogues:** ten earlier, distinct communities selected with weighted
               standardized distance and time-safe outcomes.
-            - **Forecast:** an approved one-year point estimate and calibrated interval where the
-              tract is eligible. The three-year candidate failed its locked release gate and is
-              shown as unavailable rather than being replaced with a weaker result.
+            - **Forecasts:** regularized-linear and gradient-boosted-tree point estimates and
+              model-specific calibrated intervals at one and three years where the tract is
+              model-ready. Evaluation warnings remain visible when a model misses a benchmark.
             """
         )
         st.markdown("#### Important boundaries")
@@ -559,6 +577,178 @@ def render_methods(data: NeighborhoodData) -> None:
         )
 
 
+def _science_figure(file_name: str, caption: str) -> None:
+    """Render one reviewed, source-generated analytical figure with its evidence caption."""
+
+    figure_path = DATA_SCIENCE_ASSET_ROOT / file_name
+    if not figure_path.exists():
+        st.warning(f"The reviewed figure asset is unavailable: {file_name}")
+        return
+    st.image(str(figure_path), width="stretch")
+    st.caption(caption)
+
+
+def render_data_science_results() -> None:
+    """Walk through the implemented data, forecast, and similarity evidence."""
+
+    st.subheader("Data Science Results")
+    st.markdown(
+        "This page explains the analytical work behind the neighborhood screens. The forecast "
+        "and historical analogue system answer different questions: the forecast estimates a "
+        "future FHFA single-family HPI change, while analogues retrieve earlier communities that "
+        "looked similar and show what happened to them afterward. Neither is a property valuation "
+        "or a measure of neighborhood quality."
+    )
+
+    foundation_tab, forecasting_tab, similarity_tab = st.tabs(
+        ["Data foundation", "Forecasting", "Historical analogues"]
+    )
+    with foundation_tab:
+        st.markdown("### A longitudinal panel with an explicit geography boundary")
+        st.markdown(
+            "The pipeline combines annual FHFA tract HPI, 2010-2024 ACS five-year releases, and "
+            "Census geography. Census redesigned many tracts in 2020, so records on either side "
+            "of that change cannot all be treated as the same neighborhood. Analyses crossing "
+            "the redesign use a conservative 59,607-tract stable cohort. Current profiles can "
+            "use the broader 2020 tract universe. This preserves more current coverage without "
+            "inventing historical continuity."
+        )
+        _science_figure(
+            "01_tract_vintage_coverage.png",
+            "Project-generated EDA figure. The stable cohort is the valid pre/post-2020 "
+            "comparison subset, not a claim that other current tracts do not exist. Reproduced "
+            "by the visual EDA workflow.",
+        )
+        st.info(
+            "Why it matters: a complete national download is not the same as a complete modeling "
+            "sample. Geography continuity, FHFA history, and feature availability narrow the "
+            "tracts that can support a model result."
+        )
+
+    with forecasting_tab:
+        st.markdown("### Comparing the two supervised forecasting models")
+        st.markdown(
+            "The forecast target is cumulative change in the FHFA single-family tract HPI. "
+            "The project fits two models at each horizon: L2-regularized linear regression gives "
+            "an interpretable additive benchmark, while gradient-boosted trees can learn nonlinear "
+            "relationships and interactions. Zero change, persistence, recent growth, county "
+            "trend, and state trend remain simple comparison baselines; none replaces either "
+            "supervised model in the application."
+        )
+        validation_scorecard = pd.read_csv(
+            DATA_SCIENCE_ASSET_ROOT / "forecast_validation_mae.csv"
+        )
+        st.plotly_chart(
+            forecast_validation_comparison_figure(validation_scorecard),
+            width="stretch",
+            key="forecast_validation_model_comparison",
+            config={"displayModeBar": False},
+        )
+        st.caption(
+            "Validation MAE compares every method on the same cumulative-log-change target. "
+            "Lower is better. The two colored supervised models are the project forecasts; trend "
+            "and persistence methods are reference points."
+        )
+        st.markdown(
+            "On validation data, gradient-boosted trees had the lower MAE of the two project "
+            "models at both horizons: 0.0733 versus 0.0766 at one year, and 0.0807 versus 0.1033 "
+            "at three years. The state-trend baseline was strongest at three years in this "
+            "development period, which is useful context about the difficulty of the task—not a "
+            "reason to redefine the baseline as the model."
+        )
+        comparison_table = validation_scorecard.loc[
+            validation_scorecard["model_name"].isin(
+                ["regularized_linear", "gradient_boosted_trees"]
+            )
+        ].copy()
+        comparison_table["Model"] = comparison_table["model_name"].map(
+            {
+                "regularized_linear": "Regularized linear",
+                "gradient_boosted_trees": "Gradient-boosted trees",
+            }
+        )
+        comparison_table["Horizon"] = comparison_table["horizon_years"].map(
+            lambda value: f"{int(value)} year"
+        )
+        comparison_table["Validation MAE"] = comparison_table["mae_log_change"].map(
+            lambda value: f"{value:.4f}"
+        )
+        st.dataframe(
+            comparison_table[["Horizon", "Model", "Validation MAE"]],
+            hide_index=True,
+            width="stretch",
+        )
+        st.info(
+            "Model evaluation does not end with the validation ranking. Each supervised model is "
+            "calibrated and evaluated separately on later outcomes using MAE, RMSE, signed error, "
+            "tail error, interval coverage, and performance slices. Weak results stay visible "
+            "with warnings instead of being replaced by a state or county trend."
+        )
+        _science_figure(
+            "02_forecast_validation_vs_locked_mae.png",
+            "The later-period evaluation keeps both supervised models visible at both horizons. "
+            "Zero change and state trend are comparison baselines only. Generated by the final "
+            "forecast evaluation workflow.",
+        )
+        st.markdown(
+            "In the later period, one-year MAE was 0.0599 for gradient-boosted trees and 0.0632 "
+            "for regularized linear regression. Zero change reached 0.0627 and state trend "
+            "reached 0.0592, so the nonlinear model remained competitive while the linear model "
+            "received a visible warning for trailing zero change. At three years, the two project "
+            "models reached 0.0980 and 0.1087, clearly improving on zero change at 0.1566 and "
+            "state trend at 0.2943."
+        )
+        _science_figure(
+            "03_forecast_interval_coverage.png",
+            "Observed coverage is checked separately for every model-horizon pair. One-year "
+            "coverage is close to the nominal 90%; wider three-year intervals are conservative. "
+            "A warning does not remove the corresponding forecast.",
+        )
+        _science_figure(
+            "04_forecast_observed_vs_predicted.png",
+            "Mean observed and predicted change makes the direction of later-period error visible. "
+            "These bars summarize evaluation outcomes and are not current tract forecasts.",
+        )
+
+    with similarity_tab:
+        st.markdown("### Retrieving earlier communities, not predicting with a black box")
+        st.markdown(
+            "For a selected tract today, the system standardizes twelve housing, demographic, "
+            "economic, and market-history features using training data only. Weighted Euclidean "
+            "distance then retrieves ten distinct earlier tracts whose later outcomes were "
+            "already known. The selected tract itself, future information, and locked forecast "
+            "test periods are excluded from the candidate pool."
+        )
+        _science_figure(
+            "05_similarity_workflow.png",
+            "The complete similarity sequence, from current features through time-safe retrieval "
+            "and observed later outcomes. Generated by the similarity communication workflow.",
+        )
+        st.markdown(
+            "Weighted standardized matching was retained over PCA because it was easier to "
+            "explain feature by feature and had lower validation error at both horizons. Small "
+            "weight changes preserved most top-ten matches. Removing an entire feature family "
+            "changed the question enough to produce different neighborhoods, so those ablations "
+            "are treated as model variants rather than minor instability."
+        )
+        _science_figure(
+            "06_similarity_stability_and_selection.png",
+            "Overlap and Jaccard measures test whether modest modeling changes preserve the "
+            "neighbor list. The right-hand comparison supports weighted matching over PCA.",
+        )
+        _science_figure(
+            "07_analogue_outcome_utility.png",
+            "Analogue outcomes beat zero change, but the strongest forecast comparator performs "
+            "better. That result fixes the product role: analogues provide historical evidence, "
+            "not the primary forecast.",
+        )
+        _science_figure(
+            "08_current_analogue_coverage.png",
+            "The approved method returns ten matches for 46,719 of 85,528 current tracts at each "
+            "supported horizon. Every other tract retains an explicit unavailable reason.",
+        )
+
+
 def render_geography_browser(profile: Mapping[str, Any]) -> None:
     """Render state-map, county, and tract navigation without loading model outputs early."""
 
@@ -586,11 +776,24 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
         st.rerun()
 
     state_row = states.loc[states["state_abbreviation"] == current_state].iloc[0]
-    st.markdown(
-        f"**{state_row['state_name']} selected** · "
-        f"{int(state_row['analogue_ready_tract_count']):,} of "
-        f"{int(state_row['tract_count']):,} current tracts support historical analogues"
+    total_tracts = format_integer(state_row["tract_count"])
+    analogue_tracts = format_integer(state_row["analogue_ready_tract_count"])
+    forecast_tracts = format_integer(state_row.get("forecast_ready_tract_count"))
+    forecast_3_year_tracts = format_integer(
+        state_row.get("forecast_3_year_ready_tract_count")
     )
+    st.markdown(f"**{state_row['state_name']} selected** · {total_tracts} current tracts")
+    state_coverage = st.columns(3)
+    with state_coverage[0]:
+        metric_card("Analogues available", analogue_tracts, f"of {total_tracts} tracts")
+    with state_coverage[1]:
+        metric_card("1-year forecasts", forecast_tracts, f"of {total_tracts} tracts")
+    with state_coverage[2]:
+        metric_card(
+            "3-year forecasts",
+            forecast_3_year_tracts,
+            f"of {total_tracts} tracts",
+        )
     counties = load_counties(current_state)
     if counties.empty:
         st.warning("No counties were returned for the selected state.")
@@ -599,7 +802,9 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
     county_labels = {
         (
             f"{row['county_name']} · {int(row['tract_count']):,} tracts · "
-            f"{int(row['analogue_ready_tract_count']):,} analogue-ready"
+            f"{int(row['analogue_ready_tract_count']):,} analogues · "
+            f"{int(row.get('forecast_ready_tract_count', 0)):,} one-year forecasts · "
+            f"{int(row.get('forecast_3_year_ready_tract_count', 0)):,} three-year forecasts"
         ): str(row["county_geoid"])
         for row in county_records
     }
@@ -613,21 +818,39 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
     if tracts.empty:
         st.warning("No current tracts were returned for the selected county.")
         return
-    tract_records = tracts.to_dict(orient="records")
-    tract_labels = {
-        (
-            f"{row['tract_name']} · {row['geoid_2020']}"
-            + (" · analogues available" if bool(row["analogue_available"]) else "")
-        ): str(row["geoid_2020"])
-        for row in tract_records
-    }
+    st.caption(
+        "Click a point to open that neighborhood. The basemap provides familiar place and road "
+        "labels; the selected neighborhood's exact tract outline appears after it opens."
+    )
+    tract_event = st.plotly_chart(
+        county_tract_browser_map_figure(tracts, str(profile.get("geoid_2020", ""))),
+        width="stretch",
+        key=f"county_tract_browser_{county_geoid}",
+        config={"displayModeBar": False},
+        on_select="rerun",
+        selection_mode="points",
+    )
+    clicked_tract = selected_geoid_from_map_event(tract_event)
+    if clicked_tract and clicked_tract != str(profile.get("geoid_2020", "")):
+        st.session_state["selected_geoid"] = clicked_tract
+        st.session_state.pop("selected_area_name", None)
+        st.session_state.pop("selected_area_geoid", None)
+        st.rerun()
+    tract_records = cast(list[dict[str, Any]], tracts.to_dict(orient="records"))
+    tract_labels = {tract_browser_label(row): str(row["geoid_2020"]) for row in tract_records}
+    st.caption(
+        "Prefer the map or address finder when you do not know a tract number. The list retains "
+        "county, state, population, and model status for an accessible text alternative."
+    )
     tract_label = st.selectbox(
-        "Neighborhood",
+        "Or choose a neighborhood from the list",
         options=list(tract_labels),
         key=f"browse_tract_{county_geoid}",
     )
     if st.button("Open this neighborhood", key=f"open_browse_{county_geoid}"):
         st.session_state["selected_geoid"] = tract_labels[tract_label]
+        st.session_state.pop("selected_area_name", None)
+        st.session_state.pop("selected_area_geoid", None)
         st.rerun()
 
 
@@ -663,11 +886,45 @@ def main() -> None:
                 "complete validated release.</div>",
                 unsafe_allow_html=True,
             )
+        if settings.data_mode == "live":
+            with st.expander("Find a neighborhood by address (recommended)", expanded=True):
+                st.caption(
+                    "The address is sent to the public U.S. Census Geocoder to identify its 2020 "
+                    "tract. It is not written to this project's tables."
+                )
+                with st.form("address_lookup"):
+                    address_text = st.text_input(
+                        "Street address",
+                        placeholder="123 Main St, Ann Arbor, MI 48104",
+                    )
+                    address_submitted = st.form_submit_button(
+                        "Locate neighborhood",
+                        width="stretch",
+                    )
+                if address_submitted:
+                    try:
+                        with st.spinner("Matching the address to Census geography…"):
+                            address_match = lookup_census_tract(address_text)
+                            supported = search_places(address_match.geoid_2020)
+                        if supported.empty:
+                            st.warning(
+                                "The address matched a Census tract outside the application's "
+                                "supported 50-state and Washington, D.C. release."
+                            )
+                        else:
+                            st.session_state["selected_geoid"] = address_match.geoid_2020
+                            st.session_state["selected_area_name"] = address_match.area_name
+                            st.session_state["selected_area_geoid"] = address_match.geoid_2020
+                            st.success(f"Matched to {address_match.display_label}")
+                    except (LookupError, RuntimeError, ValueError) as error:
+                        st.warning(str(error))
+        else:
+            st.caption("Address lookup is available in the live Databricks application.")
         with st.form("place_search"):
             search_text = st.text_input(
-                "Search by county, state, or 11-digit tract GEOID",
+                "Search by county or state (tract ID optional)",
                 value=st.session_state.get("place_search_text", "Autauga"),
-                placeholder="Oakland County or 26125144200",
+                placeholder="Oakland County or Michigan",
             )
             submitted = st.form_submit_button("Find neighborhoods", width="stretch")
         if submitted or "place_results" not in st.session_state:
@@ -692,6 +949,8 @@ def main() -> None:
             st.session_state["selected_geoid"] = option_map[selected_label]
         if st.button("Open search result", width="stretch"):
             st.session_state["selected_geoid"] = option_map[selected_label]
+            st.session_state.pop("selected_area_name", None)
+            st.session_state.pop("selected_area_geoid", None)
             st.rerun()
         selected_geoid = str(st.session_state["selected_geoid"])
         st.markdown("---")
@@ -705,6 +964,11 @@ def main() -> None:
         st.caption(
             "This control changes the historical analogue evidence. It does not select a forecast."
         )
+        st.info(
+            "Forecast availability is separate from the historical-analogue horizon control. "
+            "Model-ready tracts provide both regularized-linear and gradient-boosted-tree results "
+            "at one and three years; evaluation warnings do not hide a model output."
+        )
         st.markdown("---")
         st.caption(
             "Use search, click a nearby tract, or browse from state to county to change place."
@@ -717,11 +981,16 @@ def main() -> None:
         st.stop()
 
     profile = data.profile
+    area_name = ""
+    if str(st.session_state.get("selected_area_geoid", "")) == selected_geoid:
+        area_name = str(st.session_state.get("selected_area_name", "")).strip()
+    place_heading = f"{profile['county_name']}, {profile['state_abbreviation']}"
+    if area_name:
+        place_heading = f"{area_name} · {place_heading}"
     st.markdown(
-        f'<div class="place-title">{profile["county_name"]}, {profile["state_abbreviation"]} · '
-        f'{profile["tract_name"]}</div><div class="place-subtitle">2020 Census tract '
-        f"{profile['geoid_2020']} · current ACS release "
-        f"{profile.get('acs_release_year', '—')}</div>",
+        f'<div class="place-title">{place_heading} · {profile["tract_name"]}</div>'
+        f'<div class="place-subtitle">2020 Census tract {profile["geoid_2020"]} · current ACS '
+        f"release {profile.get('acs_release_year', '—')}</div>",
         unsafe_allow_html=True,
     )
     map_col, context_col = st.columns([1.6, 1])
@@ -745,6 +1014,8 @@ def main() -> None:
             clicked_geoid = selected_geoid_from_map_event(context_event)
             if clicked_geoid and clicked_geoid != selected_geoid:
                 st.session_state["selected_geoid"] = clicked_geoid
+                st.session_state.pop("selected_area_name", None)
+                st.session_state.pop("selected_area_geoid", None)
                 st.rerun()
             st.caption(
                 "The selected tract is outlined in teal. Select a nearby tract to open it. "
@@ -788,8 +1059,14 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    overview_tab, forecast_tab, analogue_tab, methods_tab = st.tabs(
-        ["Overview", "Forecast", "Historical analogues", "Methods & limitations"]
+    overview_tab, forecast_tab, analogue_tab, science_tab, methods_tab = st.tabs(
+        [
+            "Overview",
+            "Forecast",
+            "Historical analogues",
+            "Data Science Results",
+            "Methods & limitations",
+        ]
     )
     with overview_tab:
         render_overview(data)
@@ -797,6 +1074,8 @@ def main() -> None:
         render_forecast_status(data)
     with analogue_tab:
         render_analogues(data, horizon_years)
+    with science_tab:
+        render_data_science_results()
     with methods_tab:
         render_methods(data)
 

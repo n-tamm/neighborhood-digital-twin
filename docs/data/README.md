@@ -130,7 +130,7 @@ opening Databricks. The samples are documentation aids, not substitutes for the 
 84. [`forecast_locked_test_prediction`](84_model_forecast_locked_test_prediction.md)
 85. [`forecast_locked_test_scorecard`](85_evaluation_forecast_locked_test_scorecard.md)
 86. [`forecast_current_prediction`](86_model_forecast_current_prediction.md)
-87. [`forecast_release_gate`](87_evaluation_forecast_release_gate.md)
+87. [`forecast_evaluation_threshold`](87_evaluation_forecast_threshold.md)
 88. [`forecast_final_evaluation_figure_manifest`](88_evaluation_forecast_final_evaluation_figure_manifest.md)
 89. [`serving_forecast_current`](89_serving_forecast_current.md)
 90. [`serving_forecast_availability_current`](90_serving_forecast_availability_current.md)
@@ -214,19 +214,14 @@ Mexico are held out for geographic transfer checks. All hard leakage, timing, ke
 reconciliation checks passed. The only warning is substantive rather than a pipeline error: the
 five-year horizon has three independent training origins and must remain exploratory.
 
-Forecast development outputs remain separate from final evidence. The validation prediction and
-scorecard tables support candidate comparison without exposing the locked period. On November 19,
-2026, job 504 froze the selected one- and three-year methods, generated 81,908 reserved-origin
-calibration predictions, opened 87,969 locked temporal-test rows once, and scored 93,438 current
-tract-horizon rows. Job 605 then applied the predeclared release gate. The one-year gradient-boosted
-model passed; the three-year state-trend model was worse than zero change and its interval coverage
-was too low, so that horizon was withheld rather than retuned against the final test.
+Forecast development outputs remain separate from later evaluation. The validation prediction and
+scorecard tables compare five baselines with regularized linear regression and gradient-boosted
+trees. Version 2 carries both supervised models through calibration, later-period evaluation, and
+current scoring at one and three years. Job 605 records model-specific threshold warnings; it does
+not replace either model with state trend or suppress a weak result.
 
 The analogue serving release contains 934,380 approved matches, 93,438 tract-horizon summaries,
 171,056 availability rows, 934,380 deterministic explanations, and 2,803,140 annual trajectory
-rows. The separate forecast release now adds 46,719 approved one-year forecasts and 171,056
-explicit tract-horizon availability rows. Every current profile tract therefore has an availability
-state even when it is outside the forecast cohort or the requested horizon failed evaluation. Job
-606 publishes three final forecast figures with immutable model-run lineage, and job 900 has
-successfully applied the corresponding table and column comments across the model, evaluation,
-and serving schemas.
+rows. Forecast serving keeps one availability row per tract and horizon and two forecast rows per
+available tract and horizon. Exact version-2 counts, figure lineage, and metadata validation will
+were refreshed after jobs 504, 605, 606, 701, and 900 completed on November 22, 2026.

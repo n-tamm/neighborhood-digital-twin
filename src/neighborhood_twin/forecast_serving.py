@@ -14,12 +14,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-FORECAST_SERVING_SCHEMA_VERSION = "1.0.0"
+FORECAST_SERVING_SCHEMA_VERSION = "2.0.0"
 FORECAST_SERVING_CURRENT_TABLE = "serving_forecast_current"
 FORECAST_SERVING_AVAILABILITY_TABLE = "serving_forecast_availability_current"
 SERVING_RELEASE_MANIFEST_TABLE = "serving_release_manifest"
 FORECAST_SERVING_COMPONENT = "forecasts"
-FORECAST_SERVING_METHOD = "frozen_supervised_model_with_split_conformal_interval"
+FORECAST_SERVING_METHOD = "two_supervised_models_with_model_specific_conformal_intervals"
+FORECAST_MODEL_NAMES = ("regularized_linear", "gradient_boosted_trees")
 
 
 @dataclass(frozen=True)
@@ -102,10 +103,10 @@ def _add_lineage(frame: Any, release: ForecastServingRelease) -> Any:
 def build_serving_forecasts(
     current_predictions: Any,
     current_profile: Any,
-    release_gate: Any,
+    evaluation_thresholds: Any,
     release: ForecastServingRelease,
 ) -> Any:
-    """Publish compact forecasts only for horizons that passed the locked release gate."""
+    """Publish both supervised-model forecasts with their evaluation status."""
 
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
@@ -113,20 +114,21 @@ def build_serving_forecasts(
         "geoid_2020",
         functions.col("tract_name").alias("_profile_tract_name"),
     )
-    approved_gate = release_gate.where(functions.col("release_eligible")).select(
+    evaluation = evaluation_thresholds.select(
+        "model_name",
         "horizon_years",
-        "release_eligible",
-        "release_gate_reason",
+        "meets_evaluation_thresholds",
+        "evaluation_warning_reason",
         "locked_observation_count",
-        "champion_mae_log_change",
+        "model_mae_log_change",
         "zero_change_mae_log_change",
         "state_trend_mae_log_change",
         "empirical_interval_coverage",
         "minimum_required_interval_coverage",
-        "forecast_release_gate_schema_version",
+        "forecast_evaluation_threshold_schema_version",
     )
     compact = (
-        current_predictions.join(approved_gate, "horizon_years", "inner")
+        current_predictions.join(evaluation, ["model_name", "horizon_years"], "inner")
         .join(labels, "geoid_2020", "left")
         .select(
             "geoid_2020",
@@ -157,15 +159,15 @@ def build_serving_forecasts(
             "acs_uncertainty_band",
             "model_training_cutoff_year",
             "forecast_final_schema_version",
-            "release_eligible",
-            "release_gate_reason",
+            "meets_evaluation_thresholds",
+            "evaluation_warning_reason",
             "locked_observation_count",
-            "champion_mae_log_change",
+            "model_mae_log_change",
             "zero_change_mae_log_change",
             "state_trend_mae_log_change",
             "empirical_interval_coverage",
             "minimum_required_interval_coverage",
-            "forecast_release_gate_schema_version",
+            "forecast_evaluation_threshold_schema_version",
         )
         .withColumn(
             "forecast_difference_from_baseline_annualized_pct_points",
@@ -205,7 +207,7 @@ def build_serving_forecasts(
 def build_forecast_availability(
     current_profile: Any,
     forecasts: Any,
-    release_gate: Any,
+    evaluation_thresholds: Any,
     release: ForecastServingRelease,
 ) -> Any:
     """Create one explicit availability row for every current tract and horizon."""
@@ -214,14 +216,21 @@ def build_forecast_availability(
 
     spark = current_profile.sparkSession
     horizons = spark.createDataFrame([(value,) for value in release.horizons], "horizon_years int")
-    gate = release_gate.select(
-        "horizon_years",
-        "release_eligible",
-        "release_gate_reason",
-        "champion_mae_log_change",
-        "zero_change_mae_log_change",
-        "empirical_interval_coverage",
-        "minimum_required_interval_coverage",
+    gate = evaluation_thresholds.groupBy("horizon_years").agg(
+        functions.countDistinct("model_name").alias("evaluated_model_count"),
+        functions.sum(functions.col("meets_evaluation_thresholds").cast("int")).alias(
+            "models_meeting_evaluation_threshold_count"
+        ),
+        functions.sort_array(functions.collect_set("model_name")).alias(
+            "evaluated_model_names"
+        ),
+        functions.sort_array(
+            functions.collect_set(
+                functions.when(
+                    ~functions.col("meets_evaluation_thresholds"), functions.col("model_name")
+                )
+            )
+        ).alias("models_with_evaluation_warnings"),
     )
     universe = (
         current_profile.select(
@@ -237,13 +246,17 @@ def build_forecast_availability(
         .crossJoin(horizons)
         .join(gate, "horizon_years", "left")
     )
-    available = forecasts.select(
-        "geoid_2020",
-        "horizon_years",
-        "forecast_origin_year",
-        "target_end_year",
-        "model_name",
-    ).withColumn("_forecast_available", functions.lit(True))
+    available = forecasts.groupBy("geoid_2020", "horizon_years").agg(
+        functions.first("forecast_origin_year").alias("forecast_origin_year"),
+        functions.first("target_end_year").alias("target_end_year"),
+        functions.countDistinct("model_name").alias("published_model_count"),
+        functions.sort_array(functions.collect_set("model_name")).alias(
+            "published_model_names"
+        ),
+    ).withColumn(
+        "_forecast_available",
+        functions.col("published_model_count") == functions.lit(len(FORECAST_MODEL_NAMES)),
+    )
     result = (
         universe.join(available, ["geoid_2020", "horizon_years"], "left")
         .withColumn(
@@ -254,14 +267,10 @@ def build_forecast_availability(
             "availability_reason",
             functions.when(functions.col("_forecast_available"), functions.lit("available"))
             .when(
-                ~functions.coalesce(functions.col("release_eligible"), functions.lit(False)),
-                functions.lit("horizon_failed_locked_release_gate"),
-            )
-            .when(
                 ~functions.coalesce(functions.col("forecast_candidate"), functions.lit(False)),
                 functions.lit("not_in_model_ready_cohort"),
             )
-            .otherwise(functions.lit("current_prediction_not_published")),
+            .otherwise(functions.lit("both_model_predictions_not_published")),
         )
         .drop("_forecast_available")
     )
@@ -271,7 +280,7 @@ def build_forecast_availability(
 def validate_forecast_serving_outputs(
     forecasts: Any,
     availability: Any,
-    release_gate: Any,
+    evaluation_thresholds: Any,
     release: ForecastServingRelease,
 ) -> dict[str, int]:
     """Validate lineage, key uniqueness, interval ordering, and coverage reconciliation."""
@@ -279,18 +288,32 @@ def validate_forecast_serving_outputs(
     from pyspark.sql import functions  # type: ignore[import-not-found]
 
     validate_forecast_serving_release(release)
-    gate_rows = release_gate.select("horizon_years", "release_eligible").collect()
-    gate_horizons = tuple(sorted(int(row["horizon_years"]) for row in gate_rows))
+    gate_rows = evaluation_thresholds.select(
+        "model_name", "horizon_years", "meets_evaluation_thresholds"
+    ).collect()
+    gate_horizons = tuple(sorted({int(row["horizon_years"]) for row in gate_rows}))
     if gate_horizons != release.horizons:
-        raise RuntimeError("Forecast release gate does not cover every configured horizon")
-    eligible_horizons = {
-        int(row["horizon_years"]) for row in gate_rows if bool(row["release_eligible"])
+        raise RuntimeError("Forecast evaluation does not cover every configured horizon")
+    expected_gate_keys = {
+        (model_name, horizon)
+        for model_name in FORECAST_MODEL_NAMES
+        for horizon in release.horizons
     }
+    actual_gate_keys = {
+        (str(row["model_name"]), int(row["horizon_years"])) for row in gate_rows
+    }
+    if actual_gate_keys != expected_gate_keys:
+        raise RuntimeError("Forecast evaluation does not cover both models at every horizon")
     published_horizons = {
         int(row[0]) for row in forecasts.select("horizon_years").distinct().collect()
     }
-    if published_horizons != eligible_horizons:
-        raise RuntimeError("Published forecast horizons do not match the release gate")
+    if published_horizons != set(release.horizons):
+        raise RuntimeError("Published forecasts do not cover every configured horizon")
+    published_models = {
+        str(row[0]) for row in forecasts.select("model_name").distinct().collect()
+    }
+    if published_models != set(FORECAST_MODEL_NAMES):
+        raise RuntimeError("Published forecasts do not contain both supervised models")
     for name, frame in (
         (FORECAST_SERVING_CURRENT_TABLE, forecasts),
         (FORECAST_SERVING_AVAILABILITY_TABLE, availability),
@@ -298,14 +321,14 @@ def validate_forecast_serving_outputs(
         release_ids = {row[0] for row in frame.select("serving_release_id").distinct().collect()}
         if release_ids != {release.release_id}:
             raise RuntimeError(f"{name} does not contain exactly the requested release")
-        if (
-            frame.groupBy("geoid_2020", "horizon_years")
-            .count()
-            .where(functions.col("count") != 1)
-            .limit(1)
-            .count()
-        ):
-            raise RuntimeError(f"{name} contains duplicate tract-horizon keys")
+    if forecasts.groupBy("geoid_2020", "horizon_years", "model_name").count().where(
+        functions.col("count") != 1
+    ).limit(1).count():
+        raise RuntimeError("Forecasts contain duplicate tract-horizon-model keys")
+    if availability.groupBy("geoid_2020", "horizon_years").count().where(
+        functions.col("count") != 1
+    ).limit(1).count():
+        raise RuntimeError("Availability contains duplicate tract-horizon keys")
     if (
         forecasts.where(
             (
@@ -326,7 +349,7 @@ def validate_forecast_serving_outputs(
     available_keys = availability.where(functions.col("forecast_available")).select(
         "geoid_2020", "horizon_years"
     )
-    forecast_keys = forecasts.select("geoid_2020", "horizon_years")
+    forecast_keys = forecasts.select("geoid_2020", "horizon_years").distinct()
     if (
         available_keys.join(forecast_keys, ["geoid_2020", "horizon_years"], "left_anti")
         .limit(1)
