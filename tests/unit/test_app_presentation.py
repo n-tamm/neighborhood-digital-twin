@@ -14,6 +14,7 @@ import pandas as pd
 import pytest
 from neighborhood_app.charts import (
     analogue_map_figure,
+    county_tract_browser_map_figure,
     forecast_interval_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
@@ -171,7 +172,7 @@ def test_analogue_map_keeps_national_points_and_local_tract_outlines() -> None:
         ]
     )
 
-    figure = analogue_map_figure(profile, context.iloc[0], context, matches)
+    figure = analogue_map_figure(profile, context.iloc[0].to_dict(), context, matches)
 
     assert [trace.type for trace in figure.data] == [
         "choroplethmap",
@@ -214,6 +215,10 @@ def test_state_browser_map_encodes_coverage_without_scoring_quality() -> None:
                 "tract_count": 100,
                 "analogue_ready_tract_count": 55,
                 "analogue_ready_share": 0.55,
+                "forecast_ready_tract_count": 40,
+                "forecast_ready_share": 0.40,
+                "forecast_3_year_ready_tract_count": 0,
+                "forecast_3_year_ready_share": 0.0,
             }
         ]
     )
@@ -223,7 +228,54 @@ def test_state_browser_map_encodes_coverage_without_scoring_quality() -> None:
     assert [trace.type for trace in figure.data] == ["choropleth", "choropleth"]
     assert figure.data[0].locations == ("MI",)
     assert figure.data[0].z == (55.00000000000001,)
+    assert figure.data[0].customdata[0][3] == 40
+    assert figure.data[0].customdata[0][5] == 0
     assert figure.data[1].marker.line.width == 3.2
+
+
+def test_county_tract_browser_map_supports_location_first_selection() -> None:
+    """County browsing should expose tract locations and identifiers without requiring a GEOID."""
+
+    tracts = pd.DataFrame(
+        [
+            {
+                "geoid_2020": "01001020300",
+                "tract_name": "Census Tract 203",
+                "county_name": "Autauga County",
+                "state_abbreviation": "AL",
+                "population_total_estimate": 4433,
+                "forecast_available": True,
+                "forecast_3_year_available": False,
+                "analogue_available": True,
+                "minimum_longitude": -86.48,
+                "minimum_latitude": 32.45,
+                "maximum_longitude": -86.45,
+                "maximum_latitude": 32.49,
+            },
+            {
+                "geoid_2020": "01001020400",
+                "tract_name": "Census Tract 204",
+                "county_name": "Autauga County",
+                "state_abbreviation": "AL",
+                "population_total_estimate": 3812,
+                "forecast_available": False,
+                "forecast_3_year_available": False,
+                "analogue_available": True,
+                "minimum_longitude": -86.45,
+                "minimum_latitude": 32.47,
+                "maximum_longitude": -86.42,
+                "maximum_latitude": 32.51,
+            },
+        ]
+    )
+
+    figure = county_tract_browser_map_figure(tracts, "01001020300")
+
+    assert [trace.type for trace in figure.data] == ["scattermap", "scattermap"]
+    assert figure.data[0].customdata[0][0] == "01001020300"
+    assert figure.data[0].customdata[0][2] == "Autauga County"
+    assert figure.data[0].customdata[0][6] == "Unavailable"
+    assert figure.data[1].marker.color == "#F2B84B"
 
 
 def test_place_label_keeps_geography_and_identifier_visible() -> None:
@@ -237,13 +289,14 @@ def test_place_label_keeps_geography_and_identifier_visible() -> None:
             "geoid_2020": "01001020300",
             "population_total_estimate": 4433,
             "forecast_available": True,
+            "forecast_3_year_available": False,
             "analogue_available": True,
         }
     )
 
     assert label == (
-        "Autauga County, AL · Census Tract 203 · 4,433 residents · forecast available · "
-        "analogues available · GEOID 01001020300"
+        "Autauga County, AL · Census Tract 203 · 4,433 residents · 1-year forecast available · "
+        "no approved 3-year forecast · analogues available · GEOID 01001020300"
     )
 
 
@@ -253,13 +306,19 @@ def test_tract_browser_label_explains_place_without_requiring_geoid_knowledge() 
     label = tract_browser_label(
         {
             "tract_name": "Census Tract 203",
+            "county_name": "Autauga County",
+            "state_abbreviation": "AL",
             "population_total_estimate": 4433,
             "forecast_available": False,
+            "forecast_3_year_available": False,
             "analogue_available": True,
         }
     )
 
-    assert label == "Census Tract 203 · 4,433 residents · forecast — · analogues ✓"
+    assert label == (
+        "Autauga County, AL · Census Tract 203 · 4,433 residents · 1-year forecast — · "
+        "3-year forecast — · analogues ✓"
+    )
 
 
 def test_streamlit_app_starts_in_explicit_sample_mode(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -274,3 +333,4 @@ def test_streamlit_app_starts_in_explicit_sample_mode(monkeypatch: pytest.Monkey
     assert any(
         "Forecast serving output is not published yet" in item.value for item in app.markdown
     )
+    assert "Data Science Results" in [tab.label for tab in app.tabs]

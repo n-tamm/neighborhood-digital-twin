@@ -14,6 +14,7 @@ import pandas as pd
 import streamlit as st
 from neighborhood_app.charts import (
     analogue_map_figure,
+    county_tract_browser_map_figure,
     feature_gap_figure,
     forecast_interval_figure,
     housing_mix_figure,
@@ -579,7 +580,7 @@ def _science_figure(file_name: str, caption: str) -> None:
 def render_data_science_results() -> None:
     """Walk through the implemented data, forecast, and similarity evidence."""
 
-    st.subheader("Data Science walkthrough")
+    st.subheader("Data Science Results")
     st.markdown(
         "This page explains the analytical work behind the neighborhood screens. The forecast "
         "and historical analogue system answer different questions: the forecast estimates a "
@@ -714,12 +715,21 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
     total_tracts = format_integer(state_row["tract_count"])
     analogue_tracts = format_integer(state_row["analogue_ready_tract_count"])
     forecast_tracts = format_integer(state_row.get("forecast_ready_tract_count"))
+    forecast_3_year_tracts = format_integer(
+        state_row.get("forecast_3_year_ready_tract_count")
+    )
     st.markdown(f"**{state_row['state_name']} selected** · {total_tracts} current tracts")
-    state_coverage = st.columns(2)
+    state_coverage = st.columns(3)
     with state_coverage[0]:
         metric_card("Analogues available", analogue_tracts, f"of {total_tracts} tracts")
     with state_coverage[1]:
         metric_card("Approved 1-year forecasts", forecast_tracts, f"of {total_tracts} tracts")
+    with state_coverage[2]:
+        metric_card(
+            "Approved 3-year forecasts",
+            forecast_3_year_tracts,
+            f"of {total_tracts} tracts",
+        )
     counties = load_counties(current_state)
     if counties.empty:
         st.warning("No counties were returned for the selected state.")
@@ -729,7 +739,8 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
         (
             f"{row['county_name']} · {int(row['tract_count']):,} tracts · "
             f"{int(row['analogue_ready_tract_count']):,} analogues · "
-            f"{int(row.get('forecast_ready_tract_count', 0)):,} forecasts"
+            f"{int(row.get('forecast_ready_tract_count', 0)):,} one-year forecasts · "
+            f"{int(row.get('forecast_3_year_ready_tract_count', 0)):,} three-year forecasts"
         ): str(row["county_geoid"])
         for row in county_records
     }
@@ -743,14 +754,32 @@ def render_geography_browser(profile: Mapping[str, Any]) -> None:
     if tracts.empty:
         st.warning("No current tracts were returned for the selected county.")
         return
+    st.caption(
+        "Click a point to open that neighborhood. The basemap provides familiar place and road "
+        "labels; the selected neighborhood's exact tract outline appears after it opens."
+    )
+    tract_event = st.plotly_chart(
+        county_tract_browser_map_figure(tracts, str(profile.get("geoid_2020", ""))),
+        width="stretch",
+        key=f"county_tract_browser_{county_geoid}",
+        config={"displayModeBar": False},
+        on_select="rerun",
+        selection_mode="points",
+    )
+    clicked_tract = selected_geoid_from_map_event(tract_event)
+    if clicked_tract and clicked_tract != str(profile.get("geoid_2020", "")):
+        st.session_state["selected_geoid"] = clicked_tract
+        st.session_state.pop("selected_area_name", None)
+        st.session_state.pop("selected_area_geoid", None)
+        st.rerun()
     tract_records = tracts.to_dict(orient="records")
     tract_labels = {tract_browser_label(row): str(row["geoid_2020"]) for row in tract_records}
     st.caption(
-        "Population and model status make the choices easier to compare. Use the neighborhood "
-        "map after opening a tract to see its exact boundary and surroundings."
+        "Prefer the map or address finder when you do not know a tract number. The list retains "
+        "county, state, population, and model status for an accessible text alternative."
     )
     tract_label = st.selectbox(
-        "Neighborhood",
+        "Or choose a neighborhood from the list",
         options=list(tract_labels),
         key=f"browse_tract_{county_geoid}",
     )
@@ -794,7 +823,7 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
         if settings.data_mode == "live":
-            with st.expander("Find my tract from a street address"):
+            with st.expander("Find a neighborhood by address (recommended)", expanded=True):
                 st.caption(
                     "The address is sent to the public U.S. Census Geocoder to identify its 2020 "
                     "tract. It is not written to this project's tables."
@@ -829,9 +858,9 @@ def main() -> None:
             st.caption("Address lookup is available in the live Databricks application.")
         with st.form("place_search"):
             search_text = st.text_input(
-                "Search by county, state, or tract GEOID",
+                "Search by county or state (tract ID optional)",
                 value=st.session_state.get("place_search_text", "Autauga"),
-                placeholder="Oakland County, Michigan, or 26125144200",
+                placeholder="Oakland County or Michigan",
             )
             submitted = st.form_submit_button("Find neighborhoods", width="stretch")
         if submitted or "place_results" not in st.session_state:
@@ -870,6 +899,11 @@ def main() -> None:
         )
         st.caption(
             "This control changes the historical analogue evidence. It does not select a forecast."
+        )
+        st.info(
+            "Forecast availability: the current release publishes approved one-year forecasts "
+            "only. No neighborhood has an approved three-year forecast because that model failed "
+            "its locked release test. Three-year selections still show historical analogues."
         )
         st.markdown("---")
         st.caption(
@@ -966,7 +1000,7 @@ def main() -> None:
             "Overview",
             "Forecast",
             "Historical analogues",
-            "Data Science",
+            "Data Science Results",
             "Methods & limitations",
         ]
     )

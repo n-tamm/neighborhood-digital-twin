@@ -505,8 +505,15 @@ def state_browser_map_figure(
         plotted["forecast_ready_tract_count"] = 0
     if "forecast_ready_share" not in plotted:
         plotted["forecast_ready_share"] = 0.0
+    if "forecast_3_year_ready_tract_count" not in plotted:
+        plotted["forecast_3_year_ready_tract_count"] = 0
+    if "forecast_3_year_ready_share" not in plotted:
+        plotted["forecast_3_year_ready_share"] = 0.0
     plotted["analogue_ready_pct"] = plotted["analogue_ready_share"].astype(float) * 100.0
     plotted["forecast_ready_pct"] = plotted["forecast_ready_share"].astype(float) * 100.0
+    plotted["forecast_3_year_ready_pct"] = (
+        plotted["forecast_3_year_ready_share"].astype(float) * 100.0
+    )
     figure.add_trace(
         go.Choropleth(
             locationmode="USA-states",
@@ -527,13 +534,17 @@ def state_browser_map_figure(
                     "analogue_ready_tract_count",
                     "forecast_ready_tract_count",
                     "forecast_ready_pct",
+                    "forecast_3_year_ready_tract_count",
+                    "forecast_3_year_ready_pct",
                 ]
             ],
             hovertemplate=(
                 "%{customdata[0]}<br>%{customdata[2]:,} of %{customdata[1]:,} tracts "
                 "support analogues (%{z:.1f}%)<br>"
                 "%{customdata[3]:,} support an approved 1-year forecast "
-                "(%{customdata[4]:.1f}%)<extra>Select state</extra>"
+                "(%{customdata[4]:.1f}%)<br>"
+                "%{customdata[5]:,} support an approved 3-year forecast "
+                "(%{customdata[6]:.1f}%)<extra>Select state</extra>"
             ),
             colorbar={
                 "title": {"text": "Analogue-ready<br>tract share", "font": {"color": TEXT}},
@@ -569,6 +580,100 @@ def state_browser_map_figure(
     )
     figure.update_layout(showlegend=False)
     return _layout(figure, height=455, margin_top=8)
+
+
+def county_tract_browser_map_figure(
+    tracts: pd.DataFrame,
+    selected_geoid: str | None,
+) -> go.Figure:
+    """Map county tract centers so users can choose spatially before opening a tract."""
+
+    figure = go.Figure()
+    coordinate_fields = [
+        "minimum_longitude",
+        "minimum_latitude",
+        "maximum_longitude",
+        "maximum_latitude",
+    ]
+    if tracts.empty or any(field not in tracts for field in coordinate_fields):
+        return _layout(figure, height=420, margin_top=8)
+
+    plotted = tracts.copy()
+    for field in coordinate_fields:
+        plotted[field] = pd.to_numeric(plotted[field], errors="coerce")
+    plotted = plotted.dropna(subset=coordinate_fields)
+    if plotted.empty:
+        return _layout(figure, height=420, margin_top=8)
+
+    plotted["center_longitude"] = (
+        plotted["minimum_longitude"] + plotted["maximum_longitude"]
+    ) / 2.0
+    plotted["center_latitude"] = (
+        plotted["minimum_latitude"] + plotted["maximum_latitude"]
+    ) / 2.0
+    plotted["population_display"] = plotted["population_total_estimate"].map(
+        lambda value: "Not available" if pd.isna(value) else f"{float(value):,.0f}"
+    )
+    plotted["one_year_status"] = plotted["forecast_available"].map(
+        lambda available: "Available" if bool(available) else "Unavailable"
+    )
+    plotted["three_year_status"] = plotted["forecast_3_year_available"].map(
+        lambda available: "Available" if bool(available) else "Unavailable"
+    )
+    plotted["analogue_status"] = plotted["analogue_available"].map(
+        lambda available: "Available" if bool(available) else "Unavailable"
+    )
+    customdata = plotted[
+        [
+            "geoid_2020",
+            "tract_name",
+            "county_name",
+            "state_abbreviation",
+            "population_display",
+            "one_year_status",
+            "three_year_status",
+            "analogue_status",
+        ]
+    ]
+    figure.add_trace(
+        go.Scattermap(
+            lon=plotted["center_longitude"],
+            lat=plotted["center_latitude"],
+            mode="markers",
+            marker={"size": 10, "color": TEAL, "opacity": 0.78},
+            customdata=customdata,
+            hovertemplate=(
+                "%{customdata[1]}<br>%{customdata[2]}, %{customdata[3]}<br>"
+                "%{customdata[4]} residents<br>1-year forecast: %{customdata[5]}<br>"
+                "3-year forecast: %{customdata[6]}<br>Historical analogues: %{customdata[7]}"
+                "<extra>Click to open</extra>"
+            ),
+            name="Neighborhood locations",
+        )
+    )
+    selected = plotted.loc[plotted["geoid_2020"].astype(str) == str(selected_geoid or "")]
+    if not selected.empty:
+        figure.add_trace(
+            go.Scattermap(
+                lon=selected["center_longitude"],
+                lat=selected["center_latitude"],
+                mode="markers",
+                marker={"size": 18, "color": GOLD, "opacity": 1.0},
+                hoverinfo="skip",
+                name="Current neighborhood",
+            )
+        )
+    figure.update_layout(
+        map=_map_view(
+            float(plotted["minimum_longitude"].min()),
+            float(plotted["minimum_latitude"].min()),
+            float(plotted["maximum_longitude"].max()),
+            float(plotted["maximum_latitude"].max()),
+            minimum_zoom=4.0,
+        ),
+        dragmode="pan",
+    )
+    return _layout(figure, height=420, margin_top=8)
 
 
 def tract_outline_figure(

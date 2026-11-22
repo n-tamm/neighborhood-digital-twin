@@ -291,14 +291,19 @@ class DatabricksNeighborhoodRepository:
               a.county_name,
               a.tract_name,
               a.analogue_available,
-              coalesce(f.forecast_available, false) AS forecast_available,
+              coalesce(f1.forecast_available, false) AS forecast_available,
+              coalesce(f3.forecast_available, false) AS forecast_3_year_available,
               p.population_total_estimate,
               p.housing_units_total_estimate
             FROM {availability_table} a
-            LEFT JOIN {forecast_availability_table} f
-              ON a.geoid_2020 = f.geoid_2020
-             AND f.serving_release_id = :forecast_release_id
-             AND f.horizon_years = 1
+            LEFT JOIN {forecast_availability_table} f1
+              ON a.geoid_2020 = f1.geoid_2020
+             AND f1.serving_release_id = :forecast_release_id
+             AND f1.horizon_years = 1
+            LEFT JOIN {forecast_availability_table} f3
+              ON a.geoid_2020 = f3.geoid_2020
+             AND f3.serving_release_id = :forecast_release_id
+             AND f3.horizon_years = 3
             LEFT JOIN {profile_table} p
               ON a.geoid_2020 = p.geoid_2020
             WHERE a.serving_release_id = :release_id
@@ -346,11 +351,17 @@ class DatabricksNeighborhoodRepository:
               WHERE serving_release_id = :release_id
                 AND horizon_years = 1
             ),
-            forecast AS (
+            forecast_one_year AS (
               SELECT geoid_2020, forecast_available
               FROM {forecast_availability_table}
               WHERE serving_release_id = :forecast_release_id
                 AND horizon_years = 1
+            ),
+            forecast_three_year AS (
+              SELECT geoid_2020, forecast_available
+              FROM {forecast_availability_table}
+              WHERE serving_release_id = :forecast_release_id
+                AND horizon_years = 3
             )
             SELECT
               a.state_fips,
@@ -361,12 +372,17 @@ class DatabricksNeighborhoodRepository:
                 AS analogue_ready_tract_count,
               count(DISTINCT CASE WHEN a.analogue_available THEN a.geoid_2020 END)
                 / count(DISTINCT a.geoid_2020) AS analogue_ready_share,
-              count(DISTINCT CASE WHEN f.forecast_available THEN a.geoid_2020 END)
+              count(DISTINCT CASE WHEN f1.forecast_available THEN a.geoid_2020 END)
                 AS forecast_ready_tract_count,
-              count(DISTINCT CASE WHEN f.forecast_available THEN a.geoid_2020 END)
-                / count(DISTINCT a.geoid_2020) AS forecast_ready_share
+              count(DISTINCT CASE WHEN f1.forecast_available THEN a.geoid_2020 END)
+                / count(DISTINCT a.geoid_2020) AS forecast_ready_share,
+              count(DISTINCT CASE WHEN f3.forecast_available THEN a.geoid_2020 END)
+                AS forecast_3_year_ready_tract_count,
+              count(DISTINCT CASE WHEN f3.forecast_available THEN a.geoid_2020 END)
+                / count(DISTINCT a.geoid_2020) AS forecast_3_year_ready_share
             FROM analogue a
-            LEFT JOIN forecast f ON a.geoid_2020 = f.geoid_2020
+            LEFT JOIN forecast_one_year f1 ON a.geoid_2020 = f1.geoid_2020
+            LEFT JOIN forecast_three_year f3 ON a.geoid_2020 = f3.geoid_2020
             WHERE a.state_abbreviation IS NOT NULL
               AND a.state_name IS NOT NULL
               AND CAST(a.state_fips AS INT) <= 56
@@ -403,11 +419,17 @@ class DatabricksNeighborhoodRepository:
                 AND horizon_years = 1
                 AND state_abbreviation = :state_abbreviation
             ),
-            forecast AS (
+            forecast_one_year AS (
               SELECT geoid_2020, forecast_available
               FROM {forecast_availability_table}
               WHERE serving_release_id = :forecast_release_id
                 AND horizon_years = 1
+            ),
+            forecast_three_year AS (
+              SELECT geoid_2020, forecast_available
+              FROM {forecast_availability_table}
+              WHERE serving_release_id = :forecast_release_id
+                AND horizon_years = 3
             )
             SELECT
               a.county_geoid,
@@ -416,10 +438,13 @@ class DatabricksNeighborhoodRepository:
               count(DISTINCT a.geoid_2020) AS tract_count,
               count(DISTINCT CASE WHEN a.analogue_available THEN a.geoid_2020 END)
                 AS analogue_ready_tract_count,
-              count(DISTINCT CASE WHEN f.forecast_available THEN a.geoid_2020 END)
-                AS forecast_ready_tract_count
+              count(DISTINCT CASE WHEN f1.forecast_available THEN a.geoid_2020 END)
+                AS forecast_ready_tract_count,
+              count(DISTINCT CASE WHEN f3.forecast_available THEN a.geoid_2020 END)
+                AS forecast_3_year_ready_tract_count
             FROM analogue a
-            LEFT JOIN forecast f ON a.geoid_2020 = f.geoid_2020
+            LEFT JOIN forecast_one_year f1 ON a.geoid_2020 = f1.geoid_2020
+            LEFT JOIN forecast_three_year f3 ON a.geoid_2020 = f3.geoid_2020
             GROUP BY a.county_geoid, a.county_name, a.state_abbreviation
             ORDER BY a.county_name, a.county_geoid
             """,
@@ -448,6 +473,10 @@ class DatabricksNeighborhoodRepository:
             self._settings.gold_schema,
             "gold_tract_profile_current",
         )
+        geometry_table = self._table(
+            self._settings.silver_schema,
+            "silver_tract_display_geometry_2020",
+        )
         forecast_release_id = str(self._forecast_release.get("serving_release_id", "unpublished"))
         return self._executor.fetch_frame(
             f"""
@@ -459,16 +488,27 @@ class DatabricksNeighborhoodRepository:
               a.county_name,
               a.tract_name,
               a.analogue_available,
-              coalesce(f.forecast_available, false) AS forecast_available,
+              coalesce(f1.forecast_available, false) AS forecast_available,
+              coalesce(f3.forecast_available, false) AS forecast_3_year_available,
               p.population_total_estimate,
-              p.housing_units_total_estimate
+              p.housing_units_total_estimate,
+              g.minimum_longitude,
+              g.minimum_latitude,
+              g.maximum_longitude,
+              g.maximum_latitude
             FROM {availability_table} a
-            LEFT JOIN {forecast_availability_table} f
-              ON a.geoid_2020 = f.geoid_2020
-             AND f.serving_release_id = :forecast_release_id
-             AND f.horizon_years = 1
+            LEFT JOIN {forecast_availability_table} f1
+              ON a.geoid_2020 = f1.geoid_2020
+             AND f1.serving_release_id = :forecast_release_id
+             AND f1.horizon_years = 1
+            LEFT JOIN {forecast_availability_table} f3
+              ON a.geoid_2020 = f3.geoid_2020
+             AND f3.serving_release_id = :forecast_release_id
+             AND f3.horizon_years = 3
             LEFT JOIN {profile_table} p
               ON a.geoid_2020 = p.geoid_2020
+            LEFT JOIN {geometry_table} g
+              ON a.geoid_2020 = g.geoid_2020
             WHERE a.serving_release_id = :release_id
               AND a.horizon_years = 1
               AND a.county_geoid = :county_geoid
@@ -723,6 +763,7 @@ class SampleNeighborhoodRepository:
         places = pd.DataFrame(self._payload["places"])
         profile = self._payload["profile"]
         places["forecast_available"] = False
+        places["forecast_3_year_available"] = False
         places["population_total_estimate"] = profile.get("population_total_estimate")
         places["housing_units_total_estimate"] = profile.get("housing_units_total_estimate")
         cleaned = search_text.strip().lower()
@@ -754,6 +795,8 @@ class SampleNeighborhoodRepository:
                     "analogue_ready_share": 1.0,
                     "forecast_ready_tract_count": 0,
                     "forecast_ready_share": 0.0,
+                    "forecast_3_year_ready_tract_count": 0,
+                    "forecast_3_year_ready_share": 0.0,
                 }
             ]
         )
@@ -773,6 +816,7 @@ class SampleNeighborhoodRepository:
                     "tract_count": 1,
                     "analogue_ready_tract_count": 1,
                     "forecast_ready_tract_count": 0,
+                    "forecast_3_year_ready_tract_count": 0,
                 }
             ]
         )
@@ -794,8 +838,13 @@ class SampleNeighborhoodRepository:
                     "tract_name": profile["tract_name"],
                     "analogue_available": True,
                     "forecast_available": False,
+                    "forecast_3_year_available": False,
                     "population_total_estimate": profile.get("population_total_estimate"),
                     "housing_units_total_estimate": profile.get("housing_units_total_estimate"),
+                    "minimum_longitude": self._payload["bounds"].get("minimum_longitude"),
+                    "minimum_latitude": self._payload["bounds"].get("minimum_latitude"),
+                    "maximum_longitude": self._payload["bounds"].get("maximum_longitude"),
+                    "maximum_latitude": self._payload["bounds"].get("maximum_latitude"),
                 }
             ]
         )

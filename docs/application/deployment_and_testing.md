@@ -41,6 +41,7 @@ verified live data, caveats, and error handling.
 - real local fixture loading and horizon availability;
 - known-answer formatting and place labels;
 - polygon-map construction and selected-boundary layering;
+- lightweight county tract-map construction and point-selection identifiers;
 - one-connection batching for the nine neighborhood result sets when a forecast release exists;
 - preservation of missing HPI observations;
 - full Streamlit startup in sample mode with no rendered exception;
@@ -57,7 +58,7 @@ trace.
 Before calling an app revision complete, check:
 
 1. the app process reaches a running state and the root page loads;
-2. a county search and an exact GEOID search both work;
+2. address lookup, county/state search, exact GEOID search, and county-map selection all work;
 3. at least one available and one unavailable tract/horizon state render correctly;
 4. the active analogue release ID is the same across availability, summary, match, explanation,
    and path, and the forecast tables share their own complete release ID;

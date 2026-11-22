@@ -1,8 +1,8 @@
-# Data Science Walkthrough
+# Data Science Results
 
 ## Purpose
 
-The application includes a dedicated Data Science tab so someone can understand the implemented
+The application includes a dedicated Data Science Results tab so someone can understand the implemented
 analysis without direct Databricks access. It is a project-level explanation rather than a
 tract-specific dashboard. The page keeps three ideas separate:
 

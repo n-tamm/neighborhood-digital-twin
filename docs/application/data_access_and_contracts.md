@@ -66,10 +66,12 @@ so switching tabs, horizons, or inspected matches does not rerun warehouse queri
 
 The geographic browser issues small aggregate or identity queries in sequence: state coverage,
 counties for one state, and tracts for one county. The queries join the independently activated
-one-year forecast-availability release so analogue and forecast readiness remain distinct. Tract
-choices also join compact profile counts for readable population context. Each result is cached
-for one hour. These queries run only after the user switches from the default neighborhood map to
-`Browse U.S.`, so the additional navigation does not slow the normal tract page load.
+forecast-availability release at both one- and three-year horizons so analogue and forecast
+readiness remain distinct. Tract choices also join compact profile counts for readable population
+context and four bounding-box fields from the display-only geometry table. The browser uses those
+fields to draw clickable center points without transferring every tract polygon. Each result is
+cached for one hour. These queries run only after the user switches from the default neighborhood
+map to `Browse U.S.`, so the additional navigation does not slow the normal tract page load.
 
 The state map requires one canonical named state identity. Its aggregation excludes availability
 rows with missing state labels and limits the mapped view to the 50 states and District of

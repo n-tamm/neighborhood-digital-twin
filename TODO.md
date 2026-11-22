@@ -109,10 +109,12 @@ remains historical context and a secondary estimate.
 - Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
   visible points at national extent and canonical tract outlines at local extent.
 - App Review 1 changes are implemented on the application branch: all browser counts use readable
-  thousands separators; state, county, search, and tract choices expose analogue and approved
-  one-year forecast availability; tract options add population context; and live mode offers an
-  optional Census address-to-2020-tract lookup with an explicit external-request notice.
-- A Data Science tab now walks through geography readiness, final forecast evaluation, and
+  thousands separators; state, county, search, and tract choices separate analogue, approved
+  one-year forecast, and unavailable three-year forecast status; and live mode opens with a
+  recommended Census address-to-2020-tract lookup with an explicit external-request notice.
+  County browsing adds a clickable tract-center map over familiar basemap labels, while its text
+  choices retain county, state, population, both forecast horizons, and analogue status.
+- A Data Science Results tab now walks through geography readiness, final forecast evaluation, and
   similarity method selection using eight reviewed, workflow-generated figures with governed
   build lineage.
 - Sample mode remains intentionally small and does not contain a production forecast. Live app
