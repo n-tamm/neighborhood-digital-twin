@@ -11,3 +11,5 @@
 Version 2 contains two rows per model-ready tract and horizon: one regularized-linear result and one gradient-boosted-tree result. All are scored from the 2025 origin and retain annualized values, cumulative log change, interval bounds, baseline context, cohort fields, and lineage.
 
 Evaluation status is attached downstream, but current predictions are not deleted because a model misses a benchmark.
+
+The current table contains 186,876 rows: 46,719 model-ready tracts multiplied by two models and two horizons.

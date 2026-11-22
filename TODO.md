@@ -1,16 +1,15 @@
 # Current Project State and Next Work
 
-This is the implementation handoff as of November 21, 2026. It records what is actually running,
+This is the implementation handoff as of November 22, 2026. It records what is actually running,
 what the current evidence supports, and what should happen next. Detailed execution order remains
 in [the pipeline runbook](docs/PIPELINE_RUN_ORDER.md).
 
 ## Current answer
 
-The public-data pipeline, current historical-analogue system, and interactive Databricks
-application are implemented. The forecast contract is being corrected so the application shows
-the project's regularized-linear and gradient-boosted-tree models at both one and three years.
-State and county trends remain baselines. Evaluation warnings will remain visible without hiding
-either model.
+The public-data pipeline, historical-analogue system, corrected two-model forecast release, and
+interactive Databricks application are implemented. The app shows regularized-linear and gradient-
+boosted-tree results at both one and three years. State and county trends remain baselines, and an
+evaluation warning stays visible without hiding the one-year linear result.
 
 The remaining work is no longer basic pipeline construction. It is coordinated refresh work,
 application review, report integration, and targeted model research that must preserve the
@@ -32,8 +31,8 @@ already opened locked-test result.
   the locked test uses 2024. Three-year training uses 2011-2016, validation uses 2017-2018,
   calibration uses 2019, 2020-2021 are purged, and the locked test uses 2022.
 - Jobs 301, 302, 500, 400, 401, 600, and the similarity workflows have current upstream outputs.
-  Forecast jobs 504, 605, 606, 701, and 900 must be rerun after the two-model correction; their
-  existing Databricks outputs still reflect the superseded one-method-per-horizon contract.
+  Forecast jobs 504, 605, 606, 701, and 900 completed on November 22 under the corrected two-model
+  contract. The superseded version-1 serving tables are no longer active.
 
 ## Forecast checkpoint
 
@@ -51,18 +50,17 @@ already opened locked-test result.
   forecast or promote a baseline.
 - Job 701 publishes both supervised results at both horizons for each model-ready tract.
 
-### Immediate forecast sequence
+### Completed forecast sequence
 
-1. Validate and deploy the corrected bundle.
-2. Run jobs 504, 605, 606, 701, and 900 in order; source ingestion and gold preparation do not
-   need to be rerun.
-3. Confirm four model-horizon combinations in specification, interval, scorecard, threshold, and
-   current-prediction outputs.
-4. Confirm two serving rows per available tract and horizon and one availability row per tract and
-   horizon.
-5. Refresh the table samples, exact metrics, figure manifest, app assets, and this checkpoint from
-   the successful runs.
-6. Deploy and visually inspect representative one- and three-year forecasts in the live app.
+- Jobs 504, 605, and 606 succeeded under finalization run
+  `29c68a5af1e74daab6e06ff7aa2aa9e9`; all four supervised model-horizon combinations are present.
+- Job 701 activated version-2 release `forecast-20261122T164538152848Z` with 186,876 forecast rows,
+  46,719 eligible tracts, four model-horizon combinations, and 171,056 availability rows.
+- Job 900 reapplied descriptions and column comments. Corrected samples, figure assets, and result
+  documentation were refreshed from the governed outputs.
+- The app was redeployed as `01f1e6af5d19196980e82abe8deb8c4b`, reached `SUCCEEDED`, and returned
+  to `RUNNING`. Manual browser acceptance of forecast cards, warnings, figure readability, and
+  responsive layout remains open.
 
 The prior state-trend finalization remains historical evidence of the design error. Because its
 later outcomes were already viewed, the corrected run must not be described as a new untouched
@@ -109,16 +107,17 @@ remains historical context and a secondary estimate.
   County browsing adds a clickable tract-center map over familiar basemap labels, while its text
   choices retain county, state, population, both forecast horizons, and analogue status.
 - A Data Science Results tab now walks through geography readiness, the two supervised forecast
-  models and their baselines, and similarity method selection. Corrected later-period forecast
-  figures must be added after job 606 completes.
+  models and their baselines, later-period error and uncertainty, and similarity method selection.
+  Its corrected forecast assets come from job-606 build
+  `forecast-final-20261122T163847149439Z`.
 - Sample mode remains intentionally small and does not contain a production forecast. Live app
   review must therefore be performed in Databricks.
 
 ## Immediate next sequence
 
-1. **Publish and review the corrected forecast experience.** Run the version-2 forecast sequence,
-   then check eligible and ineligible tracts across regions. Confirm that both models and horizons,
-   their intervals, separate baseline, and evaluation warnings are understandable.
+1. **Review the corrected forecast experience.** Check eligible and ineligible tracts across
+   regions. Confirm that both models and horizons, their intervals, separate baseline, and the
+   one-year linear warning are understandable.
 2. **Review the refreshed analogue experience.** Check available and unavailable tracts, both
    horizons, match explanations, geographic diversity, observed path gaps, and release lineage.
 3. **Create the integrated model story.** Combine validation, later-period error, uncertainty,

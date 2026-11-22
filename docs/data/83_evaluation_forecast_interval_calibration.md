@@ -11,3 +11,5 @@
 The table contains one row for each supervised model and active horizon. The intended coverage is 90 percent. Each radius is estimated and applied only to the matching model-horizon pair.
 
 This is a marginal uncertainty estimate across the calibration population, not a guarantee for every tract or subgroup. Whether the interval generalized to the unseen final period is evaluated separately in `forecast_locked_test_scorecard`.
+
+The current table has four rows. Calibration uses 41,017 observations per one-year model and 39,563 per three-year model; the residual radius is recorded separately for every model-horizon pair.

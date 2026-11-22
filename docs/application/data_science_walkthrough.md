@@ -36,10 +36,20 @@ project's regularized-linear and gradient-boosted-tree models at one and three y
 validation chart includes five simple baselines so readers can see whether model flexibility adds
 value. State trend remains visible as a baseline; it is not treated as the three-year model.
 
-The current bundled validation values come from governed job-500 scorecards. After the corrected
-two-model jobs 504, 605, and 606 run, the page will also receive reviewed side-by-side figures for
-later-period MAE, model-specific interval coverage, and error direction. The app does not
-recalculate those metrics at runtime.
+The bundled validation values come from governed job-500 scorecards. Three reviewed figures from
+job 606 build `forecast-final-20261122T163847149439Z` add later-period MAE, model-specific interval
+coverage, and mean observed-versus-predicted change. The later-period result keeps both supervised
+models visible: the one-year linear result carries a warning for trailing zero change, while both
+three-year models clearly outperform zero change and state trend. The app does not recalculate
+these metrics at runtime.
+
+Source lineage:
+
+- final figure job run: `346673047634854`;
+- forecast finalization run: `29c68a5af1e74daab6e06ff7aa2aa9e9`;
+- serving release: `forecast-20261122T164538152848Z`; and
+- tracked assets: `02_forecast_validation_vs_locked_mae.png`,
+  `03_forecast_interval_coverage.png`, and `04_forecast_observed_vs_predicted.png`.
 
 ### Historical analogues
 

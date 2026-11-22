@@ -18,10 +18,18 @@ contract:
 3. **Mean observed and predicted later-period change.** Each horizon compares the observed mean
    with both supervised-model means to make error direction understandable.
 
-The exact build ID, run ID, managed-volume path, and reviewed local copies must be recorded here
-after the corrected job 606 succeeds. The previous build
-`forecast-final-20261119T173650231784Z` is superseded because it treated the three-year state-trend
-baseline as the project model.
+The corrected build completed on November 22, 2026:
+
+- **Figure build:** `forecast-final-20261122T163847149439Z`
+- **Databricks job run:** `346673047634854`
+- **Forecast finalization run:** `29c68a5af1e74daab6e06ff7aa2aa9e9`
+- **Managed-volume root:**
+  `/Volumes/workspace/neighborhood_twin_evaluation/model_evaluation_figures/final_forecast/build_id=forecast-final-20261122T163847149439Z`
+- **Reviewed application copies:** `app/assets/data_science/02_forecast_validation_vs_locked_mae.png`,
+  `03_forecast_interval_coverage.png`, and `04_forecast_observed_vs_predicted.png`
+
+The previous build `forecast-final-20261119T173650231784Z` is superseded because it treated the
+three-year state-trend baseline as the project model.
 
 ## Validation-era build
 

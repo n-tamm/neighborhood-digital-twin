@@ -113,6 +113,29 @@ The bundle granted the app service principal read-only access to the two forecas
 app restarted successfully. This release is now superseded by the version-2 two-model contract and
 must not be treated as the final forecast design.
 
+## Version-2 forecast release verification
+
+On November 22, 2026, jobs 504, 605, and 606 completed under forecast finalization run
+`29c68a5af1e74daab6e06ff7aa2aa9e9`. Job 701 initially stopped because the existing version-1
+serving tables had an incompatible schema. The two legacy tables were preserved under explicit
+schema-v1 backup names, and rerun `1072028212048142` then created clean version-2 tables and
+activated release `forecast-20261122T164538152848Z`. Job 900 reapplied governed metadata. After
+the version-2 tables, manifest, representative tract, and app startup were validated, the temporary
+backups and obsolete `forecast_release_gate` table were removed; their replacement is
+`forecast_evaluation_threshold`.
+
+The active release contains 186,876 forecast rows: 46,719 eligible tracts multiplied by two
+horizons and two supervised models. Its availability product contains 171,056 tract-horizon rows,
+with 93,438 available. The manifest has both expected components, and tract `01001020300` returns
+regularized-linear and gradient-boosted-tree forecasts at both one and three years. State trend is
+retained only as labeled baseline context.
+
+The canonical app was restarted after release activation. Final application deployment
+`01f1e6af5d19196980e82abe8deb8c4b` reached `SUCCEEDED`, with the app `RUNNING` and compute
+`ACTIVE`. An unauthenticated endpoint check reached the expected Databricks sign-in redirect. The
+Data Science Results page now uses the corrected job-606 figures. Authenticated browser review of
+the revised forecast cards, warnings, figures, and narrow layout remains a manual acceptance gate.
+
 ## Final analytical refresh verification
 
 On November 21, 2026, the corrected similarity chain refreshed jobs 501-604, published analogue

@@ -11,3 +11,5 @@
 Version 2 contains regularized-linear and gradient-boosted-tree specifications at both one and three years. State and county trends remain baseline evidence and do not appear as selected project models. Keeping the specifications as a table makes the model roles and settings auditable.
 
 Validation MAE values are cumulative log HPI change errors, not percentage-point errors. Later-period performance belongs in the evaluation scorecard and threshold table.
+
+The current table contains four rows under finalization run `29c68a5af1e74daab6e06ff7aa2aa9e9`: both models at both supported horizons.

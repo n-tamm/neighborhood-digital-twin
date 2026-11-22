@@ -86,5 +86,31 @@ nonlinear behavior, calibrated uncertainty ranges, and transparent baseline cont
 support an individual-home valuation, a forecast of all housing types, a causal claim about why a
 neighborhood changed, or an investment recommendation.
 
-The exact version-2 later-period metrics and serving counts must be added here after jobs 504, 605,
-606, and 701 complete successfully under the corrected two-model contract.
+## Later-period results
+
+Jobs 504 and 605 evaluated both frozen supervised specifications under finalization run
+`29c68a5af1e74daab6e06ff7aa2aa9e9`. Because these outcomes had been inspected during the earlier
+one-champion design, they are later-period evaluation evidence rather than a newly untouched model-
+selection test.
+
+| Horizon | Model | Observations | MAE | RMSE | Mean error | P90 absolute error | Interval coverage |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 1 year | Gradient-boosted trees | 42,082 | 0.0599 | 0.0788 | -0.0344 | 0.1248 | 89.4% |
+| 1 year | Regularized linear | 42,082 | 0.0632 | 0.0829 | -0.0379 | 0.1312 | 89.2% |
+| 3 years | Gradient-boosted trees | 45,887 | 0.0980 | 0.1241 | -0.0656 | 0.2001 | 94.3% |
+| 3 years | Regularized linear | 45,887 | 0.1087 | 0.1384 | -0.0803 | 0.2259 | 97.2% |
+
+Negative mean errors show that both models overpredicted average change in this later period. At
+one year, the tree narrowly beats zero change at 0.0627 but not state trend at 0.0592; the linear
+model is slightly worse than zero change and therefore carries a warning. At three years, both
+supervised models clearly beat zero change at 0.1566 and state trend at 0.2943. The tree has the
+lower MAE at both horizons, but both project models remain visible so their behavior and uncertainty
+can be compared.
+
+## Current serving result
+
+Job 701 activated forecast release `forecast-20261122T164538152848Z` under serving schema 2.0. It
+contains 186,876 forecast rows: 46,719 eligible tracts, two horizons, and two supervised models.
+The availability table contains 171,056 rows, one for each of 85,528 current profile tracts at both
+horizons; 93,438 tract-horizon rows are available. The manifest contains the expected two forecast
+components, and a representative tract returns all four model-horizon combinations.
