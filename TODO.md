@@ -158,3 +158,18 @@ serving, presentation, or metadata runs from it. The corrected canonical forecas
 later and superseded that result. Use the canonical maintainer profile, verify `bundle summary`,
 and invoke jobs by bundle key during the final similarity refresh. A future shared CI/CD bundle
 must bind the existing canonical resources before obsolete duplicate jobs are removed.
+
+The November 22 App Review 1 deployment used the canonical `team` bundle and changed only source
+files; it did not run or modify any pipeline job. Streamlit is now pinned to `1.55.0`, which removes
+the FastAPI/Starlette conflict seen with the unconstrained latest release. Deployment
+`01f1e670f3b71ea380273906be0b8dbf` is running successfully. Databricks still reports
+`Security scan failed: scanner run failed` without returning a vulnerability result. Databricks
+documents this beta scan as non-blocking and an incomplete run as unavailable. Review the app's
+Security tab, retry, or escalate the scan before final release; do not describe it as passed.
+
+The course-specification review still has four submission-level gates outside the implemented
+code: complete the final report and its team-contribution statement, select and integrate at least
+three generated figures with reconciled values, produce the three-to-five-minute video or poster,
+and publish the capstone-gallery post. The partner also needs to confirm the exact Copilot model
+and any exposed settings for the feature-ablation notebook. Repeat the secret, path, dependency,
+attribution, link, AI-disclosure, and clean-checkout audits after those final materials are added.

@@ -54,7 +54,7 @@ If the full pipeline is too large for a review run, include a small legally redi
 
 ## Current submission gaps
 
-The November 21, 2026 repository review found that the implementation evidence is substantially
+The November 22, 2026 repository review found that the implementation evidence is substantially
 in place, but the submission package is not yet complete:
 
 - the final written report has not been added, so its word count, integrated citations, three
@@ -66,10 +66,18 @@ in place, but the submission package is not yet complete:
   at least three of them in the report and reconcile every displayed value with the final releases;
 - one contributor-recorded Copilot use still needs the contributor to confirm the exact model and
   any available settings before the AI appendix is final; and
+- the Databricks application builds and runs, but its beta platform source scanner currently exits
+  with `scanner run failed` without producing a vulnerability result; Databricks treats an
+  incomplete scan as unavailable, so this cannot be treated as a clean security scan and should be
+  reviewed in the app Security tab, retried, or escalated before the final release; and
 - final unused-file, dependency/import, attribution, link, and clean-checkout reviews must be
   repeated after the report and presentation materials are assembled.
 
 The review found no committed credential or private key. It also removed saved notebook output
 that contained a personal absolute path and confirmed that the current tracked Python and notebook
-files contain the repository's required AI-assistance wording and a model label. This is a release
-checkpoint, not a substitute for repeating the checks after the last content change.
+files contain the repository's required AI-assistance wording and a model label. Streamlit was
+pinned to the locally and live-tested `1.55.0` release after an unconstrained upgrade introduced a
+Databricks base-image dependency conflict. The full suite passes with 160 tests, Ruff is clean,
+mypy passes for the 41 checked source modules, and the sample application renders headlessly on the
+pinned version. This is a release checkpoint, not a substitute for repeating the checks after the
+last content change.

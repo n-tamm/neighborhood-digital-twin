@@ -127,3 +127,40 @@ status `ACTIVE`. Its service principal has `CAN_USE` on one SQL warehouse and `S
 twelve named profile, geography, analogue, and forecast tables. It has no raw/model-table access
 and no write permission. Manual cross-browser, responsive-layout, and tract-by-tract content
 acceptance remain release gates for the team.
+
+## App Review 1 deployment verification
+
+On November 22, 2026, the first application-review changes were deployed from the canonical
+`team` bundle. Deployment `01f1e670f3b71ea380273906be0b8dbf` reached `SUCCEEDED`; the app
+returned to `RUNNING` with `ACTIVE` compute. The bundle deploy changed only source files and did
+not create, change, or delete a Databricks job or table resource.
+
+The live repository contract returned all 51 state or district rows and exposed both analogue
+and approved one-year forecast coverage. Michigan, for example, returned 2,972 current tracts,
+including 2,286 analogue-ready and 2,286 forecast-ready tracts. Oakland County returned 350 tract
+choices with population and both model-status fields. A full neighborhood load for tract
+`01001020300` independently selected analogue release
+`analogue-20261121T163609734965Z` and forecast release
+`forecast-20261119T172707640214Z`, with 20 analogue rows and one approved forecast row. This
+confirmed that the new browser fields did not mix releases or require access beyond the twelve
+named read-only tables.
+
+The optional address lookup was checked against the Census Geocoder with the Census Bureau's
+known address at 4600 Silver Hill Road. It resolved to 2020 tract `24033802405` and returned
+Suitland CDP, Prince George's County, Maryland as recognizable place context. The lookup still
+needs one manual submission from the authenticated Databricks app to verify application-runtime
+egress and the rendered privacy notice.
+
+Streamlit is pinned to `1.55.0` for reproducible deployment. Streamlit 1.60 and later install
+Starlette directly, which conflicted with the FastAPI version in the Databricks base image. The
+pinned release installed without a dependency conflict, passed the local 160-test suite and a
+headless sample render, and started successfully in Databricks. The eight Data Science images in
+the app were also checksum-matched to their governed report sources before deployment.
+
+Databricks still logs `Security scan failed: scanner run failed` while allowing the deployment to
+complete. [Databricks documents this beta scan](https://docs.databricks.com/aws/en/dev-tools/databricks-apps/security-scanning)
+as non-blocking and records a scan that cannot complete as unavailable rather than clean. This is
+therefore not a reported clean scan and not a reported vulnerability. Review the deployment's
+Security tab and retry or raise the platform issue before the final release is declared secure.
+Manual browser acceptance remains required for the address lookup, narrow layout, figure
+readability, empty states, and cross-browser behavior.
