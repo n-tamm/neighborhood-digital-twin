@@ -165,3 +165,16 @@ therefore not a reported clean scan and not a reported vulnerability. Review the
 Security tab and retry or raise the platform issue before the final release is declared secure.
 Manual browser acceptance remains required for the address lookup, narrow layout, figure
 readability, empty states, and cross-browser behavior.
+
+The tract-discovery follow-up deployed on November 22 as
+`01f1e67db64d1b1abeabb637ed7bfeef`. It reached `SUCCEEDED`, with the app `RUNNING` and compute
+`ACTIVE`. The canonical bundle uploaded source only and left all 34 declared Databricks resources
+unchanged. The current build log contains no package conflict or application startup exception;
+the beta source scanner remains unavailable with the same `scanner run failed` message.
+
+A direct read-only contract check returned 51 state or district summaries and confirmed zero
+approved three-year forecasts nationwide. The Oakland County check returned 350 current tract
+choices, 299 approved one-year forecasts, zero approved three-year forecasts, and display bounds
+for all 350 tracts. State, county, tract, and search queries all returned the new horizon-specific
+fields. This validates the data behind the new coverage cards, labels, and county tract-location
+map; manual browser review still needs to confirm the interaction and visual spacing.

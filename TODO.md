@@ -163,8 +163,9 @@ must bind the existing canonical resources before obsolete duplicate jobs are re
 
 The November 22 App Review 1 deployment used the canonical `team` bundle and changed only source
 files; it did not run or modify any pipeline job. Streamlit is now pinned to `1.55.0`, which removes
-the FastAPI/Starlette conflict seen with the unconstrained latest release. Deployment
-`01f1e670f3b71ea380273906be0b8dbf` is running successfully. Databricks still reports
+the FastAPI/Starlette conflict seen with the unconstrained latest release. The latest application
+deployment, `01f1e67db64d1b1abeabb637ed7bfeef`, is running successfully.
+Databricks still reports
 `Security scan failed: scanner run failed` without returning a vulnerability result. Databricks
 documents this beta scan as non-blocking and an incomplete run as unavailable. Review the app's
 Security tab, retry, or escalate the scan before final release; do not describe it as passed.
