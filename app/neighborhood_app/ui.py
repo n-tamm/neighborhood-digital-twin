@@ -80,6 +80,20 @@ def indexed_value_from_log_change(reference_value: Any, cumulative_log_change: A
     return float(reference_value) * math.exp(float(cumulative_log_change))
 
 
+def reference_amount_for_display(
+    value: Any,
+    *,
+    fallback: float = 300_000.0,
+    minimum: float = 50_000.0,
+    maximum: float = 5_000_000.0,
+) -> float:
+    """Return a bounded housing-value reference used only for app presentation."""
+
+    if value is None or pd.isna(value) or float(value) <= 0:
+        value = fallback
+    return min(max(float(value), minimum), maximum)
+
+
 def safe_float(value: Any, default: float = 0.0) -> float:
     """Convert a possibly missing display value without propagating NaN to HTML."""
 

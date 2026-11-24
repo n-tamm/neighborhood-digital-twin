@@ -221,3 +221,11 @@ Ruff, mypy, all 159 non-acquisition tests, and all four acquisition tests passed
 also verify that the live repository query contains no evaluation-threshold filter and retains a
 model row whose evaluation flag is false. Manual browser review is still required for the chart's
 axis spacing, responsive layout, wording, and usefulness of the dollar illustration.
+
+The follow-up visual refinement deployed as `01f1e825ae051b3d8e025b0c0193f5ce`. It reached
+`SUCCEEDED`, with the app `RUNNING`, compute `ACTIVE`, and all 34 bundle resources unchanged. The
+forecast chart now reserves space for a bordered, three-series legend below the plot. The Overview
+HPI chart retains observed index values on the left and adds a display-only right axis anchored to
+the ACS median owner-occupied value at the latest observed HPI point. The Forecast tab now explains
+the 90% split-conformal basis and reports calibration sample counts. Application logs show a normal
+restart with no startup exception; manual visual review remains the acceptance gate.

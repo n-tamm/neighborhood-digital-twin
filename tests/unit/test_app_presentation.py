@@ -30,6 +30,7 @@ from neighborhood_app.ui import (
     format_square_miles,
     indexed_value_from_log_change,
     place_label,
+    reference_amount_for_display,
     selected_geoid_from_map_event,
     selected_rank_from_table_event,
     selected_state_from_map_event,
@@ -51,10 +52,18 @@ def test_hpi_chart_does_not_plot_unavailable_observations() -> None:
         }
     )
 
-    figure = hpi_history_figure(history)
+    figure = hpi_history_figure(history, reference_value=300_000)
 
     assert list(figure.data[0].x) == [2022, 2024]
     assert list(figure.data[0].y) == [200.0, 225.0]
+    assert list(figure.data[0].customdata[:, 0]) == pytest.approx(
+        [266_666.67, 300_000.0], abs=0.01
+    )
+    assert len(figure.data) == 2
+    assert figure.data[1].yaxis == "y2"
+    assert not figure.data[1].showlegend
+    assert figure.layout.yaxis2.title.text == "Illustrative dollar scale (anchored to 2024)"
+    assert figure.layout.yaxis2.tickprefix == "$"
 
 
 def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
@@ -93,8 +102,16 @@ def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
     assert all(len(trace.error_y.arrayminus) == 2 for trace in figure.data[:2])
     assert list(figure.data[2].x) == ["1-year\nthrough 2026", "3-year\nthrough 2028"]
     assert figure.layout.margin.l == 92
+    assert figure.layout.margin.b == 112
     assert figure.layout.yaxis.automargin
     assert figure.layout.yaxis.title.text == "Estimated HPI change through target year"
+    assert figure.layout.legend.title.text == "Chart key"
+    assert figure.layout.legend.y < 0
+    assert {trace.name for trace in figure.data} == {
+        "Regularized linear",
+        "Gradient-boosted trees",
+        "State-trend baseline",
+    }
 
 
 def test_validation_chart_keeps_supervised_models_and_baselines_visible() -> None:
@@ -139,6 +156,9 @@ def test_hpi_display_translations_do_not_change_the_model_scale() -> None:
     assert cumulative_percent_from_log_change(0.0953101798) == pytest.approx(10.0)
     assert indexed_value_from_log_change(250_000, 0.0953101798) == pytest.approx(275_000)
     assert indexed_value_from_log_change(None, 0.1) is None
+    assert reference_amount_for_display(None) == 300_000
+    assert reference_amount_for_display(10_000) == 50_000
+    assert reference_amount_for_display(7_000_000) == 5_000_000
 
 
 def test_context_map_combines_visible_point_with_boundary_context() -> None:

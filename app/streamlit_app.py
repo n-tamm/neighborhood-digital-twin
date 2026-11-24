@@ -38,6 +38,7 @@ from neighborhood_app.ui import (
     indexed_value_from_log_change,
     metric_card,
     place_label,
+    reference_amount_for_display,
     safe_float,
     selected_geoid_from_map_event,
     selected_rank_from_table_event,
@@ -172,16 +173,21 @@ def render_overview(data: NeighborhoodData) -> None:
         )
 
     st.markdown("#### Observed single-family housing-market history")
+    history_reference = reference_amount_for_display(
+        profile.get("median_owner_occupied_value_estimate")
+    )
     st.plotly_chart(
-        hpi_history_figure(data.history),
+        hpi_history_figure(data.history, reference_value=history_reference),
         width="stretch",
         key="overview_hpi_history",
         config={"displayModeBar": False},
     )
     st.caption(
-        "FHFA tract HPI is an index of single-family price movement. It is not an individual home "
-        "value or a measure of multifamily prices. Missing annual observations are not "
-        "interpolated."
+        f"The left axis is observed FHFA tract HPI. The right axis is display-only dollar context: "
+        f"it anchors the latest observed HPI point to the ACS median owner-occupied value "
+        f"({format_currency(history_reference)}) and scales earlier index values proportionally. "
+        "It is not a record of local sale prices, an individual-home value, or a multifamily "
+        "measure. Missing annual HPI observations are not interpolated."
     )
 
 
@@ -304,10 +310,9 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     )
 
     st.markdown("#### Put the HPI forecast in dollar context")
-    default_reference = profile.get("median_owner_occupied_value_estimate")
-    if default_reference is None or pd.isna(default_reference) or float(default_reference) <= 0:
-        default_reference = 300_000.0
-    default_reference = min(max(float(default_reference), 50_000.0), 5_000_000.0)
+    default_reference = reference_amount_for_display(
+        profile.get("median_owner_occupied_value_estimate")
+    )
     reference_value = st.number_input(
         "Reference amount for illustration",
         min_value=50_000,
@@ -344,15 +349,46 @@ def render_forecast_status(data: NeighborhoodData) -> None:
                         reference_value, row["prediction_cumulative_log_change"]
                     )
                 ),
-                "Illustrative range": f"{lower_amount} to {upper_amount}",
+                "Illustrative 90% model range": f"{lower_amount} to {upper_amount}",
             }
         )
     st.dataframe(pd.DataFrame(translated_rows), hide_index=True, width="stretch")
     st.caption(
-        "Illustration only: this applies the tract HPI change to a reference amount so the scale "
-        "is easier to understand. It does not estimate a specific property's future value and "
-        "does not change the underlying model result."
+        "The point amount applies the model's cumulative tract-HPI change to the reference amount. "
+        "The range applies that same dollar translation to the model's lower and upper 90% "
+        "split-conformal bounds. It does not change the underlying model result."
     )
+
+    with st.expander("How is the 90% model range calculated?"):
+        st.markdown(
+            "Each frozen model and forecast horizon has its own range. The model was scored on "
+            "a reserved historical calibration period, and the finite-sample 90th percentile of "
+            "its absolute tract-level errors became the amount added to and subtracted from the "
+            "current point forecast. The dollar range above simply applies those HPI bounds to "
+            "the selected reference amount. It reflects historical model error, not uncertainty "
+            "about an individual property, and it cannot account for every future shock."
+        )
+        calibration_rows = (
+            data.forecasts.drop_duplicates(["model_name", "horizon_years"])
+            .sort_values(["horizon_years", "model_name"])
+        )
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Horizon": f"{int(row['horizon_years'])} year",
+                        "Model": model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                        "Calibration tracts": format_integer(
+                            row["calibration_observation_count"]
+                        ),
+                        "Target coverage": f"{float(row['nominal_coverage']):.0%}",
+                    }
+                    for _, row in calibration_rows.iterrows()
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
 
     with st.expander("How did the models perform in later testing?"):
         evaluation_rows = []

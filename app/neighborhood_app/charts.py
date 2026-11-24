@@ -183,22 +183,77 @@ def housing_mix_figure(profile: Mapping[str, Any]) -> go.Figure:
     return _layout(figure, height=235, margin_top=8)
 
 
-def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
-    """Plot observed FHFA single-family HPI without filling unavailable years."""
+def hpi_history_figure(
+    history: pd.DataFrame,
+    *,
+    reference_value: float | None = None,
+) -> go.Figure:
+    """Plot observed FHFA HPI with an optional display-only dollar scale."""
 
     available = history.loc[history["hpi_available"].fillna(False)].copy()
     figure = go.Figure()
+    hovertemplate = "%{x}: HPI %{y:.1f}<extra></extra>"
+    customdata = None
+    latest_year: int | None = None
+    hpi_upper: float | None = None
+    value_upper: float | None = None
+    if not available.empty and reference_value is not None and reference_value > 0:
+        latest = available.sort_values("observation_year").iloc[-1]
+        latest_hpi = float(latest["hpi"])
+        latest_year = int(latest["observation_year"])
+        if latest_hpi > 0:
+            scale = float(reference_value) / latest_hpi
+            available["illustrative_value"] = available["hpi"].astype(float) * scale
+            customdata = available[["illustrative_value"]]
+            hovertemplate = (
+                "%{x}: HPI %{y:.1f}<br>"
+                "Illustrative dollar context %{customdata[0]:$,.0f}<extra></extra>"
+            )
+            hpi_upper = float(available["hpi"].max()) * 1.08
+            value_upper = hpi_upper * scale
     figure.add_scatter(
         x=available["observation_year"],
         y=available["hpi"],
         mode="lines+markers",
         line={"color": NAVY, "width": 3},
         marker={"color": TEAL, "size": 7, "line": {"color": SURFACE, "width": 1}},
-        hovertemplate="%{x}: HPI %{y:.1f}<extra></extra>",
+        customdata=customdata,
+        hovertemplate=hovertemplate,
+        name="Observed FHFA HPI",
     )
     figure.update_xaxes(showgrid=False, title=None, dtick=2)
-    figure.update_yaxes(gridcolor=GRID, title="FHFA HPI", rangemode="tozero")
-    return _layout(figure, height=330)
+    figure.update_yaxes(
+        gridcolor=GRID,
+        title="Observed FHFA HPI",
+        rangemode="tozero",
+        range=[0, hpi_upper] if hpi_upper is not None else None,
+        automargin=True,
+    )
+    if value_upper is not None and latest_year is not None:
+        figure.add_scatter(
+            x=available["observation_year"],
+            y=available["illustrative_value"],
+            yaxis="y2",
+            mode="lines",
+            line={"color": "rgba(0,0,0,0)", "width": 0},
+            hoverinfo="skip",
+            showlegend=False,
+            name="Illustrative dollar scale",
+        )
+        figure.update_layout(
+            yaxis2={
+                "title": f"Illustrative dollar scale (anchored to {latest_year})",
+                "overlaying": "y",
+                "side": "right",
+                "range": [0, value_upper],
+                "tickprefix": "$",
+                "tickformat": ",.0f",
+                "showgrid": False,
+                "zeroline": False,
+                "automargin": True,
+            }
+        )
+    return _layout(figure, height=350, margin_left=76, margin_right=116)
 
 
 def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
@@ -287,7 +342,17 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
     figure.update_layout(
         barmode="group",
         showlegend=True,
-        legend={"orientation": "h", "y": 1.16, "x": 0},
+        legend={
+            "orientation": "h",
+            "y": -0.22,
+            "yanchor": "top",
+            "x": 0.5,
+            "xanchor": "center",
+            "title": {"text": "Chart key"},
+            "bgcolor": SURFACE,
+            "bordercolor": GRID,
+            "borderwidth": 1,
+        },
         title={
             "text": "How much could the tract-level housing price index change?",
             "x": 0,
@@ -297,9 +362,9 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
     )
     return _layout(
         figure,
-        height=430,
-        margin_top=78,
-        margin_bottom=55,
+        height=485,
+        margin_top=72,
+        margin_bottom=112,
         margin_left=92,
         margin_right=28,
     )

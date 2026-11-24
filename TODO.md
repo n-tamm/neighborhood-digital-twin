@@ -100,6 +100,9 @@ remains historical context and a secondary estimate.
 - A display-only dollar illustration applies the modeled tract-HPI change to a user-controlled
   reference amount. It does not change the forecast target, model output, evaluation, or Data
   Science Results tab and is not an individual-home valuation.
+- The Overview HPI chart retains the observed FHFA index on its left axis and adds a display-only
+  dollar scale on the right. The scale anchors the latest observed HPI point to the ACS median
+  owner-occupied value and must not be described as observed prices or an appraisal.
 - Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
   visible points at national extent and canonical tract outlines at local extent.
 - App Review 1 changes are implemented on the application branch: all browser counts use readable
@@ -177,3 +180,9 @@ only application source. Deployment `01f1e823150819fea9f447a301cce5ab` succeeded
 `RUNNING`, compute `ACTIVE`, and all 34 declared resources unchanged. The repository query has no
 evaluation-threshold filter: weak published model results remain present. Manual browser review of
 the revised comparison chart and display-only dollar illustration is the next acceptance gate.
+
+The legend, interval explanation, and Overview dollar-scale follow-up is live as deployment
+`01f1e825ae051b3d8e025b0c0193f5ce`. It also changed only application source and left all 34
+resources unchanged. Manual review should confirm that all three forecast series are obvious
+without hovering and that the secondary Overview axis remains readable without implying observed
+or predicted property prices.
