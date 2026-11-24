@@ -121,10 +121,25 @@ def _selected_geometry_frame(
     )
 
 
-def _layout(figure: go.Figure, *, height: int, margin_top: int = 35) -> go.Figure:
+def _layout(
+    figure: go.Figure,
+    *,
+    height: int,
+    margin_top: int = 35,
+    margin_bottom: int = 24,
+    margin_left: int = 18,
+    margin_right: int = 18,
+) -> go.Figure:
+    """Apply shared chart styling while allowing room for readable axis labels."""
+
     figure.update_layout(
         height=height,
-        margin={"l": 18, "r": 18, "t": margin_top, "b": 24},
+        margin={
+            "l": margin_left,
+            "r": margin_right,
+            "t": margin_top,
+            "b": margin_bottom,
+        },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font={"family": "Inter, ui-sans-serif, system-ui", "color": TEXT},
@@ -187,7 +202,7 @@ def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
 
 
 def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
-    """Compare both supervised forecasts, model-specific intervals, and a state baseline."""
+    """Compare cumulative model forecasts, ranges, and the state baseline by horizon."""
 
     figure = go.Figure()
     if forecasts.empty:
@@ -200,62 +215,94 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
     ordered["model_label"] = ordered["model_name"].map(model_labels).fillna(
         ordered["model_name"]
     )
-    ordered["result_label"] = ordered.apply(
-        lambda row: f"{int(row['horizon_years'])}-year · {row['model_label']}", axis=1
+    ordered["horizon_label"] = ordered.apply(
+        lambda row: f"{int(row['horizon_years'])}-year\nthrough {int(row['target_end_year'])}",
+        axis=1,
     )
-    point = ordered["prediction_annualized_change_pct"].astype(float)
-    lower = ordered["prediction_lower_annualized_change_pct"].astype(float)
-    upper = ordered["prediction_upper_annualized_change_pct"].astype(float)
+    for column in (
+        "prediction_cumulative_log_change",
+        "prediction_lower_cumulative_log_change",
+        "prediction_upper_cumulative_log_change",
+        "baseline_prediction_cumulative_log_change",
+    ):
+        ordered[f"{column}_pct"] = ordered[column].astype(float).map(math.expm1) * 100.0
+    model_colors = {
+        "regularized_linear": NAVY,
+        "gradient_boosted_trees": TEAL,
+    }
+    for model_name, model_label in model_labels.items():
+        model_rows = ordered.loc[ordered["model_name"] == model_name].sort_values(
+            "horizon_years"
+        )
+        point = model_rows["prediction_cumulative_log_change_pct"]
+        lower = model_rows["prediction_lower_cumulative_log_change_pct"]
+        upper = model_rows["prediction_upper_cumulative_log_change_pct"]
+        figure.add_bar(
+            x=model_rows["horizon_label"],
+            y=point,
+            name=model_label,
+            marker_color=model_colors[model_name],
+            error_y={
+                "type": "data",
+                "symmetric": False,
+                "array": upper - point,
+                "arrayminus": point - lower,
+                "color": TEAL_LIGHT,
+                "thickness": 3,
+                "width": 7,
+            },
+            customdata=model_rows[
+                [
+                    "prediction_lower_cumulative_log_change_pct",
+                    "prediction_upper_cumulative_log_change_pct",
+                    "prediction_annualized_change_pct",
+                    "target_end_year",
+                ]
+            ],
+            hovertemplate=(
+                "%{y:+.1f}% estimated total HPI change<br>"
+                "%{customdata[0]:+.1f}% to %{customdata[1]:+.1f}% model range<br>"
+                "%{customdata[2]:.1f}% average per year through %{customdata[3]}"
+                f"<extra>{model_label}</extra>"
+            ),
+        )
+    baseline = ordered.drop_duplicates("horizon_years").sort_values("horizon_years")
     figure.add_scatter(
-        x=point,
-        y=ordered["result_label"],
-        mode="markers",
-        marker={"size": 13, "color": TEAL, "line": {"color": TEXT, "width": 1}},
-        error_x={
-            "type": "data",
-            "symmetric": False,
-            "array": upper - point,
-            "arrayminus": point - lower,
-            "color": TEAL_LIGHT,
-            "thickness": 4,
-            "width": 8,
-        },
-        customdata=ordered[
-            [
-                "prediction_lower_annualized_change_pct",
-                "prediction_upper_annualized_change_pct",
-                "target_end_year",
-                "model_name",
-            ]
-        ],
-        hovertemplate=(
-            "Annualized forecast %{x:.1f}%<br>"
-            "%{customdata[0]:.1f}% to %{customdata[1]:.1f}% interval<br>"
-            "Through %{customdata[2]} · %{customdata[3]}<extra>Model forecast</extra>"
-        ),
-        name="Forecast and calibrated interval",
-    )
-    figure.add_scatter(
-        x=ordered["baseline_prediction_annualized_change_pct"],
-        y=ordered["result_label"],
+        x=baseline["horizon_label"],
+        y=baseline["baseline_prediction_cumulative_log_change_pct"],
         mode="markers",
         marker={"size": 11, "color": GOLD, "symbol": "diamond"},
-        hovertemplate="State-trend baseline %{x:.1f}%<extra>Baseline</extra>",
+        hovertemplate="%{y:+.1f}% state-trend change<extra>Baseline context</extra>",
         name="State-trend baseline",
     )
-    figure.add_vline(x=0, line_color=MUTED, line_width=1)
-    figure.update_xaxes(
-        title="Annualized FHFA HPI change",
+    figure.add_hline(y=0, line_color=MUTED, line_width=1)
+    figure.update_xaxes(title=None, showgrid=False, automargin=True)
+    figure.update_yaxes(
+        title="Estimated HPI change through target year",
         ticksuffix="%",
         gridcolor=GRID,
         zeroline=False,
+        automargin=True,
     )
-    figure.update_yaxes(title=None, showgrid=False, categoryorder="array")
     figure.update_layout(
+        barmode="group",
         showlegend=True,
-        legend={"orientation": "h", "y": -0.28, "x": 0},
+        legend={"orientation": "h", "y": 1.16, "x": 0},
+        title={
+            "text": "How much could the tract-level housing price index change?",
+            "x": 0,
+            "xanchor": "left",
+            "font": {"size": 16},
+        },
     )
-    return _layout(figure, height=340, margin_top=12)
+    return _layout(
+        figure,
+        height=430,
+        margin_top=78,
+        margin_bottom=55,
+        margin_left=92,
+        margin_right=28,
+    )
 
 
 def forecast_validation_comparison_figure(scorecard: pd.DataFrame) -> go.Figure:

@@ -64,7 +64,7 @@ Before calling an app revision complete, check:
    and path, and the forecast tables share their own complete release ID;
 5. all ten live matches appear even though the local fixture contains only one;
 6. no analogue outcome or trend baseline is described as the selected tract's supervised
-   forecast, and weak model results remain visible with their evaluation warnings;
+   forecast, and weak model results remain visible with their evaluation details;
 7. desktop and narrow layouts retain readable titles, legends, tables, and caveats; and
 8. the service principal has no write permission and no access to raw or modeling tables.
 
@@ -200,3 +200,24 @@ choices, 299 version-1 one-year forecasts, no three-year forecasts, and display 
 for all 350 tracts. State, county, tract, and search queries all returned the new horizon-specific
 fields. This validates the data behind the new coverage cards, labels, and county tract-location
 map; manual browser review still needs to confirm the interaction and visual spacing.
+
+## Forecast usability review deployment
+
+On November 24, 2026, the Forecast tab was revised without changing or rerunning either forecasting
+model. Deployment `01f1e823150819fea9f447a301cce5ab` reached `SUCCEEDED`; the app is `RUNNING`
+with `ACTIVE` compute. The canonical bundle uploaded source only and left all 34 Databricks
+resources unchanged. The current application log shows a normal Streamlit restart with no startup
+exception.
+
+The revised screen shows cumulative percentage change for both supervised models at both published
+horizons, places calibrated ranges directly on a grouped comparison chart, and keeps state trend
+visually separate as baseline context. Failed evaluation checks no longer create repeated warning
+boxes, and they never filter a model result. Evaluation details remain available in one optional
+table. A display-only dollar illustration can apply the tract-HPI change to a user-controlled
+reference amount; it is explicitly not an individual-property valuation and does not change any
+model output or evaluation result.
+
+Ruff, mypy, all 159 non-acquisition tests, and all four acquisition tests passed. Automated tests
+also verify that the live repository query contains no evaluation-threshold filter and retains a
+model row whose evaluation flag is false. Manual browser review is still required for the chart's
+axis spacing, responsive layout, wording, and usefulness of the dollar illustration.

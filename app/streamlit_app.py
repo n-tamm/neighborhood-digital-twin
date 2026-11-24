@@ -29,10 +29,13 @@ from neighborhood_app.data import AppSettings, NeighborhoodData, create_reposito
 from neighborhood_app.geocoding import lookup_census_tract
 from neighborhood_app.ui import (
     apply_styles,
+    cumulative_percent_from_log_change,
     format_currency,
     format_integer,
     format_percent,
+    format_signed_percent,
     format_square_miles,
+    indexed_value_from_log_change,
     metric_card,
     place_label,
     safe_float,
@@ -183,16 +186,28 @@ def render_overview(data: NeighborhoodData) -> None:
 
 
 def render_forecast_status(data: NeighborhoodData) -> None:
-    """Render both supervised forecasts or an explicit data-availability boundary."""
+    """Render both model forecasts with plain-language context and optional detail."""
 
     profile = data.profile
-    st.subheader("Forecast model")
+    st.subheader("Housing market forecast")
     if data.forecasts.empty:
+        reason_labels = {
+            "not_in_model_ready_cohort": (
+                "The tract does not have the complete FHFA history and point-in-time features "
+                "required by both forecasting models."
+            ),
+            "both_model_predictions_not_published": (
+                "A complete pair of model results was not published for this tract."
+            ),
+            "No availability record was published": (
+                "No forecast availability record was published for this tract."
+            ),
+        }
         if not data.forecast_release:
-            boundary_title = "Forecast serving output is not published yet."
+            boundary_title = "Forecast data is not loaded in this app mode."
             boundary_text = (
-                "This data mode does not contain an activated forecast release. The local "
-                "sample fixture intentionally omits production forecasts."
+                "The local sample demonstrates the interface but does not include the production "
+                "forecast release."
             )
         else:
             reasons = (
@@ -200,14 +215,14 @@ def render_forecast_status(data: NeighborhoodData) -> None:
                 if not data.forecast_availability.empty
                 else ["No availability record was published"]
             )
-            boundary_title = "Forecasts are unavailable for this tract."
-            boundary_text = "Reason: " + ", ".join(reasons) + "."
+            boundary_title = "Model forecasts are not available for this tract."
+            boundary_text = " ".join(reason_labels.get(reason, reason) for reason in reasons)
         st.markdown(
             f"""
             <div class="model-boundary">
               <strong>{boundary_title}</strong><br>
-              {boundary_text} This application will not substitute a baseline or historical
-              analogue outcome for the two supervised forecasting models.
+              {boundary_text} This is a data-availability limit, not a decision to hide a model
+              because it performed poorly.
             </div>
             """,
             unsafe_allow_html=True,
@@ -220,21 +235,24 @@ def render_forecast_status(data: NeighborhoodData) -> None:
             ),
             status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
             status_badge(
-                "Current forecast candidate", available=bool(profile.get("forecast_candidate"))
+                "Complete forecast inputs", available=bool(profile.get("forecast_candidate"))
             ),
         ]
         st.markdown(" ".join(readiness), unsafe_allow_html=True)
+        st.caption(
+            "The neighborhood profile and any observed HPI history remain available on the "
+            "Overview tab. The app does not replace a missing model forecast with a baseline."
+        )
         return
 
     forecast_as_of_year = int(data.forecasts["forecast_origin_year"].max())
     st.markdown(
         f"""
         <div class="model-boundary">
-          <strong>Regularized-linear and gradient-boosted-tree forecasts as of
+          <strong>Two model views of tract-level single-family HPI change from
           {forecast_as_of_year}.</strong><br>
-          Both models forecast FHFA single-family tract HPI at one and three years. Their point
-          estimates and intervals are model results, not individual-home valuations, multifamily
-          forecasts, or investment ratings.
+          Every published linear and gradient-boosted-tree result is shown. Model evaluation does
+          not remove a forecast from this page.
         </div>
         """,
         unsafe_allow_html=True,
@@ -247,20 +265,32 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     cards = st.columns(len(horizons))
     for card, horizon_years in zip(cards, horizons, strict=True):
         with card:
-            st.markdown(f"#### {horizon_years}-year horizon")
             horizon_rows = data.forecasts.loc[
                 data.forecasts["horizon_years"] == horizon_years
             ].sort_values("model_name")
+            target_end_year = int(horizon_rows["target_end_year"].iloc[0])
+            st.markdown(f"#### {horizon_years}-year outlook · through {target_end_year}")
             for _, row in horizon_rows.iterrows():
+                cumulative_change = cumulative_percent_from_log_change(
+                    row["prediction_cumulative_log_change"]
+                )
+                lower_change = cumulative_percent_from_log_change(
+                    row["prediction_lower_cumulative_log_change"]
+                )
+                upper_change = cumulative_percent_from_log_change(
+                    row["prediction_upper_cumulative_log_change"]
+                )
                 metric_card(
                     model_labels.get(str(row["model_name"]), str(row["model_name"])),
-                    format_percent(row["prediction_annualized_change_pct"]),
+                    format_signed_percent(cumulative_change),
                     (
-                        f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
-                        f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
-                        f"through {int(row['target_end_year'])}"
+                        f"{format_percent(row['prediction_annualized_change_pct'])} average per "
+                        f"year · range {format_signed_percent(lower_change)} to "
+                        f"{format_signed_percent(upper_change)}"
                     ),
                 )
+
+    st.markdown("#### Compare the model estimates")
     st.plotly_chart(
         forecast_interval_figure(data.forecasts),
         width="stretch",
@@ -268,32 +298,107 @@ def render_forecast_status(data: NeighborhoodData) -> None:
         config={"displayModeBar": False},
     )
     st.caption(
-        "The diamond is the state-trend baseline. The interval is calibrated from a reserved "
-        "historical year and then evaluated on a later locked test; it is not a guarantee."
+        "Bars show estimated total HPI change through each target year. Thin lines show each "
+        "model's calibrated range. The gold diamond is the state-trend baseline for context. "
+        "None of these values is an individual-home appraisal."
     )
-    warnings = data.forecasts.loc[
-        ~data.forecasts["meets_evaluation_thresholds"].fillna(False)
-    ].drop_duplicates(["model_name", "horizon_years"])
-    for _, row in warnings.sort_values(["horizon_years", "model_name"]).iterrows():
-        model_label = model_labels.get(str(row["model_name"]), str(row["model_name"]))
-        st.warning(
-            f"Evaluation warning: the {model_label} {int(row['horizon_years'])}-year result "
-            f"did not meet every predeclared benchmark. Its later-period MAE was "
-            f"{float(row['model_mae_log_change']):.3f}, compared with "
-            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its interval "
-            f"covered {float(row['empirical_interval_coverage']):.1%} of outcomes. The result is "
-            "shown for transparency; the baseline does not replace it."
+
+    st.markdown("#### Put the HPI forecast in dollar context")
+    default_reference = profile.get("median_owner_occupied_value_estimate")
+    if default_reference is None or pd.isna(default_reference) or float(default_reference) <= 0:
+        default_reference = 300_000.0
+    default_reference = min(max(float(default_reference), 50_000.0), 5_000_000.0)
+    reference_value = st.number_input(
+        "Reference amount for illustration",
+        min_value=50_000,
+        max_value=5_000_000,
+        value=int(round(float(default_reference) / 1_000) * 1_000),
+        step=10_000,
+        help=(
+            "The starting value defaults to the ACS median owner-occupied value when available. "
+            "It is not a model input."
+        ),
+        key=f"forecast_reference_value_{profile.get('geoid_2020', 'selected')}",
+    )
+    translated_rows = []
+    for _, row in data.forecasts.sort_values(["horizon_years", "model_name"]).iterrows():
+        lower_amount = format_currency(
+            indexed_value_from_log_change(
+                reference_value, row["prediction_lower_cumulative_log_change"]
+            )
         )
-    first = data.forecasts.sort_values("horizon_years").iloc[0]
-    st.markdown("#### What drives the model")
-    st.write(str(first["driver_summary"]))
-    st.info(
-        "Historical analogues remain a separate evidence source. Their observed later outcomes "
-        "do not set or widen this forecast interval."
+        upper_amount = format_currency(
+            indexed_value_from_log_change(
+                reference_value, row["prediction_upper_cumulative_log_change"]
+            )
+        )
+        translated_rows.append(
+            {
+                "Horizon": f"{int(row['horizon_years'])} year",
+                "Model": model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                "Estimated market change": format_signed_percent(
+                    cumulative_percent_from_log_change(row["prediction_cumulative_log_change"])
+                ),
+                "Illustrative end amount": format_currency(
+                    indexed_value_from_log_change(
+                        reference_value, row["prediction_cumulative_log_change"]
+                    )
+                ),
+                "Illustrative range": f"{lower_amount} to {upper_amount}",
+            }
+        )
+    st.dataframe(pd.DataFrame(translated_rows), hide_index=True, width="stretch")
+    st.caption(
+        "Illustration only: this applies the tract HPI change to a reference amount so the scale "
+        "is easier to understand. It does not estimate a specific property's future value and "
+        "does not change the underlying model result."
     )
+
+    with st.expander("How did the models perform in later testing?"):
+        evaluation_rows = []
+        evaluation = data.forecasts.drop_duplicates(["model_name", "horizon_years"]).sort_values(
+            ["horizon_years", "model_name"]
+        )
+        for _, row in evaluation.iterrows():
+            warning_labels = {
+                "insufficient_later_period_observations": "Limited later-period sample",
+                "worse_than_zero_change_mae": "Did not beat zero change",
+                "interval_coverage_below_threshold": "Range coverage was below the project target",
+            }
+            warning_reasons = str(row.get("evaluation_warning_reason", "")).split(";")
+            status = "Met the project checks"
+            if not bool(row["meets_evaluation_thresholds"]):
+                status = "; ".join(
+                    warning_labels[reason]
+                    for reason in warning_reasons
+                    if reason in warning_labels
+                ) or "Shown with an evaluation note"
+            evaluation_rows.append(
+                {
+                    "Horizon": f"{int(row['horizon_years'])} year",
+                    "Model": model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                    "Later-period MAE": f"{float(row['model_mae_log_change']):.3f}",
+                    "Zero-change MAE": f"{float(row['zero_change_mae_log_change']):.3f}",
+                    "Interval coverage": f"{float(row['empirical_interval_coverage']):.1%}",
+                    "Evaluation note": status,
+                }
+            )
+        st.dataframe(pd.DataFrame(evaluation_rows), hide_index=True, width="stretch")
+        st.caption(
+            "These checks describe later-period performance. They do not determine which model "
+            "results are displayed above. Lower MAE is better."
+        )
+
+    first = data.forecasts.sort_values("horizon_years").iloc[0]
+    with st.expander("What information influences the models?"):
+        st.write(str(first["driver_summary"]))
+        st.caption(
+            "This is a global model finding, not a causal explanation for the selected tract. "
+            "Historical analogues are a separate source of evidence."
+        )
     st.caption(
         f"Forecast release {data.forecast_release.get('serving_release_id', 'unavailable')} · "
-        "models regularized_linear and gradient_boosted_trees · "
+        "regularized linear and gradient-boosted trees · "
         f"nominal interval coverage {float(first['nominal_coverage']):.0%}"
     )
 

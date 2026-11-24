@@ -22,10 +22,13 @@ from neighborhood_app.charts import (
     state_browser_map_figure,
 )
 from neighborhood_app.ui import (
+    cumulative_percent_from_log_change,
     format_currency,
     format_integer,
     format_percent,
+    format_signed_percent,
     format_square_miles,
+    indexed_value_from_log_change,
     place_label,
     selected_geoid_from_map_event,
     selected_rank_from_table_event,
@@ -70,22 +73,28 @@ def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
             "prediction_annualized_change_pct": [2.0, 2.4, 3.0, 3.3],
             "prediction_lower_annualized_change_pct": [-1.0, -0.5, 0.5, 0.8],
             "prediction_upper_annualized_change_pct": [5.0, 5.2, 5.5, 5.8],
+            "prediction_cumulative_log_change": [0.0198, 0.0237, 0.0862, 0.0959],
+            "prediction_lower_cumulative_log_change": [-0.0101, -0.0050, 0.0149, 0.0237],
+            "prediction_upper_cumulative_log_change": [0.0488, 0.0507, 0.1522, 0.1648],
             "baseline_prediction_annualized_change_pct": [1.5, 1.5, 1.8, 1.8],
+            "baseline_prediction_cumulative_log_change": [0.0149, 0.0149, 0.0525, 0.0525],
         }
     )
 
     figure = forecast_interval_figure(forecasts)
 
-    assert len(figure.data) == 2
-    assert len(figure.data[0].x) == 4
-    assert set(figure.data[0].y) == {
-        "1-year · Regularized linear",
-        "1-year · Gradient-boosted trees",
-        "3-year · Regularized linear",
-        "3-year · Gradient-boosted trees",
+    assert len(figure.data) == 3
+    assert [trace.type for trace in figure.data] == ["bar", "bar", "scatter"]
+    assert {trace.name for trace in figure.data[:2]} == {
+        "Regularized linear",
+        "Gradient-boosted trees",
     }
-    assert len(figure.data[0].error_x.arrayminus) == 4
-    assert list(figure.data[1].x).count(1.5) == 2
+    assert all(len(trace.y) == 2 for trace in figure.data[:2])
+    assert all(len(trace.error_y.arrayminus) == 2 for trace in figure.data[:2])
+    assert list(figure.data[2].x) == ["1-year\nthrough 2026", "3-year\nthrough 2028"]
+    assert figure.layout.margin.l == 92
+    assert figure.layout.yaxis.automargin
+    assert figure.layout.yaxis.title.text == "Estimated HPI change through target year"
 
 
 def test_validation_chart_keeps_supervised_models_and_baselines_visible() -> None:
@@ -118,8 +127,18 @@ def test_formatters_preserve_interpretable_units() -> None:
     assert format_integer(85528) == "85,528"
     assert format_percent(0.66559, value_is_share=True) == "66.6%"
     assert format_percent(3.24) == "3.2%"
+    assert format_signed_percent(-3.24) == "-3.2%"
     assert format_square_miles(2_589_988.110336) == "1.0 sq mi"
     assert format_currency(None) == "Not available"
+
+
+def test_hpi_display_translations_do_not_change_the_model_scale() -> None:
+    """Display helpers should translate log change without altering a model prediction."""
+
+    assert cumulative_percent_from_log_change(0.0) == pytest.approx(0.0)
+    assert cumulative_percent_from_log_change(0.0953101798) == pytest.approx(10.0)
+    assert indexed_value_from_log_change(250_000, 0.0953101798) == pytest.approx(275_000)
+    assert indexed_value_from_log_change(None, 0.1) is None
 
 
 def test_context_map_combines_visible_point_with_boundary_context() -> None:
@@ -366,6 +385,6 @@ def test_streamlit_app_starts_in_explicit_sample_mode(monkeypatch: pytest.Monkey
     assert not app.exception
     assert app.title[0].value.startswith("A neighborhood’s history")
     assert any(
-        "Forecast serving output is not published yet" in item.value for item in app.markdown
+        "Forecast data is not loaded in this app mode" in item.value for item in app.markdown
     )
     assert "Data Science Results" in [tab.label for tab in app.tabs]

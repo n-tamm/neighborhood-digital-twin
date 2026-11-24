@@ -47,11 +47,20 @@ housing stock.
 
 ### Forecast
 
-The forecast screen shows regularized-linear and gradient-boosted-tree point estimates at one and
-three years, a calibrated interval for each result, a separate state-trend baseline, and a
-plain-language driver summary when the selected tract is model-ready. A result that misses an
-evaluation threshold stays visible with its MAE and interval-coverage warning. No baseline,
-validation prediction, or analogue outcome is substituted for either supervised forecast.
+The forecast screen shows regularized-linear and gradient-boosted-tree estimates at one and three
+years. Cards translate cumulative log change into total percentage change and retain the average
+annual rate. A grouped chart compares both models, their calibrated ranges, and a clearly separate
+state-trend baseline. Extra left margin and automatic axis sizing keep the y-axis label visible.
+
+Later-period evaluation details are available in one optional section rather than repeated warning
+boxes. A weak evaluation result remains visible in the cards and chart; only incomplete tract input
+data can make a forecast unavailable. No baseline, validation prediction, or analogue outcome is
+substituted for either supervised forecast.
+
+The screen also lets a user apply the modeled tract-HPI change to a reference dollar amount. This
+is a display-only translation for understanding scale. It does not change a prediction, use
+property characteristics, or estimate the future value of an individual home. The default reference
+is the ACS median owner-occupied value when available, and the user can replace it.
 
 ### Historical analogues
 

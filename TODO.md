@@ -1,6 +1,6 @@
 # Current Project State and Next Work
 
-This is the implementation handoff as of November 22, 2026. It records what is actually running,
+This is the implementation handoff as of November 24, 2026. It records what is actually running,
 what the current evidence supports, and what should happen next. Detailed execution order remains
 in [the pipeline runbook](docs/PIPELINE_RUN_ORDER.md).
 
@@ -94,10 +94,12 @@ remains historical context and a secondary estimate.
   `https://neighborhood-intelligence-3866391918408215.aws.databricksapps.com`.
 - The live repository independently selects complete analogue and forecast releases so it cannot
   mix partial table versions.
-- The corrected Forecast tab is designed to show linear and boosted-tree point estimates and 90%
-  intervals at one and three years, with the state trend kept separate as a baseline.
-- Evaluation warnings report MAE, zero-change comparison, and interval coverage without hiding a
-  model result.
+- The revised Forecast tab shows both supervised models as cumulative percentage changes at one
+  and three years, with calibrated ranges and the state-trend baseline kept visually separate.
+  Evaluation details are consolidated into an optional table and never filter a model result.
+- A display-only dollar illustration applies the modeled tract-HPI change to a user-controlled
+  reference amount. It does not change the forecast target, model output, evaluation, or Data
+  Science Results tab and is not an individual-home valuation.
 - Connecticut history uses the audited planning-region-to-2020 tract bridge. Map selection uses
   visible points at national extent and canonical tract outlines at local extent.
 - App Review 1 changes are implemented on the application branch: all browser counts use readable
@@ -116,8 +118,9 @@ remains historical context and a secondary estimate.
 ## Immediate next sequence
 
 1. **Review the corrected forecast experience.** Check eligible and ineligible tracts across
-   regions. Confirm that both models and horizons, their intervals, separate baseline, and the
-   one-year linear warning are understandable.
+   regions. Confirm that both models and horizons, their intervals, separate baseline, optional
+   evaluation table, cumulative-percent labels, and display-only dollar illustration are clear.
+   Specifically verify that the revised y-axis is fully visible on desktop and narrow layouts.
 2. **Review the refreshed analogue experience.** Check available and unavailable tracts, both
    horizons, match explanations, geographic diversity, observed path gaps, and release lineage.
 3. **Create the integrated model story.** Combine validation, later-period error, uncertainty,
@@ -168,3 +171,9 @@ three generated figures with reconciled values, produce the three-to-five-minute
 and publish the capstone-gallery post. The partner also needs to confirm the exact Copilot model
 and any exposed settings for the feature-ablation notebook. Repeat the secret, path, dependency,
 attribution, link, AI-disclosure, and clean-checkout audits after those final materials are added.
+
+The November 24 forecast-usability deployment also used the canonical `team` bundle and changed
+only application source. Deployment `01f1e823150819fea9f447a301cce5ab` succeeded, with the app
+`RUNNING`, compute `ACTIVE`, and all 34 declared resources unchanged. The repository query has no
+evaluation-threshold filter: weak published model results remain present. Manual browser review of
+the revised comparison chart and display-only dollar illustration is the next acceptance gate.

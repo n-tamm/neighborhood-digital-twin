@@ -51,6 +51,35 @@ def format_percent(value: Any, *, value_is_share: bool = False, digits: int = 1)
     return f"{numeric:.{digits}f}%"
 
 
+def format_signed_percent(value: Any, *, digits: int = 1) -> str:
+    """Format a display percentage with an explicit direction."""
+
+    if value is None or pd.isna(value):
+        return "Not available"
+    return f"{float(value):+.{digits}f}%"
+
+
+def cumulative_percent_from_log_change(value: Any) -> float | None:
+    """Translate modeled cumulative log change into a user-facing percent change."""
+
+    if value is None or pd.isna(value):
+        return None
+    return math.expm1(float(value)) * 100.0
+
+
+def indexed_value_from_log_change(reference_value: Any, cumulative_log_change: Any) -> float | None:
+    """Scale a reference amount by modeled HPI change for display only."""
+
+    if (
+        reference_value is None
+        or cumulative_log_change is None
+        or pd.isna(reference_value)
+        or pd.isna(cumulative_log_change)
+    ):
+        return None
+    return float(reference_value) * math.exp(float(cumulative_log_change))
+
+
 def safe_float(value: Any, default: float = 0.0) -> float:
     """Convert a possibly missing display value without propagating NaN to HTML."""
 
