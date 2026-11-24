@@ -30,6 +30,7 @@ from neighborhood_app.geocoding import lookup_census_tract
 from neighborhood_app.ui import (
     apply_styles,
     cumulative_percent_from_log_change,
+    forecast_series_key_html,
     format_currency,
     format_integer,
     format_percent,
@@ -297,6 +298,7 @@ def render_forecast_status(data: NeighborhoodData) -> None:
                 )
 
     st.markdown("#### Compare the model estimates")
+    st.markdown(forecast_series_key_html(), unsafe_allow_html=True)
     st.plotly_chart(
         forecast_interval_figure(data.forecasts),
         width="stretch",
@@ -498,8 +500,9 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
             config={"displayModeBar": False},
         )
         st.caption(
-            "Gold numbered points keep all matches visible nationally. Zoom in to inspect the "
-            "actual tract outlines; select a county row to update the comparison below."
+            "The initial view focuses on the contiguous United States. Gold numbered points mark "
+            "matches in view; pan or zoom out for Alaska or Hawaii matches. Zoom in to inspect "
+            "tract outlines, then select a county row to update the comparison below."
         )
     with list_col:
         st.markdown("#### Closest historical communities")

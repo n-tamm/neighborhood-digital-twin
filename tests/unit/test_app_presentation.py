@@ -23,6 +23,7 @@ from neighborhood_app.charts import (
 )
 from neighborhood_app.ui import (
     cumulative_percent_from_log_change,
+    forecast_series_key_html,
     format_currency,
     format_integer,
     format_percent,
@@ -102,11 +103,10 @@ def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
     assert all(len(trace.error_y.arrayminus) == 2 for trace in figure.data[:2])
     assert list(figure.data[2].x) == ["1-year\nthrough 2026", "3-year\nthrough 2028"]
     assert figure.layout.margin.l == 92
-    assert figure.layout.margin.b == 112
+    assert figure.layout.margin.b == 55
     assert figure.layout.yaxis.automargin
     assert figure.layout.yaxis.title.text == "Estimated HPI change through target year"
-    assert figure.layout.legend.title.text == "Chart key"
-    assert figure.layout.legend.y < 0
+    assert not figure.layout.showlegend
     assert {trace.name for trace in figure.data} == {
         "Regularized linear",
         "Gradient-boosted trees",
@@ -159,6 +159,10 @@ def test_hpi_display_translations_do_not_change_the_model_scale() -> None:
     assert reference_amount_for_display(None) == 300_000
     assert reference_amount_for_display(10_000) == 50_000
     assert reference_amount_for_display(7_000_000) == 5_000_000
+    series_key = forecast_series_key_html()
+    assert "Regularized linear" in series_key
+    assert "Gradient-boosted trees" in series_key
+    assert "State-trend baseline" in series_key
 
 
 def test_context_map_combines_visible_point_with_boundary_context() -> None:
@@ -256,7 +260,9 @@ def test_analogue_map_keeps_national_points_and_local_tract_outlines() -> None:
     ]
     assert figure.data[1].mode == "markers+text"
     assert figure.data[1].customdata[0][0] == 1
-    assert figure.layout.map.zoom < 2.2
+    assert figure.layout.map.center.lon == pytest.approx(-96.5)
+    assert figure.layout.map.center.lat == pytest.approx(38.5)
+    assert figure.layout.map.zoom == pytest.approx(2.75)
 
 
 def test_table_selection_resolves_to_one_match_rank() -> None:

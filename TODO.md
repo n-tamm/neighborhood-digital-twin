@@ -186,3 +186,9 @@ The legend, interval explanation, and Overview dollar-scale follow-up is live as
 resources unchanged. Manual review should confirm that all three forecast series are obvious
 without hovering and that the secondary Overview axis remains readable without implying observed
 or predicted property prices.
+
+The clipped embedded legend was replaced by an app-level series key in deployment
+`01f1e827563e1aabab8921d58e988262`. The same source-only deployment changed the historical-
+analogue map's default viewport to the contiguous United States, with dedicated regional views for
+selected tracts in Alaska, Hawaii, and Puerto Rico. Manual review should confirm that the key is
+now visible and the national map is framed usefully on both desktop and narrow layouts.

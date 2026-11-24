@@ -53,8 +53,9 @@ housing stock.
 The forecast screen shows regularized-linear and gradient-boosted-tree estimates at one and three
 years. Cards translate cumulative log change into total percentage change and retain the average
 annual rate. A grouped chart compares both models, their calibrated ranges, and a clearly separate
-state-trend baseline. Its bordered legend appears below the plot so the navy linear bars, teal tree
-bars, and gold baseline diamonds can be identified without hovering. Extra left margin and
+state-trend baseline. An app-level series key appears immediately above the plot so the navy linear
+bars, teal tree bars, and gold baseline diamonds can be identified without hovering or depending
+on Plotly's embedded legend placement. Extra left margin and
 automatic axis sizing keep the y-axis label visible.
 
 Later-period evaluation details are available in one optional section rather than repeated warning

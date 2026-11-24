@@ -94,6 +94,25 @@ def reference_amount_for_display(
     return min(max(float(value), minimum), maximum)
 
 
+def forecast_series_key_html() -> str:
+    """Return an always-visible key for the three forecast chart series."""
+
+    return """
+    <div class="chart-series-key" role="list" aria-label="Forecast chart legend">
+      <span class="chart-series-key-title">Chart key</span>
+      <span class="chart-series-key-item" role="listitem">
+        <span class="chart-series-swatch chart-series-linear"></span>Regularized linear
+      </span>
+      <span class="chart-series-key-item" role="listitem">
+        <span class="chart-series-swatch chart-series-tree"></span>Gradient-boosted trees
+      </span>
+      <span class="chart-series-key-item" role="listitem">
+        <span class="chart-series-swatch chart-series-baseline"></span>State-trend baseline
+      </span>
+    </div>
+    """
+
+
 def safe_float(value: Any, default: float = 0.0) -> float:
     """Convert a possibly missing display value without propagating NaN to HTML."""
 
@@ -269,6 +288,19 @@ def apply_styles() -> None:
                         background: #282418; color: #e4d7b7; border-radius: 0 10px 10px 0; }
         .model-boundary { background: #102431; border: 1px solid #294655; border-radius: 14px;
                           padding: 1rem 1.1rem; }
+        .chart-series-key { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem 1.1rem;
+                            background: var(--surface); border: 1px solid var(--line);
+                            border-radius: 10px; padding: .65rem .85rem; margin: .15rem 0 .55rem; }
+        .chart-series-key-title { color: var(--muted); font-size: .75rem; font-weight: 750;
+                                  letter-spacing: .06em; text-transform: uppercase; }
+        .chart-series-key-item { display: inline-flex; align-items: center; gap: .42rem;
+                                 color: var(--ink); font-size: .86rem; font-weight: 650; }
+        .chart-series-swatch { display: inline-block; width: 16px; height: 11px;
+                               border: 1px solid rgba(255,255,255,.45); border-radius: 2px; }
+        .chart-series-linear { background: #63b3d1; }
+        .chart-series-tree { background: #2dd4bf; }
+        .chart-series-baseline { width: 10px; height: 10px; background: #f2b84b;
+                                 transform: rotate(45deg); margin: 0 3px; }
         .sample-banner { background: #2c2617; border: 1px solid #665127; border-radius: 10px;
                          padding: .7rem .85rem; color: #eed59c; font-size: .87rem; }
         [data-testid="stPlotlyChart"] { background: var(--surface); border: 1px solid var(--line);
@@ -281,6 +313,7 @@ def apply_styles() -> None:
         @media (max-width: 800px) {
           .block-container { padding-left: 1rem; padding-right: 1rem; }
           .metric-card { min-height: 96px; }
+          .chart-series-key { align-items: flex-start; flex-direction: column; }
         }
         </style>
         """,

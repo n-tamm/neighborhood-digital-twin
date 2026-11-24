@@ -229,3 +229,11 @@ HPI chart retains observed index values on the left and adds a display-only righ
 the ACS median owner-occupied value at the latest observed HPI point. The Forecast tab now explains
 the 90% split-conformal basis and reports calibration sample counts. Application logs show a normal
 restart with no startup exception; manual visual review remains the acceptance gate.
+
+The visible-key and map-viewport correction deployed as `01f1e827563e1aabab8921d58e988262`.
+It reached `SUCCEEDED`, with the app `RUNNING`, compute `ACTIVE`, and all 34 Databricks resources
+unchanged. Because the embedded Plotly legend was clipped in the live interface, the Forecast tab
+now renders an app-level, text-labeled key directly above the chart. The historical-analogue map
+opens on the contiguous United States for contiguous-U.S. selections, while Alaska, Hawaii, and
+Puerto Rico selections use dedicated regional views. Matches outside the initial viewport remain
+plotted and reachable by panning or zooming.

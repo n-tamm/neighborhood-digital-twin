@@ -341,18 +341,7 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
     )
     figure.update_layout(
         barmode="group",
-        showlegend=True,
-        legend={
-            "orientation": "h",
-            "y": -0.22,
-            "yanchor": "top",
-            "x": 0.5,
-            "xanchor": "center",
-            "title": {"text": "Chart key"},
-            "bgcolor": SURFACE,
-            "bordercolor": GRID,
-            "borderwidth": 1,
-        },
+        showlegend=False,
         title={
             "text": "How much could the tract-level housing price index change?",
             "x": 0,
@@ -362,9 +351,9 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
     )
     return _layout(
         figure,
-        height=485,
+        height=430,
         margin_top=72,
-        margin_bottom=112,
+        margin_bottom=55,
         margin_left=92,
         margin_right=28,
     )
@@ -645,16 +634,18 @@ def analogue_map_figure(
             name="Selected neighborhood point",
         )
     )
-    all_longitudes = [query_lon, *located["candidate_longitude"].astype(float).tolist()]
-    all_latitudes = [query_lat, *located["candidate_latitude"].astype(float).tolist()]
+    state_abbreviation = str(profile.get("state_abbreviation", ""))
+    initial_views = {
+        "AK": {"center": {"lon": -152.0, "lat": 64.0}, "zoom": 2.7},
+        "HI": {"center": {"lon": -157.5, "lat": 20.8}, "zoom": 5.1},
+        "PR": {"center": {"lon": -66.5, "lat": 18.2}, "zoom": 7.0},
+    }
+    initial_view = initial_views.get(
+        state_abbreviation,
+        {"center": {"lon": -96.5, "lat": 38.5}, "zoom": 2.75},
+    )
     figure.update_layout(
-        map=_map_view(
-            min(all_longitudes) - 0.5,
-            min(all_latitudes) - 0.35,
-            max(all_longitudes) + 0.5,
-            max(all_latitudes) + 0.35,
-            minimum_zoom=0.6,
-        ),
+        map={"style": "carto-darkmatter", **initial_view},
         showlegend=True,
         legend={
             "orientation": "h",

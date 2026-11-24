@@ -18,10 +18,14 @@ must not be used for parcel boundaries, distance, adjacency, or similarity input
 
 ## National historical-analogue map
 
-The analogue map uses two coordinated layers. Numbered gold points keep every match visible at the
-national extent, while lightly filled gold polygons reveal the exact tract footprints as the user
-zooms closer. The selected neighborhood uses the same point-plus-polygon treatment in navy and
-teal. Hovering provides place, historical year, and similarity distance.
+The analogue map uses two coordinated layers. Numbered gold points keep matches visible at a
+national scale, while lightly filled gold polygons reveal the exact tract footprints as the user
+zooms closer. For a tract in the contiguous United States, the initial viewport is fixed to the
+contiguous country so an Alaska or Hawaii match cannot force the whole map to an unreadably broad
+extent. Those matches remain in the plotted result and can be reached by panning or zooming out.
+Selected tracts in Alaska, Hawaii, or Puerto Rico instead open on an appropriate local viewport.
+The selected neighborhood uses the same point-plus-polygon treatment in navy and teal. Hovering
+provides place, historical year, and similarity distance.
 
 The ranked county table is the single detailed-match selector. The footprint comparison,
 feature-gap explanation, and observed later trajectory below it therefore cannot conflict with a
@@ -102,7 +106,8 @@ The forecast chart shows cumulative FHFA HPI percentage change through the one- 
 target years. Grouped navy and teal bars represent regularized linear regression and gradient-
 boosted trees. Error lines show the corresponding 90% split-conformal ranges. Gold diamonds show
 the state-current-trend baseline, kept visibly separate from both supervised models. A bordered
-legend below the plot identifies all three series without relying on hover text.
+app-level key immediately above the plot identifies all three series without relying on hover text
+or an embedded Plotly legend that can be clipped by its container.
 
 When a model-horizon pair misses an evaluation threshold, the chart still shows its result. One
 optional evaluation table gives its MAE, zero-change comparison, interval coverage, and applicable
