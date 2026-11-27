@@ -8,25 +8,35 @@ Model used: GPT-5
 Known-answer tests for application formatting and chart construction.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
 import pytest
+import streamlit as st
 from neighborhood_app.charts import (
     analogue_map_figure,
     county_tract_browser_map_figure,
     forecast_interval_figure,
     forecast_validation_comparison_figure,
+    housing_mix_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
     state_browser_map_figure,
 )
+from neighborhood_app.data import NeighborhoodData, SampleNeighborhoodRepository
 from neighborhood_app.ui import (
+    availability_details,
+    cumulative_percent_from_log_change,
+    forecast_series_key_html,
     format_currency,
     format_integer,
     format_percent,
+    format_signed_percent,
     format_square_miles,
+    indexed_value_from_log_change,
     place_label,
+    reference_amount_for_display,
     selected_geoid_from_map_event,
     selected_rank_from_table_event,
     selected_state_from_map_event,
@@ -48,10 +58,18 @@ def test_hpi_chart_does_not_plot_unavailable_observations() -> None:
         }
     )
 
-    figure = hpi_history_figure(history)
+    figure = hpi_history_figure(history, reference_value=300_000)
 
     assert list(figure.data[0].x) == [2022, 2024]
     assert list(figure.data[0].y) == [200.0, 225.0]
+    assert list(figure.data[0].customdata[:, 0]) == pytest.approx(
+        [266_666.67, 300_000.0], abs=0.01
+    )
+    assert len(figure.data) == 2
+    assert figure.data[1].yaxis == "y2"
+    assert not figure.data[1].showlegend
+    assert figure.layout.yaxis2.title.text == "Illustrative dollar scale (anchored to 2024)"
+    assert figure.layout.yaxis2.tickprefix == "$"
 
 
 def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
@@ -70,22 +88,35 @@ def test_forecast_chart_keeps_point_interval_and_baseline_distinct() -> None:
             "prediction_annualized_change_pct": [2.0, 2.4, 3.0, 3.3],
             "prediction_lower_annualized_change_pct": [-1.0, -0.5, 0.5, 0.8],
             "prediction_upper_annualized_change_pct": [5.0, 5.2, 5.5, 5.8],
+            "prediction_cumulative_log_change": [0.0198, 0.0237, 0.0862, 0.0959],
+            "prediction_lower_cumulative_log_change": [-0.0101, -0.0050, 0.0149, 0.0237],
+            "prediction_upper_cumulative_log_change": [0.0488, 0.0507, 0.1522, 0.1648],
             "baseline_prediction_annualized_change_pct": [1.5, 1.5, 1.8, 1.8],
+            "baseline_prediction_cumulative_log_change": [0.0149, 0.0149, 0.0525, 0.0525],
         }
     )
 
     figure = forecast_interval_figure(forecasts)
 
-    assert len(figure.data) == 2
-    assert len(figure.data[0].x) == 4
-    assert set(figure.data[0].y) == {
-        "1-year · Regularized linear",
-        "1-year · Gradient-boosted trees",
-        "3-year · Regularized linear",
-        "3-year · Gradient-boosted trees",
+    assert len(figure.data) == 3
+    assert [trace.type for trace in figure.data] == ["bar", "bar", "scatter"]
+    assert {trace.name for trace in figure.data[:2]} == {
+        "Regularized linear",
+        "Gradient-boosted trees",
     }
-    assert len(figure.data[0].error_x.arrayminus) == 4
-    assert list(figure.data[1].x).count(1.5) == 2
+    assert all(len(trace.y) == 2 for trace in figure.data[:2])
+    assert all(len(trace.error_y.arrayminus) == 2 for trace in figure.data[:2])
+    assert list(figure.data[2].x) == ["1-year\nthrough 2026", "3-year\nthrough 2028"]
+    assert figure.layout.margin.l == 92
+    assert figure.layout.margin.b == 55
+    assert figure.layout.yaxis.automargin
+    assert figure.layout.yaxis.title.text == "Estimated HPI change through target year"
+    assert not figure.layout.showlegend
+    assert {trace.name for trace in figure.data} == {
+        "Regularized linear",
+        "Gradient-boosted trees",
+        "State-trend baseline",
+    }
 
 
 def test_validation_chart_keeps_supervised_models_and_baselines_visible() -> None:
@@ -118,8 +149,25 @@ def test_formatters_preserve_interpretable_units() -> None:
     assert format_integer(85528) == "85,528"
     assert format_percent(0.66559, value_is_share=True) == "66.6%"
     assert format_percent(3.24) == "3.2%"
+    assert format_signed_percent(-3.24) == "-3.2%"
     assert format_square_miles(2_589_988.110336) == "1.0 sq mi"
     assert format_currency(None) == "Not available"
+
+
+def test_hpi_display_translations_do_not_change_the_model_scale() -> None:
+    """Display helpers should translate log change without altering a model prediction."""
+
+    assert cumulative_percent_from_log_change(0.0) == pytest.approx(0.0)
+    assert cumulative_percent_from_log_change(0.0953101798) == pytest.approx(10.0)
+    assert indexed_value_from_log_change(250_000, 0.0953101798) == pytest.approx(275_000)
+    assert indexed_value_from_log_change(None, 0.1) is None
+    assert reference_amount_for_display(None) == 300_000
+    assert reference_amount_for_display(10_000) == 50_000
+    assert reference_amount_for_display(7_000_000) == 5_000_000
+    series_key = forecast_series_key_html()
+    assert "Regularized linear" in series_key
+    assert "Gradient-boosted trees" in series_key
+    assert "State-trend baseline" in series_key
 
 
 def test_context_map_combines_visible_point_with_boundary_context() -> None:
@@ -217,7 +265,9 @@ def test_analogue_map_keeps_national_points_and_local_tract_outlines() -> None:
     ]
     assert figure.data[1].mode == "markers+text"
     assert figure.data[1].customdata[0][0] == 1
-    assert figure.layout.map.zoom < 2.2
+    assert figure.layout.map.center.lon == pytest.approx(-96.5)
+    assert figure.layout.map.center.lat == pytest.approx(38.5)
+    assert figure.layout.map.zoom == pytest.approx(2.75)
 
 
 def test_table_selection_resolves_to_one_match_rank() -> None:
@@ -366,6 +416,148 @@ def test_streamlit_app_starts_in_explicit_sample_mode(monkeypatch: pytest.Monkey
     assert not app.exception
     assert app.title[0].value.startswith("A neighborhood’s history")
     assert any(
-        "Forecast serving output is not published yet" in item.value for item in app.markdown
+        "Forecast data is not loaded in this app mode" in item.value for item in app.markdown
     )
     assert "Data Science Results" in [tab.label for tab in app.tabs]
+
+
+def test_app_explains_absent_results_with_tract_source_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both tabs should explain a missing release-year index after screening passes."""
+
+    load_sample = SampleNeighborhoodRepository.load_neighborhood
+
+    def load_incomplete_tract(
+        repository: SampleNeighborhoodRepository, geoid: str
+    ) -> NeighborhoodData:
+        """Keep the sample renderer offline and reproduce the observed coverage pattern."""
+
+        data = load_sample(repository, geoid)
+        history = data.history.copy()
+        history.loc[history["observation_year"] == 2025, ["hpi", "hpi_available"]] = [None, False]
+        return replace(
+            data,
+            profile={**data.profile, "median_gross_rent_estimate": None},
+            history=history,
+            availability=data.availability.assign(
+                analogue_available=False,
+                availability_reason="model_ready_market_features_unavailable",
+            ),
+            forecast_release={"serving_as_of_year": 2025, "horizons_csv": "1,3"},
+            forecast_availability=pd.DataFrame(
+                {
+                    "horizon_years": [1, 3],
+                    "forecast_available": [False, False],
+                    "availability_reason": ["both_model_predictions_not_published"] * 2,
+                }
+            ),
+        )
+
+    monkeypatch.setenv("NEIGHBORHOOD_TWIN_DATA_MODE", "sample")
+    monkeypatch.setattr(SampleNeighborhoodRepository, "load_neighborhood", load_incomplete_tract)
+    st.cache_data.clear()
+    try:
+        app = AppTest.from_file(str(REPOSITORY_ROOT / "app" / "streamlit_app.py")).run(timeout=30)
+    finally:
+        st.cache_data.clear()
+
+    assert not app.exception
+    text = "\n".join(item.value for item in app.markdown)
+    assert "Why 1-year and 3-year forecasts are unavailable" in text
+    assert "historical matches are unavailable" in text
+    assert text.count("The 2025 FHFA single-family home price index is missing") == 2
+    assert text.count("The latest usable observation is from 2024") == 2
+    assert "median gross rent" in text
+    assert "Both forecast models need that starting value" in text
+    assert "Historical matching needs that starting value" in text
+    assert "A forecast starting in 2024 would cover different target years." in text
+    assert "Starting in 2024 would match an earlier neighborhood profile." in text
+    assert "model_ready_market_features_unavailable" not in text
+
+
+def test_coverage_explanation_distinguishes_acs_screening_and_publication() -> None:
+    """List confirmed Census gaps without guessing why an unexplained result was unpublished."""
+
+    profile = {
+        "acs_reference_period": "2020-2024",
+        "similarity_feature_count": 7,
+        "population_total_estimate": 0,
+        "housing_units_total_estimate": 80,
+        "median_household_income_estimate": None,
+        "median_gross_rent_estimate": None,
+    }
+    release = {"serving_as_of_year": 2025}
+    history = pd.DataFrame({"observation_year": [2025], "hpi": [200.0], "hpi_available": [True]})
+    analogue = availability_details(
+        profile, history, release, "insufficient_current_similarity_features", product="analogue"
+    )
+    assert "at least 8 of 12" in analogue[0]
+    assert "total population" in analogue[1]
+    assert "median household income, median gross rent" in analogue[2]
+    assert all("home price index is missing" not in item for item in analogue)
+
+    forecast = availability_details(
+        profile, history, release, "both_model_predictions_not_published", product="forecast"
+    )
+    assert "does not identify a specific missing input" in forecast[0]
+    assert "no evidence that these gaps blocked" in forecast[1]
+
+
+def test_housing_mix_preserves_zero_and_omits_unavailable_shares() -> None:
+    """A zero Census share is a real estimate and a missing share is absent from the chart."""
+
+    figure = housing_mix_figure(
+        {"single_family_share_estimate": 0.6, "mobile_home_share_estimate": 0.0}
+    )
+    assert {trace.name: list(trace.x) for trace in figure.data} == {
+        "Single-family": [60.0],
+        "Mobile home": [0.0],
+    }
+
+
+def test_missing_profile_and_boundary_keep_historical_evidence_visible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The app should retain match outcomes when display information is absent."""
+
+    load_sample = SampleNeighborhoodRepository.load_neighborhood
+
+    def load_tract_with_gaps(
+        repository: SampleNeighborhoodRepository, geoid: str
+    ) -> NeighborhoodData:
+        """Exercise absent display data without changing the known match and endpoint."""
+
+        data = load_sample(repository, geoid)
+        history = data.trajectories.copy()
+        history.loc[history["trajectory_observation_year"] == 2017, [
+            "trajectory_cumulative_change_pct", "trajectory_observed"
+        ]] = [None, False]
+        return replace(
+            data,
+            bounds={},
+            profile={
+                **data.profile,
+                "acs_release_year": None,
+                "has_current_acs_profile": False,
+                "median_owner_occupied_value_estimate": None,
+            },
+            trajectories=history,
+        )
+
+    monkeypatch.setenv("NEIGHBORHOOD_TWIN_DATA_MODE", "sample")
+    monkeypatch.setattr(SampleNeighborhoodRepository, "load_neighborhood", load_tract_with_gaps)
+    st.cache_data.clear()
+    try:
+        app = AppTest.from_file(str(REPOSITORY_ROOT / "app" / "streamlit_app.py")).run(timeout=30)
+    finally:
+        st.cache_data.clear()
+
+    assert not app.exception
+    text = "\n".join(item.value for item in app.markdown)
+    assert "no usable boundary for this tract" in text
+    assert "could not link a current American Community Survey profile" in text
+    assert "What happened afterward" in text
+    captions = "\n".join(item.value for item in app.caption)
+    assert "illustrative dollar scale needs a usable median" in captions
+    assert "FHFA index is unavailable in 2017" in captions

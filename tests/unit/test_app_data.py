@@ -131,7 +131,15 @@ class ForecastRecordingExecutor(RecordingExecutor):
                 [
                     {
                         "horizon_years": 1,
+                        "model_name": "regularized_linear",
                         "prediction_annualized_change_pct": 2.0,
+                        "meets_evaluation_thresholds": False,
+                    },
+                    {
+                        "horizon_years": 1,
+                        "model_name": "gradient_boosted_trees",
+                        "prediction_annualized_change_pct": 2.5,
+                        "meets_evaluation_thresholds": True,
                     }
                 ]
             ),
@@ -254,6 +262,13 @@ def test_live_repository_loads_forecast_release_without_mixing_manifest_ids() ->
     assert neighborhood.forecast_release["serving_release_id"] == "forecast-1"
     assert neighborhood.forecast_horizon_available(1)
     assert neighborhood.forecasts.iloc[0]["prediction_annualized_change_pct"] == 2.0
+    assert set(neighborhood.forecasts["model_name"]) == {
+        "regularized_linear",
+        "gradient_boosted_trees",
+    }
+    assert not neighborhood.forecasts["meets_evaluation_thresholds"].all()
+    forecast_query = executor.batch_queries[8][0]
+    assert "meets_evaluation_thresholds" not in forecast_query
 
 
 def test_geographic_browser_rejects_unsafe_or_malformed_identifiers() -> None:

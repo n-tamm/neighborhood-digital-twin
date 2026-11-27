@@ -18,10 +18,14 @@ must not be used for parcel boundaries, distance, adjacency, or similarity input
 
 ## National historical-analogue map
 
-The analogue map uses two coordinated layers. Numbered gold points keep every match visible at the
-national extent, while lightly filled gold polygons reveal the exact tract footprints as the user
-zooms closer. The selected neighborhood uses the same point-plus-polygon treatment in navy and
-teal. Hovering provides place, historical year, and similarity distance.
+The analogue map uses two coordinated layers. Numbered gold points keep matches visible at a
+national scale, while lightly filled gold polygons reveal the exact tract footprints as the user
+zooms closer. For a tract in the contiguous United States, the initial viewport is fixed to the
+contiguous country so an Alaska or Hawaii match cannot force the whole map to an unreadably broad
+extent. Those matches remain in the plotted result and can be reached by panning or zooming out.
+Selected tracts in Alaska, Hawaii, or Puerto Rico instead open on an appropriate local viewport.
+The selected neighborhood uses the same point-plus-polygon treatment in navy and teal. Hovering
+provides place, historical year, and similarity distance.
 
 The ranked county table is the single detailed-match selector. The footprint comparison,
 feature-gap explanation, and observed later trajectory below it therefore cannot conflict with a
@@ -76,6 +80,12 @@ Comparing index levels between unrelated tracts is less useful than reading chan
 For Connecticut, the application maps current FHFA planning-region tract identifiers through the
 audited bridge before retrieving history for the canonical 2020 tract shown on the map.
 
+The left axis remains observed FHFA HPI. The optional right axis is a display translation: it
+anchors the latest observed HPI point to the ACS median owner-occupied value and scales earlier
+index values in direct proportion. This makes the scale easier to read, but it is not a series of
+observed sale prices, an individual-home estimate, or a model input. The ACS reference period and
+latest HPI year also need not be identical, so the axis is labeled illustrative.
+
 ## Feature-family gap chart
 
 Five bars show the mean absolute standardized gap between the query and one match for community
@@ -92,17 +102,23 @@ must not be labeled as the selected tract's predicted path.
 
 ## Forecast and calibrated interval
 
-The forecast chart shows annualized FHFA HPI change on a horizontal axis. It gives separate rows
-to regularized linear regression and gradient-boosted trees at the one- and three-year horizons.
-Each point has its own 90% split-conformal interval. A gold diamond is the state-current-trend
-baseline, kept visibly separate from both supervised models.
+The forecast chart shows cumulative FHFA HPI percentage change through the one- and three-year
+target years. Grouped navy and teal bars represent regularized linear regression and gradient-
+boosted trees. Error lines show the corresponding 90% split-conformal ranges. Gold diamonds show
+the state-current-trend baseline, kept visibly separate from both supervised models. A bordered
+app-level key immediately above the plot identifies all three series without relying on hover text
+or an embedded Plotly legend that can be clipped by its container.
 
-When a model-horizon pair misses an evaluation threshold, the chart still shows its result and a
-nearby warning gives the MAE, zero-change comparison, and interval coverage. Weak evidence is
-therefore visible instead of appearing as missing application data.
+When a model-horizon pair misses an evaluation threshold, the chart still shows its result. One
+optional evaluation table gives its MAE, zero-change comparison, interval coverage, and applicable
+note. Weak evidence is therefore visible instead of appearing as missing application data.
 
-The interval describes model-error calibration from historical periods. It is not a probability
-that an individual home's value will fall in the range and cannot account for every future shock.
+Each interval is calibrated separately by model and horizon. The frozen model is scored on a
+reserved historical calibration origin, and the finite-sample 90th percentile of its absolute
+tract-level errors is added to and subtracted from the current point forecast. The dollar table
+applies those HPI bounds to a user-controlled reference amount. The interval is not a probability
+that an individual home's value will fall in that dollar range and cannot account for every future
+shock.
 
 ## Shared visual rules
 

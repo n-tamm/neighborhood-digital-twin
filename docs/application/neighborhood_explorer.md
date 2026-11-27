@@ -41,17 +41,34 @@ uses its own data contracts, language, component design, and model boundaries.
 ### Overview
 
 The overview reports the current ACS population, housing units, household income, rent, housing
-structure mix, occupancy, and tenure. It then shows observed FHFA HPI history. The housing mix is
+structure mix, occupancy, and tenure. It then shows observed FHFA HPI history. The left chart axis
+retains the observed index. A display-only right axis anchors the latest observed HPI point to the
+ACS median owner-occupied value and scales the earlier index path proportionally. This is a more
+readable scale, not observed sale prices or an individual-property valuation. The housing mix is
 important because FHFA outcomes cover the single-family market while the profile covers the full
 housing stock.
 
 ### Forecast
 
-The forecast screen shows regularized-linear and gradient-boosted-tree point estimates at one and
-three years, a calibrated interval for each result, a separate state-trend baseline, and a
-plain-language driver summary when the selected tract is model-ready. A result that misses an
-evaluation threshold stays visible with its MAE and interval-coverage warning. No baseline,
-validation prediction, or analogue outcome is substituted for either supervised forecast.
+The forecast screen shows regularized-linear and gradient-boosted-tree estimates at one and three
+years. Cards translate cumulative log change into total percentage change and retain the average
+annual rate. A grouped chart compares both models, their calibrated ranges, and a clearly separate
+state-trend baseline. An app-level series key appears immediately above the plot so the navy linear
+bars, teal tree bars, and gold baseline diamonds can be identified without hovering or depending
+on Plotly's embedded legend placement. Extra left margin and
+automatic axis sizing keep the y-axis label visible.
+
+Later-period evaluation details are available in an optional section. Published model results stay
+visible even when they miss an evaluation check.
+
+The screen also lets a user apply the modeled tract-HPI change to a reference dollar amount. This
+is a display-only translation for understanding scale. It does not change a prediction, use
+property characteristics, or estimate the future value of an individual home. The default reference
+is the ACS median owner-occupied value when available, and the user can replace it. The point amount
+applies the model's cumulative HPI change to that reference. The displayed range applies the lower
+and upper bounds from the model-horizon's 90% split-conformal interval. An expandable explanation
+reports the calibration sample size and clarifies that the interval comes from absolute errors on
+a reserved historical calibration period.
 
 ### Historical analogues
 
@@ -68,6 +85,40 @@ zoom and hover context, but it does not compete with the table for selection sta
 The page repeatedly labels those outcomes as historical evidence. Similarity distance explains
 retrieval, not why prices later changed, and a historical path is not presented as a causal or
 probabilistic forecast.
+
+### When a result is unavailable
+
+The Forecast and Historical analogues tabs explain missing results for the selected tract and
+horizon. Forecast groups horizons when they share an explanation. Each explanation uses the
+availability record, the release's starting year, and the tract's source data.
+
+- **Missing forecast or historical matches.** Both products require a usable FHFA single-family
+  home price index for the release's starting year. The forecast uses it as the starting point
+  for price change. Historical matching uses it to compare recent price trends with earlier
+  neighborhoods. When the starting value is missing, the app names the year and gives the latest
+  usable observation or says that the tract has no usable FHFA history.
+- **Why the app uses a common year.** The current forecast and historical-matching releases
+  use 2025 as the shared starting point. A 2024 forecast would end in 2025 or 2027,
+  compared with 2026 or 2028 for the current release. A 2024 match would describe how the tract
+  looked a year earlier. The Overview still shows 2024 where it was observed. Publishing a
+  2024 result would require a separate run using information available at that time and a
+  clear earlier-results label.
+- **Missing Census estimates or display data.** The app identifies missing Census inputs when
+  the records support that explanation. A gap in the current Census profile can coexist with
+  published model results because the model uses data available at its starting point. Overview
+  explains absent Census profiles, empty FHFA histories, and missing inputs for the illustrative
+  dollar scale. Missing display boundaries and missing annual observations within historical
+  match paths receive their own notes.
+- **Missing release evidence.** A missing availability record, a result that could not be loaded,
+  and an unpublished result with no confirmed cause each get their own explanation. The app
+  reports the source gap or release status it can verify.
+
+The November 27, 2026 audit checked all 85,528 tracts for both products at both horizons. Every
+unavailable forecast or match lacked the usable 2025 starting index. For example, Washtenaw
+County, Michigan tract 4260.02 has 38 usable annual observations through 2024. Its current Census
+profile also lacks median gross rent, which the app reports as a separate gap. The detailed audit
+records the coverage counts, other tract examples, and checks against live Databricks data.
+[Nationwide availability audit](deployment_and_testing.md#nationwide-availability-audit)
 
 ### Data Science Results
 

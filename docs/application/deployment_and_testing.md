@@ -64,7 +64,7 @@ Before calling an app revision complete, check:
    and path, and the forecast tables share their own complete release ID;
 5. all ten live matches appear even though the local fixture contains only one;
 6. no analogue outcome or trend baseline is described as the selected tract's supervised
-   forecast, and weak model results remain visible with their evaluation warnings;
+   forecast, and weak model results remain visible with their evaluation details;
 7. desktop and narrow layouts retain readable titles, legends, tables, and caveats; and
 8. the service principal has no write permission and no access to raw or modeling tables.
 
@@ -200,3 +200,91 @@ choices, 299 version-1 one-year forecasts, no three-year forecasts, and display 
 for all 350 tracts. State, county, tract, and search queries all returned the new horizon-specific
 fields. This validates the data behind the new coverage cards, labels, and county tract-location
 map; manual browser review still needs to confirm the interaction and visual spacing.
+
+## Forecast usability review deployment
+
+On November 24, 2026, the Forecast tab was revised without changing or rerunning either forecasting
+model. Deployment `01f1e823150819fea9f447a301cce5ab` reached `SUCCEEDED`; the app is `RUNNING`
+with `ACTIVE` compute. The canonical bundle uploaded source only and left all 34 Databricks
+resources unchanged. The current application log shows a normal Streamlit restart with no startup
+exception.
+
+The revised screen shows cumulative percentage change for both supervised models at both published
+horizons, places calibrated ranges directly on a grouped comparison chart, and keeps state trend
+visually separate as baseline context. Failed evaluation checks no longer create repeated warning
+boxes, and they never filter a model result. Evaluation details remain available in one optional
+table. A display-only dollar illustration can apply the tract-HPI change to a user-controlled
+reference amount; it is explicitly not an individual-property valuation and does not change any
+model output or evaluation result.
+
+Ruff, mypy, all 159 non-acquisition tests, and all four acquisition tests passed. Automated tests
+also verify that the live repository query contains no evaluation-threshold filter and retains a
+model row whose evaluation flag is false. Manual browser review is still required for the chart's
+axis spacing, responsive layout, wording, and usefulness of the dollar illustration.
+
+The follow-up visual refinement deployed as `01f1e825ae051b3d8e025b0c0193f5ce`. It reached
+`SUCCEEDED`, with the app `RUNNING`, compute `ACTIVE`, and all 34 bundle resources unchanged. The
+forecast chart now reserves space for a bordered, three-series legend below the plot. The Overview
+HPI chart retains observed index values on the left and adds a display-only right axis anchored to
+the ACS median owner-occupied value at the latest observed HPI point. The Forecast tab now explains
+the 90% split-conformal basis and reports calibration sample counts. Application logs show a normal
+restart with no startup exception; manual visual review remains the acceptance gate.
+
+The visible-key and map-viewport correction deployed as `01f1e827563e1aabab8921d58e988262`.
+It reached `SUCCEEDED`, with the app `RUNNING`, compute `ACTIVE`, and all 34 Databricks resources
+unchanged. Because the embedded Plotly legend was clipped in the live interface, the Forecast tab
+now renders an app-level, text-labeled key directly above the chart. The historical-analogue map
+opens on the contiguous United States for contiguous-U.S. selections, while Alaska, Hawaii, and
+Puerto Rico selections use dedicated regional views. Matches outside the initial viewport remain
+plotted and reachable by panning or zooming.
+
+The tract coverage explanations deployed November 27, 2026 as
+`01f1ea739a6a18c8b18703cf1b153d38`. All 34 bundle resources were unchanged. A read-only data
+check confirmed that Washtenaw County tract 4260.02 has no usable 2025 FHFA index and is
+unavailable in both products at both horizons. Across the active releases, all 38,809 tracts
+with unavailable one-year forecasts and all 38,809 with unavailable one-year matches lack the
+required 2025 index. A Streamlit rendering test reproduces the tract's coverage pattern and
+checks that both tabs describe the same missing observation and its specific effect.
+
+### Nationwide availability audit
+
+The November 27 audit joined the active release IDs to the current tract inventory, the FHFA
+tract-year table using the app's Connecticut geography bridge, and each product's output rows.
+It checked 342,112 combinations across 85,528 tracts, two horizons, and two products. Each
+product and horizon had 46,719 available and 38,809 unavailable tracts. Every unavailable row
+had a documented reason and lacked the required 2025 FHFA index. Every available row had its two
+forecast model results or ten distinct historical matches. There were no missing or duplicated
+availability rows and no results behind an unavailable flag.
+
+The analogue audit also reconciled summaries, explanations, map geometry for matched tracts,
+and path endpoints across 934,380 match rows. It found 28,425 missing intermediate observations
+in three-year historical paths. Those gaps are valid source-data boundaries. The app names the
+missing calendar years and still shows the observed path points.
+
+| Example | What the app should explain |
+| --- | --- |
+| Washtenaw County, MI tract 4260.02 (`26161426002`) | 2025 FHFA is unavailable. The latest usable index is from 2024. The current Census profile separately lacks a usable median rent estimate. |
+| Alameda County, CA tract 4001 (`06001400100`) | The tract has 35 usable FHFA observations, with the latest in 2021. Neither product can use it as a 2025 starting point. |
+| Alameda County, CA tract 4013 (`06001401300`) | The current Census profile is available and there is no usable FHFA history. |
+| Suffolk County, NY tract 1456.01 (`36103145601`) | There is no linked current Census profile. FHFA history is visible through 2024. |
+| Suffolk County, NY tract 1456.02 (`36103145602`) | The current Census profile is unavailable and the app can still show both model products. |
+| Los Angeles County, CA tract 2774 (`06037277400`) | The profile estimates zero residents and housing units. The latest usable FHFA index is from 1998. |
+| Baldwin County, AL tract 114.18 (`01003011418`) | The first three-year historical match has a gap in 2022. Both endpoints remain available. |
+| Tract `01003990000` | The app has no display geometry for this tract. The other tabs still open. |
+
+Separately, the Overview audit found 1,132 tracts without a linked current Census profile, 21,598
+without usable FHFA history, and 341 without geometry in the display table. Census coverage and
+model coverage are tracked separately. The dashboard reports unavailable Census measures,
+explains where the dollar scale lacks a Census anchor, and omits chart segments whose value is
+missing.
+
+Deployment `01f1ea74acf21f6182cb76897e5f909c` activates the expanded explanations for missing
+Census profiles, FHFA series, display boundaries, and intermediate match observations. Automated
+Streamlit rendering against five actual Databricks tract records verified the explanations and
+confirmed that available results still render. The deployment left all 34 bundle resources
+unchanged.
+
+Deployment `01f1ea768a2c1fb0af89699d34729dd5` updates the release-year explanation and the
+forecast interval coverage figure. The figure was regenerated from the four records for
+forecast finalization run `29c68a5af1e74daab6e06ff7aa2aa9e9`. The render check confirmed
+that the legend sits above the plot and the bar labels fit inside the plot area.

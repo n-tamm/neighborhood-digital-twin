@@ -121,10 +121,25 @@ def _selected_geometry_frame(
     )
 
 
-def _layout(figure: go.Figure, *, height: int, margin_top: int = 35) -> go.Figure:
+def _layout(
+    figure: go.Figure,
+    *,
+    height: int,
+    margin_top: int = 35,
+    margin_bottom: int = 24,
+    margin_left: int = 18,
+    margin_right: int = 18,
+) -> go.Figure:
+    """Apply shared chart styling while allowing room for readable axis labels."""
+
     figure.update_layout(
         height=height,
-        margin={"l": 18, "r": 18, "t": margin_top, "b": 24},
+        margin={
+            "l": margin_left,
+            "r": margin_right,
+            "t": margin_top,
+            "b": margin_bottom,
+        },
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font={"family": "Inter, ui-sans-serif, system-ui", "color": TEXT},
@@ -147,7 +162,10 @@ def housing_mix_figure(profile: Mapping[str, Any]) -> go.Figure:
     colors = [TEAL, GOLD, PURPLE, MUTED]
     figure = go.Figure()
     for label, field, color in zip(labels, fields, colors, strict=True):
-        value = float(profile.get(field) or 0.0)
+        estimate = profile.get(field)
+        if pd.isna(estimate):
+            continue
+        value = float(estimate)
         figure.add_bar(
             x=[value * 100],
             y=["Current housing units"],
@@ -168,26 +186,81 @@ def housing_mix_figure(profile: Mapping[str, Any]) -> go.Figure:
     return _layout(figure, height=235, margin_top=8)
 
 
-def hpi_history_figure(history: pd.DataFrame) -> go.Figure:
-    """Plot observed FHFA single-family HPI without filling unavailable years."""
+def hpi_history_figure(
+    history: pd.DataFrame,
+    *,
+    reference_value: float | None = None,
+) -> go.Figure:
+    """Plot observed FHFA HPI with an optional display-only dollar scale."""
 
     available = history.loc[history["hpi_available"].fillna(False)].copy()
     figure = go.Figure()
+    hovertemplate = "%{x}: HPI %{y:.1f}<extra></extra>"
+    customdata = None
+    latest_year: int | None = None
+    hpi_upper: float | None = None
+    value_upper: float | None = None
+    if not available.empty and reference_value is not None and reference_value > 0:
+        latest = available.sort_values("observation_year").iloc[-1]
+        latest_hpi = float(latest["hpi"])
+        latest_year = int(latest["observation_year"])
+        if latest_hpi > 0:
+            scale = float(reference_value) / latest_hpi
+            available["illustrative_value"] = available["hpi"].astype(float) * scale
+            customdata = available[["illustrative_value"]]
+            hovertemplate = (
+                "%{x}: HPI %{y:.1f}<br>"
+                "Illustrative dollar context %{customdata[0]:$,.0f}<extra></extra>"
+            )
+            hpi_upper = float(available["hpi"].max()) * 1.08
+            value_upper = hpi_upper * scale
     figure.add_scatter(
         x=available["observation_year"],
         y=available["hpi"],
         mode="lines+markers",
         line={"color": NAVY, "width": 3},
         marker={"color": TEAL, "size": 7, "line": {"color": SURFACE, "width": 1}},
-        hovertemplate="%{x}: HPI %{y:.1f}<extra></extra>",
+        customdata=customdata,
+        hovertemplate=hovertemplate,
+        name="Observed FHFA HPI",
     )
     figure.update_xaxes(showgrid=False, title=None, dtick=2)
-    figure.update_yaxes(gridcolor=GRID, title="FHFA HPI", rangemode="tozero")
-    return _layout(figure, height=330)
+    figure.update_yaxes(
+        gridcolor=GRID,
+        title="Observed FHFA HPI",
+        rangemode="tozero",
+        range=[0, hpi_upper] if hpi_upper is not None else None,
+        automargin=True,
+    )
+    if value_upper is not None and latest_year is not None:
+        figure.add_scatter(
+            x=available["observation_year"],
+            y=available["illustrative_value"],
+            yaxis="y2",
+            mode="lines",
+            line={"color": "rgba(0,0,0,0)", "width": 0},
+            hoverinfo="skip",
+            showlegend=False,
+            name="Illustrative dollar scale",
+        )
+        figure.update_layout(
+            yaxis2={
+                "title": f"Illustrative dollar scale (anchored to {latest_year})",
+                "overlaying": "y",
+                "side": "right",
+                "range": [0, value_upper],
+                "tickprefix": "$",
+                "tickformat": ",.0f",
+                "showgrid": False,
+                "zeroline": False,
+                "automargin": True,
+            }
+        )
+    return _layout(figure, height=350, margin_left=76, margin_right=116)
 
 
 def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
-    """Compare both supervised forecasts, model-specific intervals, and a state baseline."""
+    """Compare cumulative model forecasts, ranges, and the state baseline by horizon."""
 
     figure = go.Figure()
     if forecasts.empty:
@@ -200,62 +273,93 @@ def forecast_interval_figure(forecasts: pd.DataFrame) -> go.Figure:
     ordered["model_label"] = ordered["model_name"].map(model_labels).fillna(
         ordered["model_name"]
     )
-    ordered["result_label"] = ordered.apply(
-        lambda row: f"{int(row['horizon_years'])}-year · {row['model_label']}", axis=1
+    ordered["horizon_label"] = ordered.apply(
+        lambda row: f"{int(row['horizon_years'])}-year\nthrough {int(row['target_end_year'])}",
+        axis=1,
     )
-    point = ordered["prediction_annualized_change_pct"].astype(float)
-    lower = ordered["prediction_lower_annualized_change_pct"].astype(float)
-    upper = ordered["prediction_upper_annualized_change_pct"].astype(float)
+    for column in (
+        "prediction_cumulative_log_change",
+        "prediction_lower_cumulative_log_change",
+        "prediction_upper_cumulative_log_change",
+        "baseline_prediction_cumulative_log_change",
+    ):
+        ordered[f"{column}_pct"] = ordered[column].astype(float).map(math.expm1) * 100.0
+    model_colors = {
+        "regularized_linear": NAVY,
+        "gradient_boosted_trees": TEAL,
+    }
+    for model_name, model_label in model_labels.items():
+        model_rows = ordered.loc[ordered["model_name"] == model_name].sort_values(
+            "horizon_years"
+        )
+        point = model_rows["prediction_cumulative_log_change_pct"]
+        lower = model_rows["prediction_lower_cumulative_log_change_pct"]
+        upper = model_rows["prediction_upper_cumulative_log_change_pct"]
+        figure.add_bar(
+            x=model_rows["horizon_label"],
+            y=point,
+            name=model_label,
+            marker_color=model_colors[model_name],
+            error_y={
+                "type": "data",
+                "symmetric": False,
+                "array": upper - point,
+                "arrayminus": point - lower,
+                "color": TEAL_LIGHT,
+                "thickness": 3,
+                "width": 7,
+            },
+            customdata=model_rows[
+                [
+                    "prediction_lower_cumulative_log_change_pct",
+                    "prediction_upper_cumulative_log_change_pct",
+                    "prediction_annualized_change_pct",
+                    "target_end_year",
+                ]
+            ],
+            hovertemplate=(
+                "%{y:+.1f}% estimated total HPI change<br>"
+                "%{customdata[0]:+.1f}% to %{customdata[1]:+.1f}% model range<br>"
+                "%{customdata[2]:.1f}% average per year through %{customdata[3]}"
+                f"<extra>{model_label}</extra>"
+            ),
+        )
+    baseline = ordered.drop_duplicates("horizon_years").sort_values("horizon_years")
     figure.add_scatter(
-        x=point,
-        y=ordered["result_label"],
-        mode="markers",
-        marker={"size": 13, "color": TEAL, "line": {"color": TEXT, "width": 1}},
-        error_x={
-            "type": "data",
-            "symmetric": False,
-            "array": upper - point,
-            "arrayminus": point - lower,
-            "color": TEAL_LIGHT,
-            "thickness": 4,
-            "width": 8,
-        },
-        customdata=ordered[
-            [
-                "prediction_lower_annualized_change_pct",
-                "prediction_upper_annualized_change_pct",
-                "target_end_year",
-                "model_name",
-            ]
-        ],
-        hovertemplate=(
-            "Annualized forecast %{x:.1f}%<br>"
-            "%{customdata[0]:.1f}% to %{customdata[1]:.1f}% interval<br>"
-            "Through %{customdata[2]} · %{customdata[3]}<extra>Model forecast</extra>"
-        ),
-        name="Forecast and calibrated interval",
-    )
-    figure.add_scatter(
-        x=ordered["baseline_prediction_annualized_change_pct"],
-        y=ordered["result_label"],
+        x=baseline["horizon_label"],
+        y=baseline["baseline_prediction_cumulative_log_change_pct"],
         mode="markers",
         marker={"size": 11, "color": GOLD, "symbol": "diamond"},
-        hovertemplate="State-trend baseline %{x:.1f}%<extra>Baseline</extra>",
+        hovertemplate="%{y:+.1f}% state-trend change<extra>Baseline context</extra>",
         name="State-trend baseline",
     )
-    figure.add_vline(x=0, line_color=MUTED, line_width=1)
-    figure.update_xaxes(
-        title="Annualized FHFA HPI change",
+    figure.add_hline(y=0, line_color=MUTED, line_width=1)
+    figure.update_xaxes(title=None, showgrid=False, automargin=True)
+    figure.update_yaxes(
+        title="Estimated HPI change through target year",
         ticksuffix="%",
         gridcolor=GRID,
         zeroline=False,
+        automargin=True,
     )
-    figure.update_yaxes(title=None, showgrid=False, categoryorder="array")
     figure.update_layout(
-        showlegend=True,
-        legend={"orientation": "h", "y": -0.28, "x": 0},
+        barmode="group",
+        showlegend=False,
+        title={
+            "text": "How much could the tract-level housing price index change?",
+            "x": 0,
+            "xanchor": "left",
+            "font": {"size": 16},
+        },
     )
-    return _layout(figure, height=340, margin_top=12)
+    return _layout(
+        figure,
+        height=430,
+        margin_top=72,
+        margin_bottom=55,
+        margin_left=92,
+        margin_right=28,
+    )
 
 
 def forecast_validation_comparison_figure(scorecard: pd.DataFrame) -> go.Figure:
@@ -423,13 +527,6 @@ def analogue_map_figure(
 ) -> go.Figure:
     """Layer high-visibility points over tract footprints for national-to-local review."""
 
-    selected = _selected_geometry_frame(profile, bounds, map_context)
-    query_lon = (
-        float(selected.iloc[0]["minimum_longitude"]) + float(selected.iloc[0]["maximum_longitude"])
-    ) / 2
-    query_lat = (
-        float(selected.iloc[0]["minimum_latitude"]) + float(selected.iloc[0]["maximum_latitude"])
-    ) / 2
     figure = go.Figure()
     outlined = (
         matches.dropna(subset=["candidate_geometry_geojson"]).copy()
@@ -498,6 +595,44 @@ def analogue_map_figure(
                 name="Historical match points",
             )
         )
+    if bounds:
+        _add_analogue_query_marker(figure, profile, bounds, map_context)
+    state_abbreviation = str(profile.get("state_abbreviation", ""))
+    initial_views = {
+        "AK": {"center": {"lon": -152.0, "lat": 64.0}, "zoom": 2.7},
+        "HI": {"center": {"lon": -157.5, "lat": 20.8}, "zoom": 5.1},
+        "PR": {"center": {"lon": -66.5, "lat": 18.2}, "zoom": 7.0},
+    }
+    initial_view = initial_views.get(
+        state_abbreviation,
+        {"center": {"lon": -96.5, "lat": 38.5}, "zoom": 2.75},
+    )
+    figure.update_layout(
+        map={"style": "carto-darkmatter", **initial_view},
+        showlegend=True,
+        legend={
+            "orientation": "h",
+            "y": 0.01,
+            "x": 0.01,
+            "font": {"color": TEXT},
+            "bgcolor": "rgba(10,22,34,.92)",
+        },
+    )
+    return _layout(figure, height=490, margin_top=5)
+
+
+def _add_analogue_query_marker(
+    figure: go.Figure,
+    profile: Mapping[str, Any],
+    bounds: Mapping[str, Any],
+    map_context: pd.DataFrame,
+) -> None:
+    """Add the selected tract's boundary and center when the display geometry exists."""
+
+    selected = _selected_geometry_frame(profile, bounds, map_context)
+    row = selected.iloc[0]
+    query_lon = (float(row["minimum_longitude"]) + float(row["maximum_longitude"])) / 2
+    query_lat = (float(row["minimum_latitude"]) + float(row["maximum_latitude"])) / 2
     selected_feature = _geometry_feature(
         str(selected.iloc[0]["geoid_2020"]),
         str(selected.iloc[0]["geometry_geojson"]),
@@ -533,26 +668,6 @@ def analogue_map_figure(
             name="Selected neighborhood point",
         )
     )
-    all_longitudes = [query_lon, *located["candidate_longitude"].astype(float).tolist()]
-    all_latitudes = [query_lat, *located["candidate_latitude"].astype(float).tolist()]
-    figure.update_layout(
-        map=_map_view(
-            min(all_longitudes) - 0.5,
-            min(all_latitudes) - 0.35,
-            max(all_longitudes) + 0.5,
-            max(all_latitudes) + 0.35,
-            minimum_zoom=0.6,
-        ),
-        showlegend=True,
-        legend={
-            "orientation": "h",
-            "y": 0.01,
-            "x": 0.01,
-            "font": {"color": TEXT},
-            "bgcolor": "rgba(10,22,34,.92)",
-        },
-    )
-    return _layout(figure, height=490, margin_top=5)
 
 
 def state_browser_map_figure(

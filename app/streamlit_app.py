@@ -29,12 +29,18 @@ from neighborhood_app.data import AppSettings, NeighborhoodData, create_reposito
 from neighborhood_app.geocoding import lookup_census_tract
 from neighborhood_app.ui import (
     apply_styles,
+    availability_details,
+    cumulative_percent_from_log_change,
+    forecast_series_key_html,
     format_currency,
     format_integer,
     format_percent,
+    format_signed_percent,
     format_square_miles,
+    indexed_value_from_log_change,
     metric_card,
     place_label,
+    reference_amount_for_display,
     safe_float,
     selected_geoid_from_map_event,
     selected_rank_from_table_event,
@@ -104,14 +110,20 @@ def selected_summary(data: NeighborhoodData, horizon_years: int) -> dict[str, An
     return cast(dict[str, Any], rows.iloc[0].to_dict()) if not rows.empty else {}
 
 
-def render_overview(data: NeighborhoodData) -> None:
-    """Render observed current state and housing-market history."""
+def render_census_profile(profile: Mapping[str, Any]) -> None:
+    """Explain Census coverage and show estimates supported by the current profile."""
 
-    profile = data.profile
     st.subheader("Current neighborhood profile")
+    if not profile.get("has_current_acs_profile"):
+        st.write(
+            "The app could not link a current American Community Survey profile to this "
+            "2020 Census tract. Current population, income, rent, and housing estimates "
+            "are unavailable here."
+        )
+        return
     st.caption(
-        f"ACS {profile.get('acs_reference_period', 'reference period unavailable')} estimates. "
-        "Annual ACS releases overlap because each tract value summarizes five years."
+        f"American Community Survey estimates for {profile['acs_reference_period']}. "
+        "Annual releases overlap because each tract value summarizes five years."
     )
     row_one = st.columns(4)
     with row_one[0]:
@@ -130,24 +142,39 @@ def render_overview(data: NeighborhoodData) -> None:
         metric_card(
             "Median household income",
             format_currency(profile.get("median_household_income_estimate")),
-            "Nominal ACS estimate",
+            "No usable income estimate in this Census release."
+            if pd.isna(profile.get("median_household_income_estimate"))
+            else "Nominal ACS estimate",
         )
     with row_one[3]:
         metric_card(
             "Median gross rent",
             format_currency(profile.get("median_gross_rent_estimate")),
-            "Monthly ACS estimate",
+            "No usable rent estimate in this Census release."
+            if pd.isna(profile.get("median_gross_rent_estimate"))
+            else "Monthly ACS estimate",
         )
 
     composition_col, tenure_col = st.columns([1.55, 1])
     with composition_col:
         st.markdown("#### Housing composition")
-        st.plotly_chart(
-            housing_mix_figure(profile),
-            width="stretch",
-            key="overview_housing_mix",
-            config={"displayModeBar": False},
-        )
+        shares = [
+            profile.get(f"{structure}_share_estimate")
+            for structure in ("single_family", "multifamily", "mobile_home", "other_structure")
+        ]
+        if any(pd.notna(share) for share in shares):
+            st.plotly_chart(
+                housing_mix_figure(profile),
+                width="stretch",
+                key="overview_housing_mix",
+                config={"displayModeBar": False},
+            )
+            if any(pd.isna(share) for share in shares):
+                st.caption("The chart includes the housing categories with usable Census shares.")
+        elif profile.get("housing_units_total_estimate") == 0:
+            st.write("The Census estimates zero housing units, so there is no mix to show.")
+        else:
+            st.write("The current Census profile has no usable housing structure estimates.")
     with tenure_col:
         st.markdown("#### Occupancy and tenure")
         tenure = st.columns(2)
@@ -155,11 +182,17 @@ def render_overview(data: NeighborhoodData) -> None:
             metric_card(
                 "Occupied",
                 format_percent(profile.get("occupancy_rate_estimate"), value_is_share=True),
+                "Needs a positive housing unit count and an occupied unit estimate."
+                if pd.isna(profile.get("occupancy_rate_estimate"))
+                else "",
             )
         with tenure[1]:
             metric_card(
                 "Owner occupied",
                 format_percent(profile.get("owner_occupancy_rate_estimate"), value_is_share=True),
+                "Needs occupied households and a usable count by tenure."
+                if pd.isna(profile.get("owner_occupancy_rate_estimate"))
+                else "",
             )
         st.markdown(
             '<div class="section-note">The profile describes the full housing stock. '
@@ -168,73 +201,112 @@ def render_overview(data: NeighborhoodData) -> None:
             unsafe_allow_html=True,
         )
 
+
+def render_overview(data: NeighborhoodData) -> None:
+    """Show the Census profile and the tract's independently available FHFA history."""
+
+    render_census_profile(data.profile)
     st.markdown("#### Observed single-family housing-market history")
+    available = data.history.get("hpi_available", pd.Series(dtype=bool)).fillna(False)
+    if not available.any():
+        st.write(
+            "The FHFA data has no usable annual single-family home price index for this tract."
+        )
+        return
+
+    median_value = data.profile.get("median_owner_occupied_value_estimate")
+    history_reference = float(median_value) if pd.notna(median_value) and median_value > 0 else None
     st.plotly_chart(
-        hpi_history_figure(data.history),
+        hpi_history_figure(data.history, reference_value=history_reference),
         width="stretch",
         key="overview_hpi_history",
         config={"displayModeBar": False},
     )
-    st.caption(
-        "FHFA tract HPI is an index of single-family price movement. It is not an individual home "
-        "value or a measure of multifamily prices. Missing annual observations are not "
-        "interpolated."
-    )
+    st.caption("The FHFA index tracks single-family price changes using observed years.")
+    observed_years = set(data.history.loc[available, "observation_year"].astype(int))
+    gap_years = sorted(set(range(min(observed_years), max(observed_years))) - observed_years)
+    if gap_years:
+        years = ", ".join(str(year) for year in gap_years)
+        st.caption(f"The annual FHFA series has no usable observation for {years}.")
+    if history_reference is None:
+        st.caption(
+            "The illustrative dollar scale needs a usable median owner-occupied home value "
+            "from the current Census profile."
+        )
+    else:
+        st.caption(
+            "The illustrative dollar scale anchors the latest observed index to the Census "
+            f"median owner-occupied home value of {format_currency(history_reference)} and "
+            "scales earlier index values proportionally."
+        )
+
+
+def render_missing_forecasts(data: NeighborhoodData) -> None:
+    """Explain missing horizons alongside any forecasts that can be displayed."""
+
+    published_horizons = set(data.forecasts["horizon_years"]) if not data.forecasts.empty else set()
+    horizons = {
+        int(value)
+        for value in str(data.forecast_release.get("horizons_csv", "")).split(",")
+        if value.strip().isdigit()
+    }
+    availability = data.forecast_availability
+    if not availability.empty:
+        horizons.update(availability["horizon_years"].astype(int))
+    if not horizons and not published_horizons:
+        st.markdown("#### Why forecasts are unavailable for this tract")
+        st.write("The app has no tract coverage record for this forecast release.")
+        return
+
+    grouped_horizons: dict[tuple[str, ...], list[int]] = {}
+    for horizon in sorted(horizons - published_horizons):
+        rows = (
+            availability.loc[availability["horizon_years"] == horizon]
+            if not availability.empty
+            else availability
+        )
+        reason = rows.iloc[0]["availability_reason"] if not rows.empty else None
+        details = tuple(
+            availability_details(
+                data.profile, data.history, data.forecast_release, reason, product="forecast"
+            )
+        )
+        grouped_horizons.setdefault(details, []).append(horizon)
+
+    for details, missing_horizons in grouped_horizons.items():
+        labels = " and ".join(f"{horizon}-year" for horizon in missing_horizons)
+        result_label = "forecast is" if len(missing_horizons) == 1 else "forecasts are"
+        st.markdown(f"#### Why {labels} {result_label} unavailable")
+        for detail in details:
+            st.write(detail)
 
 
 def render_forecast_status(data: NeighborhoodData) -> None:
-    """Render both supervised forecasts or an explicit data-availability boundary."""
+    """Render both model forecasts with plain-language context and optional detail."""
 
     profile = data.profile
-    st.subheader("Forecast model")
-    if data.forecasts.empty:
-        if not data.forecast_release:
-            boundary_title = "Forecast serving output is not published yet."
-            boundary_text = (
-                "This data mode does not contain an activated forecast release. The local "
-                "sample fixture intentionally omits production forecasts."
-            )
+    st.subheader("Housing market forecast")
+    if not data.forecast_release:
+        if data.data_mode == "sample":
+            st.markdown("**Forecast data is not loaded in this app mode.**")
+            st.write("Open the live Databricks app to see published forecasts and tract coverage.")
         else:
-            reasons = (
-                data.forecast_availability["availability_reason"].dropna().astype(str).unique()
-                if not data.forecast_availability.empty
-                else ["No availability record was published"]
-            )
-            boundary_title = "Forecasts are unavailable for this tract."
-            boundary_text = "Reason: " + ", ".join(reasons) + "."
-        st.markdown(
-            f"""
-            <div class="model-boundary">
-              <strong>{boundary_title}</strong><br>
-              {boundary_text} This application will not substitute a baseline or historical
-              analogue outcome for the two supervised forecasting models.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown("#### Current tract readiness")
-        readiness = [
-            status_badge(
-                "Current ACS profile available",
-                available=bool(profile.get("has_current_acs_profile")),
-            ),
-            status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
-            status_badge(
-                "Current forecast candidate", available=bool(profile.get("forecast_candidate"))
-            ),
-        ]
-        st.markdown(" ".join(readiness), unsafe_allow_html=True)
+            st.write("The app could not open a complete published forecast release.")
+        return
+
+    render_missing_forecasts(data)
+    if data.forecasts.empty:
+        st.caption("See Overview for the Census profile and any observed price history.")
         return
 
     forecast_as_of_year = int(data.forecasts["forecast_origin_year"].max())
     st.markdown(
         f"""
         <div class="model-boundary">
-          <strong>Regularized-linear and gradient-boosted-tree forecasts as of
+          <strong>Two model views of tract-level single-family HPI change from
           {forecast_as_of_year}.</strong><br>
-          Both models forecast FHFA single-family tract HPI at one and three years. Their point
-          estimates and intervals are model results, not individual-home valuations, multifamily
-          forecasts, or investment ratings.
+          Every published linear and gradient-boosted-tree result is shown. Model evaluation does
+          not remove a forecast from this page.
         </div>
         """,
         unsafe_allow_html=True,
@@ -247,20 +319,33 @@ def render_forecast_status(data: NeighborhoodData) -> None:
     cards = st.columns(len(horizons))
     for card, horizon_years in zip(cards, horizons, strict=True):
         with card:
-            st.markdown(f"#### {horizon_years}-year horizon")
             horizon_rows = data.forecasts.loc[
                 data.forecasts["horizon_years"] == horizon_years
             ].sort_values("model_name")
+            target_end_year = int(horizon_rows["target_end_year"].iloc[0])
+            st.markdown(f"#### {horizon_years}-year outlook · through {target_end_year}")
             for _, row in horizon_rows.iterrows():
+                cumulative_change = cumulative_percent_from_log_change(
+                    row["prediction_cumulative_log_change"]
+                )
+                lower_change = cumulative_percent_from_log_change(
+                    row["prediction_lower_cumulative_log_change"]
+                )
+                upper_change = cumulative_percent_from_log_change(
+                    row["prediction_upper_cumulative_log_change"]
+                )
                 metric_card(
                     model_labels.get(str(row["model_name"]), str(row["model_name"])),
-                    format_percent(row["prediction_annualized_change_pct"]),
+                    format_signed_percent(cumulative_change),
                     (
-                        f"{format_percent(row['prediction_lower_annualized_change_pct'])} to "
-                        f"{format_percent(row['prediction_upper_annualized_change_pct'])} · "
-                        f"through {int(row['target_end_year'])}"
+                        f"{format_percent(row['prediction_annualized_change_pct'])} average per "
+                        f"year · range {format_signed_percent(lower_change)} to "
+                        f"{format_signed_percent(upper_change)}"
                     ),
                 )
+
+    st.markdown("#### Compare the model estimates")
+    st.markdown(forecast_series_key_html(), unsafe_allow_html=True)
     st.plotly_chart(
         forecast_interval_figure(data.forecasts),
         width="stretch",
@@ -268,32 +353,137 @@ def render_forecast_status(data: NeighborhoodData) -> None:
         config={"displayModeBar": False},
     )
     st.caption(
-        "The diamond is the state-trend baseline. The interval is calibrated from a reserved "
-        "historical year and then evaluated on a later locked test; it is not a guarantee."
+        "Bars show estimated total HPI change through each target year. Thin lines show each "
+        "model's calibrated range. The gold diamond is the state-trend baseline for context. "
+        "None of these values is an individual-home appraisal."
     )
-    warnings = data.forecasts.loc[
-        ~data.forecasts["meets_evaluation_thresholds"].fillna(False)
-    ].drop_duplicates(["model_name", "horizon_years"])
-    for _, row in warnings.sort_values(["horizon_years", "model_name"]).iterrows():
-        model_label = model_labels.get(str(row["model_name"]), str(row["model_name"]))
-        st.warning(
-            f"Evaluation warning: the {model_label} {int(row['horizon_years'])}-year result "
-            f"did not meet every predeclared benchmark. Its later-period MAE was "
-            f"{float(row['model_mae_log_change']):.3f}, compared with "
-            f"{float(row['zero_change_mae_log_change']):.3f} for zero change, and its interval "
-            f"covered {float(row['empirical_interval_coverage']):.1%} of outcomes. The result is "
-            "shown for transparency; the baseline does not replace it."
+
+    st.markdown("#### Put the HPI forecast in dollar context")
+    default_reference = reference_amount_for_display(
+        profile.get("median_owner_occupied_value_estimate")
+    )
+    reference_value = st.number_input(
+        "Reference amount for illustration",
+        min_value=50_000,
+        max_value=5_000_000,
+        value=int(round(float(default_reference) / 1_000) * 1_000),
+        step=10_000,
+        help=(
+            "The starting value defaults to the ACS median owner-occupied value when available. "
+            "It is not a model input."
+        ),
+        key=f"forecast_reference_value_{profile.get('geoid_2020', 'selected')}",
+    )
+    translated_rows = []
+    for _, row in data.forecasts.sort_values(["horizon_years", "model_name"]).iterrows():
+        lower_amount = format_currency(
+            indexed_value_from_log_change(
+                reference_value, row["prediction_lower_cumulative_log_change"]
+            )
         )
-    first = data.forecasts.sort_values("horizon_years").iloc[0]
-    st.markdown("#### What drives the model")
-    st.write(str(first["driver_summary"]))
-    st.info(
-        "Historical analogues remain a separate evidence source. Their observed later outcomes "
-        "do not set or widen this forecast interval."
+        upper_amount = format_currency(
+            indexed_value_from_log_change(
+                reference_value, row["prediction_upper_cumulative_log_change"]
+            )
+        )
+        translated_rows.append(
+            {
+                "Horizon": f"{int(row['horizon_years'])} year",
+                "Model": model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                "Estimated market change": format_signed_percent(
+                    cumulative_percent_from_log_change(row["prediction_cumulative_log_change"])
+                ),
+                "Illustrative end amount": format_currency(
+                    indexed_value_from_log_change(
+                        reference_value, row["prediction_cumulative_log_change"]
+                    )
+                ),
+                "Illustrative 90% model range": f"{lower_amount} to {upper_amount}",
+            }
+        )
+    st.dataframe(pd.DataFrame(translated_rows), hide_index=True, width="stretch")
+    st.caption(
+        "The point amount applies the model's cumulative tract-HPI change to the reference amount. "
+        "The range applies that same dollar translation to the model's lower and upper 90% "
+        "split-conformal bounds. It does not change the underlying model result."
     )
+
+    with st.expander("How is the 90% model range calculated?"):
+        st.markdown(
+            "Each frozen model and forecast horizon has its own range. The model was scored on "
+            "a reserved historical calibration period, and the finite-sample 90th percentile of "
+            "its absolute tract-level errors became the amount added to and subtracted from the "
+            "current point forecast. The dollar range above simply applies those HPI bounds to "
+            "the selected reference amount. It reflects historical model error, not uncertainty "
+            "about an individual property, and it cannot account for every future shock."
+        )
+        calibration_rows = (
+            data.forecasts.drop_duplicates(["model_name", "horizon_years"])
+            .sort_values(["horizon_years", "model_name"])
+        )
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Horizon": f"{int(row['horizon_years'])} year",
+                        "Model": model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                        "Calibration tracts": format_integer(
+                            row["calibration_observation_count"]
+                        ),
+                        "Target coverage": f"{float(row['nominal_coverage']):.0%}",
+                    }
+                    for _, row in calibration_rows.iterrows()
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
+
+    with st.expander("How did the models perform in later testing?"):
+        evaluation_rows = []
+        evaluation = data.forecasts.drop_duplicates(["model_name", "horizon_years"]).sort_values(
+            ["horizon_years", "model_name"]
+        )
+        for _, row in evaluation.iterrows():
+            warning_labels = {
+                "insufficient_later_period_observations": "Limited later-period sample",
+                "worse_than_zero_change_mae": "Did not beat zero change",
+                "interval_coverage_below_threshold": "Range coverage was below the project target",
+            }
+            warning_reasons = str(row.get("evaluation_warning_reason", "")).split(";")
+            status = "Met the project checks"
+            if not bool(row["meets_evaluation_thresholds"]):
+                status = "; ".join(
+                    warning_labels[reason]
+                    for reason in warning_reasons
+                    if reason in warning_labels
+                ) or "Shown with an evaluation note"
+            evaluation_rows.append(
+                {
+                    "Horizon": f"{int(row['horizon_years'])} year",
+                    "Model": model_labels.get(str(row["model_name"]), str(row["model_name"])),
+                    "Later-period MAE": f"{float(row['model_mae_log_change']):.3f}",
+                    "Zero-change MAE": f"{float(row['zero_change_mae_log_change']):.3f}",
+                    "Interval coverage": f"{float(row['empirical_interval_coverage']):.1%}",
+                    "Evaluation note": status,
+                }
+            )
+        st.dataframe(pd.DataFrame(evaluation_rows), hide_index=True, width="stretch")
+        st.caption(
+            "These checks describe later-period performance. They do not determine which model "
+            "results are displayed above. Lower MAE is better."
+        )
+
+    first = data.forecasts.sort_values("horizon_years").iloc[0]
+    with st.expander("What information influences the models?"):
+        st.write(str(first["driver_summary"]))
+        st.caption(
+            "This is a global model finding, not a causal explanation for the selected tract. "
+            "Historical analogues are a separate source of evidence."
+        )
     st.caption(
         f"Forecast release {data.forecast_release.get('serving_release_id', 'unavailable')} · "
-        "models regularized_linear and gradient_boosted_trees · "
+        "regularized linear and gradient-boosted trees · "
         f"nominal interval coverage {float(first['nominal_coverage']):.0%}"
     )
 
@@ -307,14 +497,20 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
         "representation. Their later outcomes are observed history, not a forecast for the "
         "selected tract."
     )
-    availability = data.availability.loc[data.availability["horizon_years"] == horizon_years]
-    if availability.empty or not bool(availability.iloc[0]["analogue_available"]):
-        reason = (
-            str(availability.iloc[0]["availability_reason"])
-            if not availability.empty
-            else "No availability record"
-        )
-        st.warning(f"Historical analogues are unavailable for this horizon: {reason}.")
+    availability = data.availability
+    rows = (
+        availability.loc[availability["horizon_years"] == horizon_years]
+        if not availability.empty
+        else availability
+    )
+    if rows.empty or not bool(rows.iloc[0]["analogue_available"]):
+        reason = rows.iloc[0]["availability_reason"] if not rows.empty else None
+        st.markdown(f"#### Why {horizon_years}-year historical matches are unavailable")
+        for detail in availability_details(
+            data.profile, data.history, data.release, reason, product="analogue"
+        ):
+            st.write(detail)
+        st.caption("See Overview for the Census profile and any observed price history.")
         return
 
     summary = selected_summary(data, horizon_years)
@@ -357,9 +553,15 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
             config={"displayModeBar": False},
         )
         st.caption(
-            "Gold numbered points keep all matches visible nationally. Zoom in to inspect the "
-            "actual tract outlines; select a county row to update the comparison below."
+            "The initial view focuses on the contiguous United States. Gold numbered points mark "
+            "matches in view; pan or zoom out for Alaska or Hawaii matches. Zoom in to inspect "
+            "tract outlines, then select a county row to update the comparison below."
         )
+        if not data.bounds:
+            st.caption(
+                "The selected tract has no boundary in the display dataset. The match locations "
+                "are shown where geometry is available."
+            )
     with list_col:
         st.markdown("#### Closest historical communities")
         if matches.empty:
@@ -431,8 +633,8 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
     candidate_bounds_available = all(
         value is not None and not pd.isna(value) for value in candidate_bounds_fields.values()
     )
-    if candidate_geometry and candidate_bounds_available:
-        st.markdown("#### Compare neighborhood footprints")
+    st.markdown("#### Compare neighborhood footprints")
+    if data.bounds and candidate_geometry and candidate_bounds_available:
         st.caption(
             "These maps show the actual simplified tract outlines. Each panel fits its own "
             "boundary, so use the area labels—not apparent screen size—to compare scale."
@@ -480,6 +682,12 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
                 config={"displayModeBar": False},
             )
             st.caption(format_square_miles(selected_match.get("candidate_land_area_sqm")))
+    else:
+        missing_boundary = "selected tract" if not data.bounds else "historical match"
+        st.write(
+            f"The display dataset has no usable boundary for the {missing_boundary}, "
+            "so the two outlines cannot be compared here."
+        )
 
     explanation_col, detail_col = st.columns([1.35, 1])
     with explanation_col:
@@ -511,17 +719,22 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
 
     st.markdown("#### What happened afterward")
     selected_paths = trajectories.loc[trajectories["match_rank"] == selected_rank]
+    if selected_paths.empty:
+        st.write("The current release has no annual FHFA path for this match.")
+        return
     st.plotly_chart(
         trajectory_figure(selected_paths),
         width="stretch",
         key=f"analogue_trajectory_{horizon_years}_{selected_rank}",
         config={"displayModeBar": False},
     )
-    st.caption(
-        "Observed FHFA single-family HPI path after the historical match. The app does not connect "
-        "across missing intermediate observations or treat this path as the selected tract's "
-        "future."
-    )
+    st.caption("Observed single-family FHFA price changes after the historical match.")
+    missing_years = selected_paths.loc[
+        selected_paths["trajectory_cumulative_change_pct"].isna(), "trajectory_observation_year"
+    ].dropna()
+    if not missing_years.empty:
+        years = ", ".join(str(year) for year in sorted(set(missing_years.astype(int))))
+        st.caption(f"The line has a gap where the FHFA index is unavailable in {years}.")
 
 
 def render_methods(data: NeighborhoodData) -> None:
@@ -700,9 +913,9 @@ def render_data_science_results() -> None:
         )
         _science_figure(
             "03_forecast_interval_coverage.png",
-            "Observed coverage is checked separately for every model-horizon pair. One-year "
-            "coverage is close to the nominal 90%; wider three-year intervals are conservative. "
-            "A warning does not remove the corresponding forecast.",
+            "The bars show the share of later outcomes within each model's forecast range. "
+            "All four results clear the 80% coverage floor. The hatched one-year linear result "
+            "missed a separate check because its error exceeded the zero-change baseline.",
         )
         _science_figure(
             "04_forecast_observed_vs_predicted.png",
@@ -984,13 +1197,21 @@ def main() -> None:
     area_name = ""
     if str(st.session_state.get("selected_area_geoid", "")) == selected_geoid:
         area_name = str(st.session_state.get("selected_area_name", "")).strip()
-    place_heading = f"{profile['county_name']}, {profile['state_abbreviation']}"
-    if area_name:
-        place_heading = f"{area_name} · {place_heading}"
+    county_state = ", ".join(
+        str(profile[field])
+        for field in ("county_name", "state_abbreviation")
+        if pd.notna(profile.get(field))
+    )
+    heading_parts = (area_name, county_state, profile["tract_name"])
+    place_heading = " · ".join(part for part in heading_parts if part)
+    acs_year = profile.get("acs_release_year")
+    acs_label = (
+        f"current ACS release {acs_year}" if pd.notna(acs_year) else "no current ACS profile"
+    )
     st.markdown(
-        f'<div class="place-title">{place_heading} · {profile["tract_name"]}</div>'
-        f'<div class="place-subtitle">2020 Census tract {profile["geoid_2020"]} · current ACS '
-        f"release {profile.get('acs_release_year', '—')}</div>",
+        f'<div class="place-title">{place_heading}</div>'
+        f'<div class="place-subtitle">2020 Census tract {profile["geoid_2020"]} · '
+        f"{acs_label}</div>",
         unsafe_allow_html=True,
     )
     map_col, context_col = st.columns([1.6, 1])
@@ -1002,7 +1223,12 @@ def main() -> None:
             key="primary_map_view",
             label_visibility="collapsed",
         )
-        if map_view == "Neighborhood map":
+        if map_view == "Neighborhood map" and not data.bounds:
+            st.write(
+                "The display dataset has no usable boundary for this tract. Browse U.S. "
+                "to see county and state coverage."
+            )
+        elif map_view == "Neighborhood map":
             context_event = st.plotly_chart(
                 neighborhood_context_map_figure(profile, data.bounds, data.map_context),
                 width="stretch",
@@ -1042,22 +1268,31 @@ def main() -> None:
         ]
         st.markdown(" ".join(status_html), unsafe_allow_html=True)
         st.write("")
+        latest_change = profile.get("latest_hpi_annual_change_pct")
+        latest_year = profile.get("latest_hpi_year")
+        if pd.isna(latest_year):
+            movement_note = "No usable annual FHFA index for this tract."
+        elif pd.isna(latest_change):
+            movement_note = f"The {latest_year} FHFA index has no usable year-over-year change."
+        else:
+            movement_note = f"Single-family HPI · {latest_year}"
         metric_card(
             "Latest observed FHFA movement",
-            format_percent(profile.get("latest_hpi_annual_change_pct")),
-            f"Single-family HPI · {profile.get('latest_hpi_year', 'year unavailable')}",
+            format_percent(latest_change),
+            movement_note,
         )
         st.write("")
         metric_card(
             "Single-family share",
             format_percent(profile.get("single_family_share_estimate"), value_is_share=True),
-            "Share of current ACS housing units",
+            "Needs a usable Census count of housing units by structure."
+            if pd.isna(profile.get("single_family_share_estimate"))
+            else "Share of current ACS housing units",
         )
-        st.markdown(
-            '<div class="section-note">A tract can have a useful profile even when one of the '
-            "models is unavailable. Missing analytical results remain visible and explained.</div>",
-            unsafe_allow_html=True,
-        )
+        if not data.horizon_available(horizon_years) or not data.forecast_horizon_available(
+            horizon_years
+        ):
+            st.caption("Open Forecast or Historical analogues for tract-specific coverage details.")
 
     overview_tab, forecast_tab, analogue_tab, science_tab, methods_tab = st.tabs(
         [

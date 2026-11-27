@@ -240,35 +240,43 @@ eligible = [bool(gate_by_key[key]["meets_evaluation_thresholds"]) for key in cov
 labels = [f"{horizon}-year\n{model_labels[model_name]}" for model_name, horizon in coverage_keys]
 colors = [BLUE if model_name == "regularized_linear" else TEAL for model_name, _ in coverage_keys]
 figure, axis = plt.subplots(figsize=(11.5, 6.4))
-bars = axis.bar(np.arange(len(coverage)), coverage, width=0.58, color=colors)
+bars = axis.bar(np.arange(len(coverage)), coverage, width=0.58, color=colors, zorder=2)
 for bar, passed in zip(bars, eligible, strict=True):
     if not passed:
         bar.set_hatch("//")
-axis.bar_label(bars, labels=[f"{value:.1f}%" for value in coverage], padding=4, color=NAVY)
-axis.axhline(90, color=NAVY, linewidth=1.5, linestyle="--", label="Nominal coverage (90%)")
-axis.axhline(80, color=AMBER, linewidth=1.5, linestyle=":", label="Evaluation threshold (80%)")
+axis.bar_label(bars, labels=[f"{value:.1f}%" for value in coverage], padding=5, color=NAVY)
+axis.axhline(90, color=NAVY, linewidth=1.5, linestyle="--", label="Target coverage (90%)", zorder=1)
+axis.axhline(80, color=AMBER, linewidth=1.5, linestyle=":", label="Coverage floor (80%)", zorder=1)
 axis.set_xticks(np.arange(len(labels)), labels)
-axis.set_ylim(0, 100)
-axis.set_ylabel("Locked outcomes inside the interval")
+axis.set_ylim(0, 108)
+axis.set_yticks(np.arange(0, 101, 20))
+axis.set_ylabel("Observed coverage (%)")
 figure.suptitle(
-    "Uncertainty is evaluated separately for each model and horizon",
-    x=0.125,
-    y=0.98,
+    "How often did forecast ranges contain the outcome?",
+    x=0.10,
+    y=0.955,
     ha="left",
     fontsize=17,
     color=NAVY,
 )
-axis.set_title(
-    "Hatched bars miss at least one evaluation threshold; their forecasts remain visible.",
-    loc="left",
-    pad=9,
+figure.text(
+    0.10,
+    0.885,
+    "Hatching marks a result that missed at least one evaluation check.",
     fontsize=11,
     color=MUTED,
 )
 axis.grid(axis="y", color=GRID, linewidth=0.8)
 axis.set_axisbelow(True)
-axis.legend(frameon=False, loc="lower left")
-figure.subplots_adjust(bottom=0.19, top=0.88)
+figure.legend(
+    loc="upper left",
+    bbox_to_anchor=(0.10, 0.85),
+    ncols=2,
+    frameon=False,
+    borderaxespad=0,
+    labelcolor=NAVY,
+)
+figure.subplots_adjust(left=0.10, right=0.98, bottom=0.20, top=0.76)
 save_figure(
     2,
     "locked_interval_coverage",
