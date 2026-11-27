@@ -283,3 +283,8 @@ Census profiles, FHFA series, display boundaries, and intermediate match observa
 Streamlit rendering against five actual Databricks tract records verified the explanations and
 confirmed that available results still render. The deployment left all 34 bundle resources
 unchanged.
+
+Deployment `01f1ea768a2c1fb0af89699d34729dd5` updates the release-year explanation and the
+forecast interval coverage figure. The figure was regenerated from the four records for
+forecast finalization run `29c68a5af1e74daab6e06ff7aa2aa9e9`. The render check confirmed
+that the legend sits above the plot and the bar labels fit inside the plot area.

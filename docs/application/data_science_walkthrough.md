@@ -51,6 +51,11 @@ Source lineage:
 - tracked assets: `02_forecast_validation_vs_locked_mae.png`,
   `03_forecast_interval_coverage.png`, and `04_forecast_observed_vs_predicted.png`.
 
+The interval figure was regenerated for the app from the four governed evaluation rows. The
+legend has its own space above the plot. The 90% line marks the target and the 80% line marks
+the minimum coverage check. Hatching marks any missed evaluation check. The one-year linear
+result is hatched because it trailed zero change on point error.
+
 ### Historical analogues
 
 The similarity section first explains the method, then representation selection and stability,

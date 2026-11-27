@@ -913,9 +913,9 @@ def render_data_science_results() -> None:
         )
         _science_figure(
             "03_forecast_interval_coverage.png",
-            "Observed coverage is checked separately for every model-horizon pair. One-year "
-            "coverage is close to the nominal 90%; wider three-year intervals are conservative. "
-            "A warning does not remove the corresponding forecast.",
+            "The bars show the share of later outcomes within each model's forecast range. "
+            "All four results clear the 80% coverage floor. The hatched one-year linear result "
+            "missed a separate check because its error exceeded the zero-change baseline.",
         )
         _science_figure(
             "04_forecast_observed_vs_predicted.png",

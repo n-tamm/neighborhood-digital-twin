@@ -471,6 +471,8 @@ def test_app_explains_absent_results_with_tract_source_evidence(
     assert "median gross rent" in text
     assert "Both forecast models need that starting value" in text
     assert "Historical matching needs that starting value" in text
+    assert "A forecast starting in 2024 would cover different target years." in text
+    assert "Starting in 2024 would match an earlier neighborhood profile." in text
     assert "model_ready_market_features_unavailable" not in text
 
 

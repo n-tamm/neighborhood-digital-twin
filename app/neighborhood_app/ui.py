@@ -79,14 +79,28 @@ def availability_details(
                     else "Historical matching needs that starting value to compare recent price "
                     "trends with those of earlier neighborhoods."
                 )
-                if usable.empty:
+                latest_year = None if usable.empty else int(usable.max())
+                if latest_year is None:
                     latest = "The tract has no usable FHFA index observations."
                 else:
-                    latest = f"The latest usable observation is from {int(usable.max())}."
+                    latest = f"The latest usable observation is from {latest_year}."
                 details.append(
                     f"The {origin_year} FHFA single-family home price index is missing for this "
                     f"tract. {latest} {purpose}"
                 )
+                if latest_year is not None and latest_year < origin_year:
+                    if product == "forecast":
+                        details.append(
+                            f"This release uses {origin_year} as a common starting year. "
+                            f"A forecast starting in {latest_year} would cover different "
+                            "target years."
+                        )
+                    else:
+                        details.append(
+                            f"This release compares neighborhoods as they looked in {origin_year}. "
+                            f"Starting in {latest_year} would match an earlier neighborhood "
+                            "profile."
+                        )
 
         if reason == "current_acs_unavailable" or (
             reason == "not_in_model_ready_cohort"

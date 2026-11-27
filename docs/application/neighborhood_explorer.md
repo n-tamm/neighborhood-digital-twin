@@ -97,6 +97,12 @@ availability record, the release's starting year, and the tract's source data.
   for price change. Historical matching uses it to compare recent price trends with earlier
   neighborhoods. When the starting value is missing, the app names the year and gives the latest
   usable observation or says that the tract has no usable FHFA history.
+- **Why the app uses a common year.** The current forecast and historical-matching releases
+  use 2025 as the shared starting point. A 2024 forecast would end in 2025 or 2027,
+  compared with 2026 or 2028 for the current release. A 2024 match would describe how the tract
+  looked a year earlier. The Overview still shows 2024 where it was observed. Publishing a
+  2024 result would require a separate run using information available at that time and a
+  clear earlier-results label.
 - **Missing Census estimates or display data.** The app identifies missing Census inputs when
   the records support that explanation. A gap in the current Census profile can coexist with
   published model results because the model uses data available at its starting point. Overview
