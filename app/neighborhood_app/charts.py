@@ -162,7 +162,10 @@ def housing_mix_figure(profile: Mapping[str, Any]) -> go.Figure:
     colors = [TEAL, GOLD, PURPLE, MUTED]
     figure = go.Figure()
     for label, field, color in zip(labels, fields, colors, strict=True):
-        value = float(profile.get(field) or 0.0)
+        estimate = profile.get(field)
+        if pd.isna(estimate):
+            continue
+        value = float(estimate)
         figure.add_bar(
             x=[value * 100],
             y=["Current housing units"],
@@ -524,13 +527,6 @@ def analogue_map_figure(
 ) -> go.Figure:
     """Layer high-visibility points over tract footprints for national-to-local review."""
 
-    selected = _selected_geometry_frame(profile, bounds, map_context)
-    query_lon = (
-        float(selected.iloc[0]["minimum_longitude"]) + float(selected.iloc[0]["maximum_longitude"])
-    ) / 2
-    query_lat = (
-        float(selected.iloc[0]["minimum_latitude"]) + float(selected.iloc[0]["maximum_latitude"])
-    ) / 2
     figure = go.Figure()
     outlined = (
         matches.dropna(subset=["candidate_geometry_geojson"]).copy()
@@ -599,6 +595,44 @@ def analogue_map_figure(
                 name="Historical match points",
             )
         )
+    if bounds:
+        _add_analogue_query_marker(figure, profile, bounds, map_context)
+    state_abbreviation = str(profile.get("state_abbreviation", ""))
+    initial_views = {
+        "AK": {"center": {"lon": -152.0, "lat": 64.0}, "zoom": 2.7},
+        "HI": {"center": {"lon": -157.5, "lat": 20.8}, "zoom": 5.1},
+        "PR": {"center": {"lon": -66.5, "lat": 18.2}, "zoom": 7.0},
+    }
+    initial_view = initial_views.get(
+        state_abbreviation,
+        {"center": {"lon": -96.5, "lat": 38.5}, "zoom": 2.75},
+    )
+    figure.update_layout(
+        map={"style": "carto-darkmatter", **initial_view},
+        showlegend=True,
+        legend={
+            "orientation": "h",
+            "y": 0.01,
+            "x": 0.01,
+            "font": {"color": TEXT},
+            "bgcolor": "rgba(10,22,34,.92)",
+        },
+    )
+    return _layout(figure, height=490, margin_top=5)
+
+
+def _add_analogue_query_marker(
+    figure: go.Figure,
+    profile: Mapping[str, Any],
+    bounds: Mapping[str, Any],
+    map_context: pd.DataFrame,
+) -> None:
+    """Add the selected tract's boundary and center when the display geometry exists."""
+
+    selected = _selected_geometry_frame(profile, bounds, map_context)
+    row = selected.iloc[0]
+    query_lon = (float(row["minimum_longitude"]) + float(row["maximum_longitude"])) / 2
+    query_lat = (float(row["minimum_latitude"]) + float(row["maximum_latitude"])) / 2
     selected_feature = _geometry_feature(
         str(selected.iloc[0]["geoid_2020"]),
         str(selected.iloc[0]["geometry_geojson"]),
@@ -634,28 +668,6 @@ def analogue_map_figure(
             name="Selected neighborhood point",
         )
     )
-    state_abbreviation = str(profile.get("state_abbreviation", ""))
-    initial_views = {
-        "AK": {"center": {"lon": -152.0, "lat": 64.0}, "zoom": 2.7},
-        "HI": {"center": {"lon": -157.5, "lat": 20.8}, "zoom": 5.1},
-        "PR": {"center": {"lon": -66.5, "lat": 18.2}, "zoom": 7.0},
-    }
-    initial_view = initial_views.get(
-        state_abbreviation,
-        {"center": {"lon": -96.5, "lat": 38.5}, "zoom": 2.75},
-    )
-    figure.update_layout(
-        map={"style": "carto-darkmatter", **initial_view},
-        showlegend=True,
-        legend={
-            "orientation": "h",
-            "y": 0.01,
-            "x": 0.01,
-            "font": {"color": TEXT},
-            "bgcolor": "rgba(10,22,34,.92)",
-        },
-    )
-    return _layout(figure, height=490, margin_top=5)
 
 
 def state_browser_map_figure(

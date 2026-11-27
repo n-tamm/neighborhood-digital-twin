@@ -19,6 +19,7 @@ from neighborhood_app.charts import (
     county_tract_browser_map_figure,
     forecast_interval_figure,
     forecast_validation_comparison_figure,
+    housing_mix_figure,
     hpi_history_figure,
     neighborhood_context_map_figure,
     state_browser_map_figure,
@@ -499,3 +500,62 @@ def test_coverage_explanation_distinguishes_acs_screening_and_publication() -> N
     )
     assert "does not identify a specific missing input" in forecast[0]
     assert "no evidence that these gaps blocked" in forecast[1]
+
+
+def test_housing_mix_preserves_zero_and_omits_unavailable_shares() -> None:
+    """A zero Census share is a real estimate and a missing share is absent from the chart."""
+
+    figure = housing_mix_figure(
+        {"single_family_share_estimate": 0.6, "mobile_home_share_estimate": 0.0}
+    )
+    assert {trace.name: list(trace.x) for trace in figure.data} == {
+        "Single-family": [60.0],
+        "Mobile home": [0.0],
+    }
+
+
+def test_missing_profile_and_boundary_keep_historical_evidence_visible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The app should retain match outcomes when display information is absent."""
+
+    load_sample = SampleNeighborhoodRepository.load_neighborhood
+
+    def load_tract_with_gaps(
+        repository: SampleNeighborhoodRepository, geoid: str
+    ) -> NeighborhoodData:
+        """Exercise absent display data without changing the known match and endpoint."""
+
+        data = load_sample(repository, geoid)
+        history = data.trajectories.copy()
+        history.loc[history["trajectory_observation_year"] == 2017, [
+            "trajectory_cumulative_change_pct", "trajectory_observed"
+        ]] = [None, False]
+        return replace(
+            data,
+            bounds={},
+            profile={
+                **data.profile,
+                "acs_release_year": None,
+                "has_current_acs_profile": False,
+                "median_owner_occupied_value_estimate": None,
+            },
+            trajectories=history,
+        )
+
+    monkeypatch.setenv("NEIGHBORHOOD_TWIN_DATA_MODE", "sample")
+    monkeypatch.setattr(SampleNeighborhoodRepository, "load_neighborhood", load_tract_with_gaps)
+    st.cache_data.clear()
+    try:
+        app = AppTest.from_file(str(REPOSITORY_ROOT / "app" / "streamlit_app.py")).run(timeout=30)
+    finally:
+        st.cache_data.clear()
+
+    assert not app.exception
+    text = "\n".join(item.value for item in app.markdown)
+    assert "no usable boundary for this tract" in text
+    assert "could not link a current American Community Survey profile" in text
+    assert "What happened afterward" in text
+    captions = "\n".join(item.value for item in app.caption)
+    assert "illustrative dollar scale needs a usable median" in captions
+    assert "FHFA index is unavailable in 2017" in captions
