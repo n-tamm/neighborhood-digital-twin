@@ -237,3 +237,11 @@ now renders an app-level, text-labeled key directly above the chart. The histori
 opens on the contiguous United States for contiguous-U.S. selections, while Alaska, Hawaii, and
 Puerto Rico selections use dedicated regional views. Matches outside the initial viewport remain
 plotted and reachable by panning or zooming.
+
+The tract coverage explanations deployed November 27, 2026 as
+`01f1ea739a6a18c8b18703cf1b153d38`. All 34 bundle resources were unchanged. A read-only data
+check confirmed that Washtenaw County tract 4260.02 has no usable 2025 FHFA index and is
+unavailable in both products at both horizons. Across the active releases, all 38,809 tracts
+with unavailable one-year forecasts and all 38,809 with unavailable one-year matches lack the
+required 2025 index. A Streamlit rendering test reproduces the tract's coverage pattern and
+checks that both tabs describe the same missing observation and its specific effect.

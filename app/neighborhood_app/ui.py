@@ -12,10 +12,137 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 import streamlit as st
+
+# These are the current-profile screening fields in neighborhood_twin.products.
+# They describe ACS coverage, which is distinct from the point-in-time model inputs.
+ACS_PROFILE_FEATURE_LABELS = {
+    "population_total_estimate": "total population",
+    "housing_units_total_estimate": "total housing units",
+    "occupancy_rate_estimate": "occupancy rate",
+    "vacancy_rate_estimate": "vacancy rate",
+    "owner_occupancy_rate_estimate": "owner-occupancy rate",
+    "renter_occupancy_rate_estimate": "renter-occupancy rate",
+    "single_family_share_estimate": "single-family housing share",
+    "multifamily_share_estimate": "multifamily housing share",
+    "mobile_home_share_estimate": "mobile-home share",
+    "median_household_income_estimate": "median household income",
+    "median_owner_occupied_value_estimate": "median owner-occupied home value",
+    "median_gross_rent_estimate": "median gross rent",
+}
+
+
+def availability_details(
+    profile: Mapping[str, Any],
+    history: pd.DataFrame,
+    release: Mapping[str, Any],
+    reason: str | None,
+    *,
+    product: Literal["forecast", "analogue"],
+) -> list[str]:
+    """Explain a missing result using the release year and verified tract evidence."""
+
+    if reason is None or pd.isna(reason):
+        return ["The current release has no coverage record for this tract and time horizon."]
+    if reason == "available":
+        return ["The release lists a result for this tract, but the app could not load it."]
+    if reason == "horizon_failed_locked_release_gate":
+        return ["This version of the forecast release did not publish this time horizon."]
+
+    known_reasons = {
+        "forecast": {"not_in_model_ready_cohort", "both_model_predictions_not_published"},
+        "analogue": {
+            "current_acs_unavailable",
+            "insufficient_current_similarity_features",
+            "fhfa_history_unavailable",
+            "model_ready_market_features_unavailable",
+        },
+    }
+    details = []
+    missing_origin = False
+    if reason in known_reasons[product]:
+        origin = release.get("serving_as_of_year")
+        if pd.notna(origin) and {"observation_year", "hpi", "hpi_available"} <= set(history):
+            origin_year = int(origin)
+            usable = history.loc[
+                history["hpi_available"].fillna(False) & history["hpi"].gt(0).fillna(False),
+                "observation_year",
+            ].dropna()
+            missing_origin = origin_year not in set(usable.astype(int))
+            if missing_origin:
+                purpose = (
+                    "Both forecast models need that starting value to estimate future change."
+                    if product == "forecast"
+                    else "Historical matching needs that starting value to compare recent price "
+                    "trends with those of earlier neighborhoods."
+                )
+                if usable.empty:
+                    latest = "The tract has no usable FHFA index observations."
+                else:
+                    latest = f"The latest usable observation is from {int(usable.max())}."
+                details.append(
+                    f"The {origin_year} FHFA single-family home price index is missing for this "
+                    f"tract. {latest} {purpose}"
+                )
+
+        if reason == "current_acs_unavailable" or (
+            reason == "not_in_model_ready_cohort"
+            and profile.get("has_current_acs_profile") is not None
+            and pd.notna(profile["has_current_acs_profile"])
+            and not profile["has_current_acs_profile"]
+        ):
+            details.append(
+                "The app has no current American Community Survey (ACS) profile for this tract. "
+                "That profile supplies the Census housing and population inputs for screening."
+            )
+        count = profile.get("hpi_observation_count")
+        if reason == "not_in_model_ready_cohort" and pd.notna(count) and int(count) < 10:
+            details.append(
+                f"The forecast coverage screen requires at least 10 annual FHFA observations. "
+                f"This tract has {int(count)}."
+            )
+        if reason == "insufficient_current_similarity_features":
+            feature_count = profile.get("similarity_feature_count")
+            if pd.notna(feature_count) and int(feature_count) < 8:
+                details.append(
+                    "The preliminary screen for historical matching needs at least 8 of 12 "
+                    "Census profile measures. "
+                    f"This tract has {int(feature_count)}."
+                )
+            for field in ("population_total_estimate", "housing_units_total_estimate"):
+                value = profile.get(field)
+                if pd.isna(value) or float(value) <= 0:
+                    details.append(
+                        "Historical matching needs a positive Census estimate for "
+                        f"{ACS_PROFILE_FEATURE_LABELS[field]} to compare neighborhood size."
+                    )
+
+    if not details:
+        details.append(
+            "The current release did not publish this result. The coverage record does not "
+            "identify a specific missing input."
+        )
+    if pd.notna(profile.get("acs_reference_period")):
+        missing = [
+            label for field, label in ACS_PROFILE_FEATURE_LABELS.items()
+            if field in profile and pd.isna(profile[field])
+        ]
+        if missing:
+            period = profile["acs_reference_period"]
+            if reason == "insufficient_current_similarity_features":
+                screening_note = "The preliminary profile check counts these estimates."
+            elif missing_origin:
+                screening_note = "The missing FHFA starting value is enough to explain the gap."
+            else:
+                screening_note = "The release gives no evidence that these gaps blocked the result."
+            details.append(
+                f"Missing estimates in the {period} Census profile include "
+                f"{', '.join(missing)}. {screening_note}"
+            )
+    return details
 
 
 def format_integer(value: Any) -> str:

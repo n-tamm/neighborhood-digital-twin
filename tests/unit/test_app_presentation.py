@@ -8,10 +8,12 @@ Model used: GPT-5
 Known-answer tests for application formatting and chart construction.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
 import pytest
+import streamlit as st
 from neighborhood_app.charts import (
     analogue_map_figure,
     county_tract_browser_map_figure,
@@ -21,7 +23,9 @@ from neighborhood_app.charts import (
     neighborhood_context_map_figure,
     state_browser_map_figure,
 )
+from neighborhood_app.data import NeighborhoodData, SampleNeighborhoodRepository
 from neighborhood_app.ui import (
+    availability_details,
     cumulative_percent_from_log_change,
     forecast_series_key_html,
     format_currency,
@@ -414,3 +418,84 @@ def test_streamlit_app_starts_in_explicit_sample_mode(monkeypatch: pytest.Monkey
         "Forecast data is not loaded in this app mode" in item.value for item in app.markdown
     )
     assert "Data Science Results" in [tab.label for tab in app.tabs]
+
+
+def test_app_explains_absent_results_with_tract_source_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Both tabs should explain a missing release-year index after screening passes."""
+
+    load_sample = SampleNeighborhoodRepository.load_neighborhood
+
+    def load_incomplete_tract(
+        repository: SampleNeighborhoodRepository, geoid: str
+    ) -> NeighborhoodData:
+        """Keep the sample renderer offline and reproduce the observed coverage pattern."""
+
+        data = load_sample(repository, geoid)
+        history = data.history.copy()
+        history.loc[history["observation_year"] == 2025, ["hpi", "hpi_available"]] = [None, False]
+        return replace(
+            data,
+            profile={**data.profile, "median_gross_rent_estimate": None},
+            history=history,
+            availability=data.availability.assign(
+                analogue_available=False,
+                availability_reason="model_ready_market_features_unavailable",
+            ),
+            forecast_release={"serving_as_of_year": 2025, "horizons_csv": "1,3"},
+            forecast_availability=pd.DataFrame(
+                {
+                    "horizon_years": [1, 3],
+                    "forecast_available": [False, False],
+                    "availability_reason": ["both_model_predictions_not_published"] * 2,
+                }
+            ),
+        )
+
+    monkeypatch.setenv("NEIGHBORHOOD_TWIN_DATA_MODE", "sample")
+    monkeypatch.setattr(SampleNeighborhoodRepository, "load_neighborhood", load_incomplete_tract)
+    st.cache_data.clear()
+    try:
+        app = AppTest.from_file(str(REPOSITORY_ROOT / "app" / "streamlit_app.py")).run(timeout=30)
+    finally:
+        st.cache_data.clear()
+
+    assert not app.exception
+    text = "\n".join(item.value for item in app.markdown)
+    assert "Why 1-year and 3-year forecasts are unavailable" in text
+    assert "historical matches are unavailable" in text
+    assert text.count("The 2025 FHFA single-family home price index is missing") == 2
+    assert text.count("The latest usable observation is from 2024") == 2
+    assert "median gross rent" in text
+    assert "Both forecast models need that starting value" in text
+    assert "Historical matching needs that starting value" in text
+    assert "model_ready_market_features_unavailable" not in text
+
+
+def test_coverage_explanation_distinguishes_acs_screening_and_publication() -> None:
+    """List confirmed Census gaps without guessing why an unexplained result was unpublished."""
+
+    profile = {
+        "acs_reference_period": "2020-2024",
+        "similarity_feature_count": 7,
+        "population_total_estimate": 0,
+        "housing_units_total_estimate": 80,
+        "median_household_income_estimate": None,
+        "median_gross_rent_estimate": None,
+    }
+    release = {"serving_as_of_year": 2025}
+    history = pd.DataFrame({"observation_year": [2025], "hpi": [200.0], "hpi_available": [True]})
+    analogue = availability_details(
+        profile, history, release, "insufficient_current_similarity_features", product="analogue"
+    )
+    assert "at least 8 of 12" in analogue[0]
+    assert "total population" in analogue[1]
+    assert "median household income, median gross rent" in analogue[2]
+    assert all("home price index is missing" not in item for item in analogue)
+
+    forecast = availability_details(
+        profile, history, release, "both_model_predictions_not_published", product="forecast"
+    )
+    assert "does not identify a specific missing input" in forecast[0]
+    assert "no evidence that these gaps blocked" in forecast[1]

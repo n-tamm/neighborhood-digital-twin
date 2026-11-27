@@ -58,10 +58,8 @@ bars, teal tree bars, and gold baseline diamonds can be identified without hover
 on Plotly's embedded legend placement. Extra left margin and
 automatic axis sizing keep the y-axis label visible.
 
-Later-period evaluation details are available in one optional section rather than repeated warning
-boxes. A weak evaluation result remains visible in the cards and chart; only incomplete tract input
-data can make a forecast unavailable. No baseline, validation prediction, or analogue outcome is
-substituted for either supervised forecast.
+Later-period evaluation details are available in an optional section. Published model results stay
+visible even when they miss an evaluation check.
 
 The screen also lets a user apply the modeled tract-HPI change to a reference dollar amount. This
 is a display-only translation for understanding scale. It does not change a prediction, use
@@ -87,6 +85,21 @@ zoom and hover context, but it does not compete with the table for selection sta
 The page repeatedly labels those outcomes as historical evidence. Similarity distance explains
 retrieval, not why prices later changed, and a historical path is not presented as a causal or
 probabilistic forecast.
+
+### When a result is unavailable
+
+Forecast and Historical analogues use the active release's starting year and the selected tract's
+FHFA history to explain missing results by horizon. Both methods require a usable single-family
+home price index for that starting year. The forecast uses it as the starting point for change.
+Historical matching uses it to build the current price-trend inputs it compares with earlier
+neighborhoods. The app shows the latest usable observation and names missing estimates in the
+current Census profile. That profile is distinct from the model's point-in-time inputs.
+
+For example, Washtenaw County, Michigan tract 4260.02 has 38 usable annual FHFA observations
+through 2024. Both active releases use 2025, which has no usable index for the tract. The current
+2020–2024 Census profile also lacks median gross rent, but it passes the preliminary profile
+screen. When the available tables cannot explain a missing result, the app says how far it can
+trace the cause.
 
 ### Data Science Results
 

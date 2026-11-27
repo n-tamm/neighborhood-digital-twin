@@ -29,6 +29,7 @@ from neighborhood_app.data import AppSettings, NeighborhoodData, create_reposito
 from neighborhood_app.geocoding import lookup_census_tract
 from neighborhood_app.ui import (
     apply_styles,
+    availability_details,
     cumulative_percent_from_log_change,
     forecast_series_key_html,
     format_currency,
@@ -192,64 +193,62 @@ def render_overview(data: NeighborhoodData) -> None:
     )
 
 
+def render_missing_forecasts(data: NeighborhoodData) -> None:
+    """Explain missing horizons alongside any forecasts that can be displayed."""
+
+    published_horizons = set(data.forecasts["horizon_years"]) if not data.forecasts.empty else set()
+    horizons = {
+        int(value)
+        for value in str(data.forecast_release.get("horizons_csv", "")).split(",")
+        if value.strip().isdigit()
+    }
+    availability = data.forecast_availability
+    if not availability.empty:
+        horizons.update(availability["horizon_years"].astype(int))
+    if not horizons and not published_horizons:
+        st.markdown("#### Why forecasts are unavailable for this tract")
+        st.write("The app has no tract coverage record for this forecast release.")
+        return
+
+    grouped_horizons: dict[tuple[str, ...], list[int]] = {}
+    for horizon in sorted(horizons - published_horizons):
+        rows = (
+            availability.loc[availability["horizon_years"] == horizon]
+            if not availability.empty
+            else availability
+        )
+        reason = rows.iloc[0]["availability_reason"] if not rows.empty else None
+        details = tuple(
+            availability_details(
+                data.profile, data.history, data.forecast_release, reason, product="forecast"
+            )
+        )
+        grouped_horizons.setdefault(details, []).append(horizon)
+
+    for details, missing_horizons in grouped_horizons.items():
+        labels = " and ".join(f"{horizon}-year" for horizon in missing_horizons)
+        result_label = "forecast is" if len(missing_horizons) == 1 else "forecasts are"
+        st.markdown(f"#### Why {labels} {result_label} unavailable")
+        for detail in details:
+            st.write(detail)
+
+
 def render_forecast_status(data: NeighborhoodData) -> None:
     """Render both model forecasts with plain-language context and optional detail."""
 
     profile = data.profile
     st.subheader("Housing market forecast")
-    if data.forecasts.empty:
-        reason_labels = {
-            "not_in_model_ready_cohort": (
-                "The tract does not have the complete FHFA history and point-in-time features "
-                "required by both forecasting models."
-            ),
-            "both_model_predictions_not_published": (
-                "A complete pair of model results was not published for this tract."
-            ),
-            "No availability record was published": (
-                "No forecast availability record was published for this tract."
-            ),
-        }
-        if not data.forecast_release:
-            boundary_title = "Forecast data is not loaded in this app mode."
-            boundary_text = (
-                "The local sample demonstrates the interface but does not include the production "
-                "forecast release."
-            )
+    if not data.forecast_release:
+        if data.data_mode == "sample":
+            st.markdown("**Forecast data is not loaded in this app mode.**")
+            st.write("Open the live Databricks app to see published forecasts and tract coverage.")
         else:
-            reasons = (
-                data.forecast_availability["availability_reason"].dropna().astype(str).unique()
-                if not data.forecast_availability.empty
-                else ["No availability record was published"]
-            )
-            boundary_title = "Model forecasts are not available for this tract."
-            boundary_text = " ".join(reason_labels.get(reason, reason) for reason in reasons)
-        st.markdown(
-            f"""
-            <div class="model-boundary">
-              <strong>{boundary_title}</strong><br>
-              {boundary_text} This is a data-availability limit, not a decision to hide a model
-              because it performed poorly.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown("#### Current tract readiness")
-        readiness = [
-            status_badge(
-                "Current ACS profile available",
-                available=bool(profile.get("has_current_acs_profile")),
-            ),
-            status_badge("FHFA history available", available=bool(profile.get("has_fhfa_history"))),
-            status_badge(
-                "Complete forecast inputs", available=bool(profile.get("forecast_candidate"))
-            ),
-        ]
-        st.markdown(" ".join(readiness), unsafe_allow_html=True)
-        st.caption(
-            "The neighborhood profile and any observed HPI history remain available on the "
-            "Overview tab. The app does not replace a missing model forecast with a baseline."
-        )
+            st.write("The app could not open a complete published forecast release.")
+        return
+
+    render_missing_forecasts(data)
+    if data.forecasts.empty:
+        st.caption("See Overview for the Census profile and any observed price history.")
         return
 
     forecast_as_of_year = int(data.forecasts["forecast_origin_year"].max())
@@ -450,14 +449,20 @@ def render_analogues(data: NeighborhoodData, horizon_years: int) -> None:
         "representation. Their later outcomes are observed history, not a forecast for the "
         "selected tract."
     )
-    availability = data.availability.loc[data.availability["horizon_years"] == horizon_years]
-    if availability.empty or not bool(availability.iloc[0]["analogue_available"]):
-        reason = (
-            str(availability.iloc[0]["availability_reason"])
-            if not availability.empty
-            else "No availability record"
-        )
-        st.warning(f"Historical analogues are unavailable for this horizon: {reason}.")
+    availability = data.availability
+    rows = (
+        availability.loc[availability["horizon_years"] == horizon_years]
+        if not availability.empty
+        else availability
+    )
+    if rows.empty or not bool(rows.iloc[0]["analogue_available"]):
+        reason = rows.iloc[0]["availability_reason"] if not rows.empty else None
+        st.markdown(f"#### Why {horizon_years}-year historical matches are unavailable")
+        for detail in availability_details(
+            data.profile, data.history, data.release, reason, product="analogue"
+        ):
+            st.write(detail)
+        st.caption("See Overview for the Census profile and any observed price history.")
         return
 
     summary = selected_summary(data, horizon_years)
@@ -1197,11 +1202,10 @@ def main() -> None:
             format_percent(profile.get("single_family_share_estimate"), value_is_share=True),
             "Share of current ACS housing units",
         )
-        st.markdown(
-            '<div class="section-note">A tract can have a useful profile even when one of the '
-            "models is unavailable. Missing analytical results remain visible and explained.</div>",
-            unsafe_allow_html=True,
-        )
+        if not data.horizon_available(horizon_years) or not data.forecast_horizon_available(
+            horizon_years
+        ):
+            st.caption("Open Forecast or Historical analogues for tract-specific coverage details.")
 
     overview_tab, forecast_tab, analogue_tab, science_tab, methods_tab = st.tabs(
         [
