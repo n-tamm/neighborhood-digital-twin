@@ -88,18 +88,31 @@ probabilistic forecast.
 
 ### When a result is unavailable
 
-Forecast and Historical analogues use the active release's starting year and the selected tract's
-FHFA history to explain missing results by horizon. Both methods require a usable single-family
-home price index for that starting year. The forecast uses it as the starting point for change.
-Historical matching uses it to build the current price-trend inputs it compares with earlier
-neighborhoods. The app shows the latest usable observation and names missing estimates in the
-current Census profile. That profile is distinct from the model's point-in-time inputs.
+The Forecast and Historical analogues tabs explain missing results for the selected tract and
+horizon. Forecast groups horizons when they share an explanation. Each explanation uses the
+availability record, the release's starting year, and the tract's source data.
 
-For example, Washtenaw County, Michigan tract 4260.02 has 38 usable annual FHFA observations
-through 2024. Both active releases use 2025, which has no usable index for the tract. The current
-2020–2024 Census profile also lacks median gross rent, but it passes the preliminary profile
-screen. When the available tables cannot explain a missing result, the app says how far it can
-trace the cause.
+- **Missing forecast or historical matches.** Both products require a usable FHFA single-family
+  home price index for the release's starting year. The forecast uses it as the starting point
+  for price change. Historical matching uses it to compare recent price trends with earlier
+  neighborhoods. When the starting value is missing, the app names the year and gives the latest
+  usable observation or says that the tract has no usable FHFA history.
+- **Missing Census estimates or display data.** The app identifies missing Census inputs when
+  the records support that explanation. A gap in the current Census profile can coexist with
+  published model results because the model uses data available at its starting point. Overview
+  explains absent Census profiles, empty FHFA histories, and missing inputs for the illustrative
+  dollar scale. Missing display boundaries and missing annual observations within historical
+  match paths receive their own notes.
+- **Missing release evidence.** A missing availability record, a result that could not be loaded,
+  and an unpublished result with no confirmed cause each get their own explanation. The app
+  reports the source gap or release status it can verify.
+
+The November 27, 2026 audit checked all 85,528 tracts for both products at both horizons. Every
+unavailable forecast or match lacked the usable 2025 starting index. For example, Washtenaw
+County, Michigan tract 4260.02 has 38 usable annual observations through 2024. Its current Census
+profile also lacks median gross rent, which the app reports as a separate gap. The detailed audit
+records the coverage counts, other tract examples, and checks against live Databricks data.
+[Nationwide availability audit](deployment_and_testing.md#nationwide-availability-audit)
 
 ### Data Science Results
 
